@@ -94,17 +94,35 @@ StdFpga="-fpgatsb -nocrypto -debugmsg -handshake $Subst342 $Verbose $StdSim $Dme
 # Standard version for HAPS FPGA, c/w debug symbols" (debug-crypto-uart-hs)
 StdFpgaDbg="-fpgatsb -dbg -debugmsg -handshake $Subst342 $Verbose $StdSim $DmeLogging"
 
-# Specially instrumented for fault induction on simulator only, and noisy besides (opt-nc-uart-spec-##)
-#***** TBD *****
+# Specially instrumented builds for fault induction on simulator only.
+# Test				Purpose
+Spec_StandbyTest=1		# Allow 3rd stage FW to try to put the chip
+				# into standby. 
+Spec_GBBootSrvStandbyTest=2	# STANDBY_TEST plus 3rd stage FW waits for the
+				# server to put UniPro to hibern8 mode before
+				# suspend
+Spec_GearChangeTest=3		# Run the SpiRom at different gear speeds
 
-# Specially instrumented for fault induction on simulator only, but quiet (opt-nc-quiet-spec-##)
-#***** TBD *****
+# Specially instrumented builds for fault induction on simulator only, and noisy besides (opt-nc-uart-spec-##)
+SpecNoisy_Standby="-es3tsb -nocrypto -debugmsg -spec $Spec_StandbyTest $Subst342 $Verbose $StdSim"
+SpecNoisy_GBBootSrvStandby="-es3tsb -nocrypto -debugmsg -spec $Spec_GBBootSrvStandbyTest $Subst342 $Verbose $StdSim"
+SpecNoisy_GearChange="-es3tsb -nocrypto -debugmsg -spec $Spec_GearChangeTest $Subst342 $Verbose $StdSim"
+
+
+# Specially instrumented builds for fault induction on simulator only, but quiet (opt-nc-quiet-spec-##)
+SpecQuiet_Standby="-es3tsb -nocrypto -spec $Spec_StandbyTest $Subst342 $Verbose $StdSim"
+SpecQuiet_GBBootSrvStandby="-es3tsb -nocrypto -spec $Spec_GBBootSrvStandbyTest $Subst342 $Verbose $StdSim"
+SpecQuiet_GearChange="-es3tsb -nocrypto -spec $Spec_GearChangeTest $Subst342 $Verbose $StdSim"
 
 #-----
 # Lists of build targets and names
 #-----
 Targets=("$StdNoisy" "$StdProd" "$StdQuiet" "$StdFpga" "$StdFpgaDbg")
+Targets+=("$SpecNoisy_Standby" "$SpecNoisy_GBBootSrvStandby" "$SpecNoisy_GearChange")
+Targets+=("$SpecQuiet_Standby" "$SpecQuiet_GBBootSrvStandby" "$SpecQuiet_GearChange")
 TargetNames=("StdNoisy" "StdProd" "StdQuiet" "StdFpga" "StdFpgaDbg")
+TargetNames+=("SpecNoisy_Standby" "SpecNoisy_GBBootSrvStandby" "SpecNoisy_GearChange")
+TargetNames+=("SpecQuiet_Standby" "SpecQuiet_GBBootSrvStandby" "SpecQuiet_GearChange")
 
 
 

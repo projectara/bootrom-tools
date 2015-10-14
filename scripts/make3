@@ -32,7 +32,7 @@
 # Usage:
 #    make3 {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-v} {-dbg} \
 #          {-nocrypto} {-gearchange} {-nodelay} {-debugmsg} {-handshake} \
-#          {-stby} {-stby-wait-svr} {-stby-gbboot} {-dme}  {-342} --rev=<revision>
+#          {-dme} {-342} --rev=<revision>
 #
 #    -es2tsb, -es3tsb, -fpgatsb
 #              Select the build target

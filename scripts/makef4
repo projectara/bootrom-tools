@@ -31,8 +31,8 @@
 #
 # Usage:
 #    makef4 {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-v} {-dbg} \
-#           {-nocrypto} {-gearchange} {-nodelay} {-debugmsg} {-handshake} \
-#           {-stby} {-stby-wait-svr} {-stby-gbboot} {-spec <num>} {-dme} {-342}
+#           {-nocrypto} {-nodelay} {-debugmsg} {-handshake} \
+#           {-spec <num>}{-dme} {-342}
 #
 #    -es2tsb, -es3tsb, -fpgatsb
 #              Select the build target
@@ -47,9 +47,6 @@
 #    -gearchange	Test for changing UniPro gear change
 #    -debugmsg		Allow debug serial output
 #    -handshake		GPIO handshake with simulation/test controller
-#    -stby		Enable standby-mode tesing
-#    -stby-wait-svr	Will wait for the server in standby mode
-#    -stby-gbboot	Enable GBBoot server standby mode
 #    -spec <num>	Compile special test number `<num>`.
 #    -dme               Enable DME-write logging
 #    -342		Substitute the L3FW for L2FW to speed simulation
@@ -67,15 +64,12 @@ Sign=false
 DbgMode=false
 Testing=false
 NoCrypto=false
-GearChangeTest=false
 NoCDelay=false
 DebugMessages=false
 Handshake=false
-StandbyTest=false
-StandbyWaitForServer=false
-GBBootServerStandby=false
-DmeLogging=false
 Subst342=false
+SpecialTest=false
+HaveSpecialTest=false
 SpecialTest=false
 CryptoSuffix="-crypto"
 DbgSuffix="-quiet"
@@ -113,10 +107,6 @@ for arg in "$@" ; do    # arg will be each positional parameter
         Testing=true
         NoCrypto=true
         CryptoSuffix="-nc"
-    elif [[ ${arg} == "-gearchange" ]]; then
-        # Test for changing UniPro gear change
-        Testing=true
-        GearChangeTest=true
     elif [[ ${arg} == "-nodelay" ]]; then
         # Clear only the minimum amount of RAM to speed simulation
         Testing=true
@@ -129,18 +119,6 @@ for arg in "$@" ; do    # arg will be each positional parameter
     elif [[ ${arg} == "-handshake" ]]; then
         # GPIO handshake with simulation/test controller
         Handshake=true
-    elif [[ ${arg} == "-stby" ]]; then
-        #    -handshake	GPIO handshake with simulation/test controller
-        Testing=true
-        StandbyTest=true
-    elif [[ ${arg} == "-stby-wait-svr" ]]; then
-        #    -handshake	GPIO handshake with simulation/test controller
-        Testing=true
-        StandbyWaitForServer=true
-    elif [[ ${arg} == "-stby-gbboot" ]]; then
-        #    -handshake	GPIO handshake with simulation/test controller
-        Testing=true
-        GBBootServerStandby=true
     elif [[ ${arg} == "-dme" ]]; then
         # Capture DME writes to dbgserial
         DmeLogging=true
@@ -184,29 +162,17 @@ if ! $Production; then
     if $NoCrypto; then
         export _NOCRYPTO=1
     fi
-    if $GearChangeTest; then
-        export _GEAR_CHANGE_TEST=1
-    fi
     if $NoDelay; then
         export _DISABLE_TIME_CONSUMING_DELAY=1
     fi
     if $Handshake; then
         export _HANDSHAKE=1
     fi
-    if $StandbyTest; then
-        export _STANDBY_TEST=1
-    fi
-    if $StandbyWaitForServer; then
-        export _STANDBY_WAIT_FOR_SERVER=1
-    fi
-    if $GBBootServerStandby; then
-        export _GBBOOT_SERVER_STANDBY=1
-    fi
     if $DmeLogging; then
         export _DME_LOGGING=1
     fi
     if $HaveSpecialTest; then
-        export _SPECIAL_TEST=$SpecialTest
+        export _SPECIAL_TEST=$SpecialTestNum
     fi
 fi
 

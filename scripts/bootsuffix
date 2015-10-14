@@ -39,7 +39,6 @@
 #
 # TESTING parameters:
 #    -nocrypto	Substitute fake cryptographic routines to speed simulation
-#    -gearchange	Test for changing UniPro gear change
 #    -debugmsg	Allow debug serial output
 #    -handshake	GPIO handshake with simulation/test controller
 #
@@ -84,9 +83,6 @@ for arg in "$@" ; do    # arg will be each positional parameter
     elif [[ ${arg} == "-prod" ]]; then    # Compile all levels for Toshba Simulation
         Production=true
     # Test args
-    elif [[ ${arg} == "-gearchange" ]]; then
-        # Enable gear change test
-        GearChangeTest=true
     elif [[ ${arg} == "-nocrypto" ]]; then
         # Substitute fake cryptographic routines to speed simulation
         CryptoSuffix="-nc"

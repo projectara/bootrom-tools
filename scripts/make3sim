@@ -31,8 +31,8 @@
 # as if the -sim (_SIMULATION) flag still existed
 #
 # Usage:
-#    make3sim {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-v} {-prod}\
-#             {-gearchange} {-dme} {-342} --rev=<revision>
+#    make3sim {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-v} {-prod} \
+#             {-spec <num>} {-dme} {-342} --rev=<revision>
 #
 #    -v        Verbose mode on TFTF creation
 #    -prod     Enable _PRODUCTION mode for all 3 firmware levels
@@ -41,7 +41,6 @@
 #              Select the build target
 #
 # TESTING parameters:
-#    -gearchange	Test for changing UniPro gear change
 #    -spec <num>	Compile special test number `<num>`.
 #    -dme               Enable DME-write logging
 #    -342		Substitute the L3FW for L2FW to speed simulation
@@ -83,9 +82,6 @@ for arg in "$@" ; do    # arg will be each positional parameter
     elif [[ ${arg} == "-342" ]]; then
         # Substitute the L3FW for L2FW to speed simulation
         Subst342=${arg}
-    elif [[ ${arg} == "-gearchange" ]]; then
-        # Test for changing UniPro gear change
-        GearChangeTest=${arg}
     elif [[ ${arg} == --rev=* ]]; then
         REV="${arg}"
     else
@@ -106,13 +102,12 @@ if [ ! $CONFIG_CHIP ]; then
     CONFIG_CHIP=$DEFAULT_CHIP_CONFIG
 fi
 
+
 if $HaveSpecialTest; then
     make3 -$CONFIG_CHIP -nocrypto -nodelay -debugmsg -handshake \
-          -stby -stby-wait-svr -stby-gbboot $GearChangeTest $Sign \
-          $DbgMode $Production $DmeLogging $Subst342 -spec $SpecialTestNum $REV
+          $Sign $DbgMode $Production $DmeLogging $Verbose $Subst342 -spec $SpecialTestNum $REV
 else
     make3 -$CONFIG_CHIP -nocrypto -nodelay -debugmsg -handshake \
-          -stby -stby-wait-svr -stby-gbboot $GearChangeTest $Sign \
-          $DbgMode $Production $DmeLogging $Subst342 $REV
+          $Sign $DbgMode $Production $DmeLogging $Verbose $Subst342 $REV
 fi
 

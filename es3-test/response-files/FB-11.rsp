@@ -1,7 +1,7 @@
 Hello world from s1fw
-Reset all cports.
-Unipro enabled!
-efuse_init: OK
+Reset all cports
+Unipro enabled
+efuse OK
 Boot from SPIROM
 L1 FFFF err: 00000043
 Spi boot failed (09000043), Boot over UniPro (09000043)

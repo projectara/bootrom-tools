@@ -82,7 +82,7 @@ REV=
 for arg in "$@" ; do    # arg will be each positional parameter
     if $SpecialTest; then
         # The previous arg was "-spec", so pick up the special test no.
-        SpecialTestNum="${arg} "
+        SpecialTestNum="${arg}"
         HaveSpecialTest=true
         SpecialTest=false
         echo "have special test $SpecialTestNum"
@@ -159,6 +159,18 @@ else
     exit 1
 fi
 
+# Give some indication of what "special-test N" is
+if $HaveSpecialTest; then
+    if [[ ${SpecialTestNum} == 1 ]]; then
+        Blurb="Allow 3rd stage FW to try to put the chip into standby"
+    elif [[ ${SpecialTestNum} == 2 ]]; then
+        Blurb="STANDBY_TEST plus 3rd stage FW waits for the server to put UniPro to hibern8 mode before suspend"
+    elif [[ ${SpecialTestNum} == 3 ]]; then
+        Blurb="Run the SpiRom at different gear speeds"
+    fi
+    echo "-spec ${SpecialTestNum}: ${Blurb}"
+fi
+
 
 # Make sure our target folder exists
 if [ ! -d $AssyDir ]
@@ -194,7 +206,7 @@ F4Args="$F4Args$NoDelay$DmeLogging$Subst342$Verbose"
 StdArgs="-$CONFIG_CHIP $NoCrypto$NoDelay$DebugMessages$DbgMode"
 StdArgs="$StdArgs$Production$DmeLogging$Subst342$Verbose"
 if $HaveSpecialTest; then
-    StdArgs="$StdArgs-spec $SpecialTestNum"
+    StdArgs="$StdArgs-spec $SpecialTestNum "
 else
     StdArgs="$StdArgs$Handshake"
 fi

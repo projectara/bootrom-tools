@@ -30,33 +30,28 @@
 # Make the GBFW server.
 #
 # Usage:
-#    make3 {-es2tsb | -es3tsb | -fpgatsb }
+#    make3 {-es2tsb | -es3tsb | -fpgatsb } {--spec=<num>} {-prod}
 #
 #    -es2tsb, -es3tsb, -fpgatsb
 #			Select the build target
+#    --spec=<num>	Compile special test number <num>.
+#    -prod		Enable _PRODUCTION mode for all 3 firmware levels
 #------------------------------------------------------------------------------
 BuildRoot=~/work/bootrom
 BuildDir=~/work/bootrom/build
-BinDir=~/work/bootrom/binary
-Ornamentation=$(bootsuffix $*)
-SpecialTest=false
 HaveSpecialTest=false
-SpecialTest=false
+SpecialTest=
 
 #-----
 # Process any args
 #-----
 Production=false
 for arg in "$@" ; do    # arg will be each positional parameter
-    if $SpecialTest; then
-        # The previous arg was "-spec", so pick up the special test no.
-        SpecialTestNum=${arg}
-        HaveSpecialTest=true
-        SpecialTest=false
-        Handshake=true  # (Special test implies -handshake)
-    elif [[ ${arg} == "-spec" ]]; then
+    if [[ ${arg} == --spec=* ]]; then
         # Take the next arg as a special test number
-        SpecialTest=true
+        HaveSpecialTest=true
+        SpecialTestNum="${arg#*=}"
+        Handshake=true  # (Special test implies -handshake)
     elif [[ ${arg} == "-es2tsb" ]]; then    # select target configuration
         CONFIG_CHIP="es2tsb"
     elif [[ ${arg} == "-es3tsb" ]]; then  # select target configuration
@@ -75,7 +70,6 @@ done
 $BuildRoot/configure ${CONFIG_CHIP}
 
 # Export the various settings so that makefile will see them
-export BUILD_FOR_GBBOOT_SERVER=1
 if $HaveSpecialTest; then
     export _SPECIAL_TEST=$SpecialTestNum
 fi

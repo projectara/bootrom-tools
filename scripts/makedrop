@@ -104,15 +104,15 @@ Spec_GBBootSrvStandbyTest=2	# STANDBY_TEST plus 3rd stage FW waits for the
 Spec_GearChangeTest=3		# Run the SpiRom at different gear speeds
 
 # Specially instrumented builds for fault induction on simulator only, and noisy besides (opt-nc-uart-spec-##)
-SpecNoisy_Standby="-es3tsb -nocrypto -debugmsg -spec $Spec_StandbyTest $Subst342 $Verbose $StdSim"
-SpecNoisy_GBBootSrvStandby="-es3tsb -nocrypto -debugmsg -spec $Spec_GBBootSrvStandbyTest $Subst342 $Verbose $StdSim"
-SpecNoisy_GearChange="-es3tsb -nocrypto -debugmsg -spec $Spec_GearChangeTest $Subst342 $Verbose $StdSim"
+SpecNoisy_Standby="-es3tsb -nocrypto -debugmsg --spec=$Spec_StandbyTest $Subst342 $Verbose $StdSim"
+SpecNoisy_GBBootSrvStandby="-es3tsb -nocrypto -debugmsg --spec=$Spec_GBBootSrvStandbyTest $Subst342 $Verbose $StdSim"
+SpecNoisy_GearChange="-es3tsb -nocrypto -debugmsg --spec=$Spec_GearChangeTest $Subst342 $Verbose $StdSim"
 
 
 # Specially instrumented builds for fault induction on simulator only, but quiet (opt-nc-quiet-spec-##)
-SpecQuiet_Standby="-es3tsb -nocrypto -spec $Spec_StandbyTest $Subst342 $Verbose $StdSim"
-SpecQuiet_GBBootSrvStandby="-es3tsb -nocrypto -spec $Spec_GBBootSrvStandbyTest $Subst342 $Verbose $StdSim"
-SpecQuiet_GearChange="-es3tsb -nocrypto -spec $Spec_GearChangeTest $Subst342 $Verbose $StdSim"
+SpecQuiet_Standby="-es3tsb -nocrypto --spec=$Spec_StandbyTest $Subst342 $Verbose $StdSim"
+SpecQuiet_GBBootSrvStandby="-es3tsb -nocrypto --spec=$Spec_GBBootSrvStandbyTest $Subst342 $Verbose $StdSim"
+SpecQuiet_GearChange="-es3tsb -nocrypto --spec=$Spec_GearChangeTest $Subst342 $Verbose $StdSim"
 
 #-----
 # Lists of build targets and names

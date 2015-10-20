@@ -32,7 +32,7 @@
 #
 # Usage:
 #    make3sim {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-v} {-prod} \
-#             {-spec <num>} {-dme} {-342} --rev=<revision>
+#             {--spec=<num>} {-dme} {-342} --rev=<revision>
 #
 #    -v        Verbose mode on TFTF creation
 #    -prod     Enable _PRODUCTION mode for all 3 firmware levels
@@ -41,27 +41,25 @@
 #              Select the build target
 #
 # TESTING parameters:
-#    -spec <num>	Compile special test number `<num>`.
+#    --spec=<num>	Compile special test number <num>.
 #    -dme               Enable DME-write logging
 #    -342		Substitute the L3FW for L2FW to speed simulation
-#    --rev=<revision>    The revision in git to build the boot ROM code
+#    --rev=<revision>	The revision in git to build the boot ROM code
 #------------------------------------------------------------------------------
 
 #-----
 # Process any args
 #-----
-SpecialTest=false
+SpecialTest=
 HaveSpecialTest=false
 REV=
 for arg in "$@" ; do    # arg will be each positional parameter
-    if $SpecialTest; then
-        # The previous arg was "-spec", so pick up the special test no.
-        SpecialTestNum=${arg}
+    if [[ ${arg} == --spec=* ]]; then
+        # --rev is not used for the FFFF, just quietly absorb it so that we
+        # don't squawk if passed in by a script passing $*
+        SpecialTest="${arg}"
         HaveSpecialTest=true
-        SpecialTest=false
-    elif [[ ${arg} == "-spec" ]]; then
-        # Take the next arg as a special test number
-        SpecialTest=true
+        Handshake=true  # (Special test implies -handshake)
     elif [[ ${arg} == "-sign" ]]; then    # Sign the 2nd & 3rd level Firmware?
         Sign=${arg}
     elif [[ ${arg} == "-dbg" ]]; then     # Build with debugging symbols
@@ -105,7 +103,7 @@ fi
 
 if $HaveSpecialTest; then
     make3 -$CONFIG_CHIP -nocrypto -nodelay -debugmsg -handshake \
-          $Sign $DbgMode $Production $DmeLogging $Verbose $Subst342 -spec $SpecialTestNum $REV
+          $Sign $DbgMode $Production $DmeLogging $Verbose $Subst342 $SpecialTest $REV
 else
     make3 -$CONFIG_CHIP -nocrypto -nodelay -debugmsg -handshake \
           $Sign $DbgMode $Production $DmeLogging $Verbose $Subst342 $REV

@@ -33,7 +33,7 @@
 # Usage:
 #    makeall {-es2tsb | -es3tsb | -fpgatsb } {-v} {-justboot} {-zip} \
 #          {-nocrypto} {-nodelay} {-debugmsg} {-handshake} \
-#          {-dme} {-342} --rev=<revision>
+#          {--spec=<num>} {-dme} {-342} --rev=<revision>
 #
 #    -es2tsb, -es3tsb, -fpgatsb
 #		Select the build target
@@ -55,7 +55,7 @@
 #			simulation
 #    -debugmsg		Allow debug serial output
 #    -handshake		GPIO handshake with simulation/test controller
-#    -spec <num>	Compile special test number `<num>`.
+#    --spec=<num>	Compile special test number <num>.
 #    -dme               Enable DME-write logging
 #    -342		Substitute the L3FW for L2FW to speed simulation
 #------------------------------------------------------------------------------
@@ -66,7 +66,6 @@ KeyDir=~/bin
 AssyDir=~/bootrom-tools/es3-test
 DropDir=~/es3-test
 Zip=false
-SpecialTest=false
 HaveSpecialTest=false
 JustBootrom=false
 CryptoSuffix="-crypto"
@@ -80,15 +79,12 @@ REV=
 # Process args
 #-----
 for arg in "$@" ; do    # arg will be each positional parameter
-    if $SpecialTest; then
-        # The previous arg was "-spec", so pick up the special test no.
-        SpecialTestNum="${arg}"
+    if [[ ${arg} == --spec=* ]]; then
+        # --rev is not used for the FFFF, just quietly absorb it so that we
+        # don't squawk if passed in by a script passing $*
+        SpecialTest="${arg}"
         HaveSpecialTest=true
-        SpecialTest=false
-        echo "have special test $SpecialTestNum"
-    elif [[ ${arg} == "-spec" ]]; then
-        # Take the next arg as a special test number
-        SpecialTest=true
+        Handshake=true  # (Special test implies -handshake)
     elif [[ ${arg} == "-justboot" ]]; then  # select target configuration
         JustBootrom=true
     elif [[ ${arg} == "-es2tsb" ]]; then  # select target configuration
@@ -206,9 +202,9 @@ F4Args="$F4Args$NoDelay$DmeLogging$Subst342$Verbose"
 StdArgs="-$CONFIG_CHIP $NoCrypto$NoDelay$DebugMessages$DbgMode"
 StdArgs="$StdArgs$Production$DmeLogging$Subst342$Verbose"
 if $HaveSpecialTest; then
-    StdArgs="$StdArgs-spec $SpecialTestNum "
+    StdArgs="$StdArgs $SpecialTest"
 else
-    StdArgs="$StdArgs$Handshake"
+    StdArgs="$StdArgs $Handshake"
 fi
 
 

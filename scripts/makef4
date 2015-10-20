@@ -32,7 +32,7 @@
 # Usage:
 #    makef4 {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-v} {-dbg} \
 #           {-nocrypto} {-nodelay} {-debugmsg} {-handshake} \
-#           {-spec <num>}{-dme} {-342}
+#           {--spec=<num>}{-dme} {-342}
 #
 #    -es2tsb, -es3tsb, -fpgatsb
 #              Select the build target
@@ -47,7 +47,7 @@
 #    -gearchange	Test for changing UniPro gear change
 #    -debugmsg		Allow debug serial output
 #    -handshake		GPIO handshake with simulation/test controller
-#    -spec <num>	Compile special test number `<num>`.
+#    --spec=<num>	Compile special test number <num>.
 #    -dme               Enable DME-write logging
 #    -342		Substitute the L3FW for L2FW to speed simulation
 #------------------------------------------------------------------------------
@@ -70,22 +70,18 @@ Handshake=false
 Subst342=false
 SpecialTest=false
 HaveSpecialTest=false
-SpecialTest=false
+
 CryptoSuffix="-crypto"
 DbgSuffix="-quiet"
 HandshakeSuffix=""
 DbgModeSuffix="opt"
 REV=
 for arg in "$@" ; do    # arg will be each positional parameter
-    if $SpecialTest; then
-        # The previous arg was "-spec", so pick up the special test no.
-        SpecialTestNum=${arg}
-        HaveSpecialTest=true
-        SpecialTest=false
-        Handshake=true  # (Special test implies -handshake)
-    elif [[ ${arg} == "-spec" ]]; then
+    if [[ ${arg} == --spec=* ]]; then
         # Take the next arg as a special test number
-        SpecialTest=true
+        HaveSpecialTest=true
+        SpecialTestNum="${arg#*=}"
+        Handshake=true  # (Special test implies -handshake)
     elif [[ ${arg} == "-sign" ]]; then    # Sign the 2nd & 3rd level Firmware?
         Sign=true
     elif [[ ${arg} == "-dbg" ]]; then     # Compile with debugging symbols
@@ -258,10 +254,10 @@ fi
 
 
 #-----
-# Bundle L2FW and L3FW into the FFFF file
+# Bundle S2FW and S3FW into the FFFF file
 #-----
 if $Subst342; then
-    echo "Make the FFFF (substitute L3FW for L2FW)..."
+    echo "Make the FFFF (substitute S3FW for S2FW)..."
     create-ffff \
       --s2f $BinDir/third.bin --egen 1 --eloc 0x2000 --name Firmware \
       --out $BinDir/$FfffName.bin --flash-capacity 0x40000 --erase-size 0x800 \

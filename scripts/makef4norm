@@ -31,17 +31,18 @@
 #
 # Usage:
 #    makef4norm {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-v} \
-#               {-handshake} {-spec <num>} {-342}
+#               {-handshake} {--spec=<num>} {-dme} {-342} --rev=<revision>
 #
 #    -es2tsb, -es3tsb, -fpgatsb
 #              Select the build target
 #    -sign     Sign both level 2 & 3 firmware
 #    -v        Verbose mode on TFTF creation
 #    -prod     Enable _PRODUCTION mode for all 3 firmware levels
+#    --rev=<revision>    The revision in git to build the boot ROM code
 #
 # TESTING parameters:
 #    -handshake		GPIO handshake with simulation/test controller
-#    -spec <num>	Compile special test number `<num>`.
+#    --spec=<num>	Compile special test number <num>.
 #    -dme               Enable DME-write logging
 #    -342		Substitute the L3FW for L2FW to speed simulation
 #------------------------------------------------------------------------------
@@ -59,7 +60,6 @@ Testing=false
 NoCrypto=false
 DebugMessages=false
 Handshake=false
-SpecialTest=false
 HaveSpecialTest=false
 SpecialTest=false
 CryptoSuffix="-crypto"
@@ -68,15 +68,12 @@ HandshakeSuffix=""
 SymbolSuffix="opt"
 REV=
 for arg in "$@" ; do    # arg will be each positional parameter
-    if $SpecialTest; then
-        # The previous arg was "-spec", so pick up the special test no.
-        SpecialTestNum=${arg}
+    if [[ ${arg} == --spec=* ]]; then
+        # --rev is not used for the FFFF, just quietly absorb it so that we
+        # don't squawk if passed in by a script passing $*
+        SpecialTest="${arg}"
         HaveSpecialTest=true
-        SpecialTest=false
         Handshake=true  # (Special test implies -handshake)
-    elif [[ ${arg} == "-spec" ]]; then
-        # Take the next arg as a special test number
-        SpecialTest=true
     elif [[ ${arg} == "-sign" ]]; then    # Sign the 2nd & 3rd level Firmware?
         Sign=${arg}
     elif [[ ${arg} == "-dbg" ]]; then     # Compile with debugging symbols
@@ -106,6 +103,9 @@ for arg in "$@" ; do    # arg will be each positional parameter
     elif [[ ${arg} == "-handshake" ]]; then
         # GPIO handshake with simulation/test controller
         Handshake=true
+    elif [[ ${arg} == "-dme" ]]; then
+        # Substitute the L3FW for L2FW to speed simulation
+        DmeLogging=${arg}
     elif [[ ${arg} == "-342" ]]; then
         # Substitute the L3FW for L2FW to speed simulation
         Subst342=${arg}
@@ -133,10 +133,10 @@ fi
 
 
 if [ $HaveSpecialTest ]; then
-    makef4 -$CONFIG_CHIP -dbg -nocryptot -nodelay -debugmsg -spec $SpecialTestNum $Verbose \
-            $Sign $Subst342
+    makef4 -$CONFIG_CHIP -dbg -nocryptot -nodelay -debugmsg $SpecialTest $Verbose \
+            $Sign $DmeLogging $Subst342
 else
     makef4 -$CONFIG_CHIP -dbg -nocrypto -nodelay -debugmsg -handshake $Verbose \
-            $Sign $Subst342
+            $Sign $DmeLogging $Subst342
 fi
 

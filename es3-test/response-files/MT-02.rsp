@@ -7,8 +7,8 @@ efuse OK
 Boot over UniPro (06000000)
 Module ready advertised.
 Ready-poked; download-ready
-Beginning Greybus FW download.
-Finished Greybus FW download.
+Beginning Greybus FW download
+Finished Greybus FW download
 UP Untrusted: (08000000)
 Reset all cports.
 Hello world from s3fw

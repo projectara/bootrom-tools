@@ -9,8 +9,8 @@ L1 FFFF err: 00000041
 Spi boot failed (09000041), Boot over UniPro (09000041)
 Module ready advertised.
 Ready-poked; download-ready
-Beginning Greybus FW download.
+Beginning Greybus FW download
 fw_cport_handler: Greybus response, status 0x000000fe
 Rx handler err
-Finished Greybus FW download.
+Finished Greybus FW download
 Boot failed (89000041) halt

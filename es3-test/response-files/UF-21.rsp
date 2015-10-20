@@ -9,8 +9,8 @@ L1 TFTF err: 00000023
 Spi boot failed (09000023), Boot over UniPro (09000023)
 Module ready advertised.
 Ready-poked; download-ready
-Beginning Greybus FW download.
-Finished Greybus FW download.
+Beginning Greybus FW download
+Finished Greybus FW download
 UP Untrusted: (0b000023)
 Reset all cports.
 Hello world from s3fw

@@ -33,6 +33,7 @@ import os
 import sys
 import argparse
 import shlex
+import shutil
 from util import error, print_to_error
 import subprocess
 
@@ -87,8 +88,8 @@ def have_patching_args(test_args):
     """
     # Normally we will be patching the Flash image. However, some tests,
     # like the e-Fuse test set use stock images with different e-Fuse
-    #preloads.
-    if test_args.patch:
+    # preloads.
+    if test_args.patch_base and test_args.patch:
         return True
     else:
         return False
@@ -99,14 +100,10 @@ def validate_test_args(test_args, patch_file):
 
     Returns None if the args are valid, or a string if invalid.
     """
-    # Check that they have specified test pass/fail criteria
-    if not test_args.pass_str and not test_args.fail_str:
-        return "you must have a pass or a fail string"
-
-    # Check that they haven't specified both pass and fail strings
-    if test_args.pass_str and test_args.fail_str:
-        return "you can't mix pass and fail strings"
-
+    if test_args.patch and not test_args.patch_base:
+        return "You must specify a --patch_base if you use --patch"
+    elif test_args.patch_base and not test_args.patch:
+        return "You specified --patch_base with no --patch"
     # The line is valid
     return None
 
@@ -119,8 +116,8 @@ def write_test_term(f_test, tag, value):
         f_test.write("{0:s} {1:s} ".format(tag, value))
 
 
-def process_1_desc(test_args, patch_file, f_test, test_path, bin_pathname,
-                   flash_pathname, map_pathname):
+def process_1_desc(test_args, tss_folder, patch_file, f_test, test_folder,
+                   bin_pathname, flash_pathname, map_pathname):
     """Process a single test descriptor
 
     From the parsed test_args, it will generate a 1-line entry in the test
@@ -136,7 +133,7 @@ def process_1_desc(test_args, patch_file, f_test, test_path, bin_pathname,
         Indicates if the flash file is copied or copied and modified
     f_test
         The file descriptor of the test suite file.
-    test_path
+    test_folder
         The path to the test folder to generate and populate with the test
         suite
     bin_pathanme
@@ -147,62 +144,67 @@ def process_1_desc(test_args, patch_file, f_test, test_path, bin_pathname,
         The pathname of the .map file (used to patch the flash image).
         (This may be None if no patches are applied)
     """
-    # Create a test-specific version of the bootrom .bin file
-    tail = os.path.basename(bin_pathname)
-    test_bin_pathname = os.path.join(test_path, tail)
+    # Skip any tests we're told to skip
+    if test_args.skip_haps:
+        return
 
-    # Create a test-specific version of the flash image file
-    (head, tail) = os.path.split(flash_pathname)
-    (root, ext) = os.path.splitext(tail)
-    if patch_file:
-        testname = root + "-" + test_args.testname + ext
-        test_flash_pathname = os.path.join(test_path, testname)
-    else:
-        test_flash_pathname = os.path.join(test_path, tail)
+    # Generate the paths to the canonical subfolders
+    src_ffff_path = os.path.join(tss_folder, "ffff")
 
-    # Copy the test bin file
-    subprocess.check_call(["cp", bin_pathname, test_bin_pathname])
+    # Generate the paths to the canonical subfolders
+    dst_ffff_path = os.path.join(test_folder, "ffff")
 
-    # Copy and optionally patch the test flash file
-    subprocess.check_call(["cp", flash_pathname, test_flash_pathname])
-    if patch_file:
-        cmdline = ["hexpatch", "--file", flash_pathname,
-                   "--out", test_flash_pathname]
+    # Validate the paths
+    if not os.path.isdir(test_folder):
+        raise ValueError("Missing test folder: {0:s}".format(test_folder))
+    if not os.path.isdir(dst_ffff_path):
+        raise ValueError("Missing ffff folder: {0:s}".format(dst_ffff_path))
+
+    # Optionally patch the test flash file
+    if test_args.patch_base:
+        # Create a test-specific version of the flash image file
+        base_ffff = os.path.join(src_ffff_path, test_args.patch_base)
+        root, ext = os.path.splitext(test_args.patch_base)
+        base_map = os.path.join(src_ffff_path, root + ".map")
+        patched_ffff = os.path.join(dst_ffff_path,
+                                    root + "-" + test_args.testname + ext)
+
+        cmdline = ["hexpatch", "--file", base_ffff,
+                   "--out", patched_ffff]
+        if os.path.isfile(base_map):
+            cmdline += ["--map",  base_map]
         for patch in test_args.patch:
             cmdline.append("--patch")
             for field in patch:
                 cmdline.append(field)
-        if map_pathname:
-            cmdline += ["--map",  map_pathname]
         subprocess.check_call(cmdline)
 
     # Generate the test file entry
     write_test_term(f_test, "-t", test_args.testname)
-    if test_args.description:
-        write_test_term(f_test, "-d", test_args.description)
-    write_test_term(f_test, "-b", test_bin_pathname)
+    write_test_term(f_test, "-b", test_args.bin)
     if test_args.efuse:
         write_test_term(f_test, "-e", test_args.efuse)
+    if test_args.ffff:
+        write_test_term(f_test, "-f", test_args.ffff)
     if test_args.response:
         write_test_term(f_test, "-r", test_args.response)
-    if test_args.pass_str:
-        for str in test_args.pass_str:
-            write_test_term(f_test, "-p", str)
-    else:
-        for str in test_args.fail_str:
-            write_test_term(f_test, "-f", str)
+    if test_args.srvr_bin:
+        write_test_term(f_test, "-B", test_args.srvr_bin)
+    if test_args.srvr_ffff:
+        write_test_term(f_test, "-F", test_args.srvr_ffff)
+
     f_test.write("\n")
 
 
-def process_desc_file(desc_pathname, flash_pathname, map_pathname,
-                      bin_pathname, test_path, test_file):
+def process_desc_file(tss_pathname, flash_pathname, map_pathname,
+                      bin_pathname, test_folder, test_file):
     """Process the test descriptor file
 
     Processes the test descriptor file, generating an output .test file
-    in the folder referenced by test_path, and a set of modified
+    in the folder referenced by test_folder, and a set of modified
     BootRom.bin files.
 
-    desc_pathname
+    tss_pathname
         The pathname to the test suite descriptor file to parse
     flash_pathname
         The pathname of the default flash image file
@@ -211,7 +213,7 @@ def process_desc_file(desc_pathname, flash_pathname, map_pathname,
         (This may be None if no patches are applied by any of the tests)
     bin_pathanme
         The pathname of the bootrom image
-    test_path
+    test_folder
         The path to the test folder to generate and populate with the test
         suite
     test_file
@@ -223,45 +225,59 @@ def process_desc_file(desc_pathname, flash_pathname, map_pathname,
                         required=True,
                         help="The test name")
 
-    parser.add_argument("--description", "-d",
-                        help="The test description")
+    parser.add_argument("--skip_haps",
+                        action='store_true',
+                        help="Skip this test on HAPS (simulation-only)")
 
     parser.add_argument("--response", "-r",
                         help="Test response file")
+
+    parser.add_argument("--patch_base",
+                        help="The FFFF file to be patched")
 
     parser.add_argument("--patch",
                         action="append",
                         nargs='*',
                         help=PATCH_HELP)
 
-    parser.add_argument("--pass_str", "-p",
-                        action="append",
-                        help="passing string")
+    parser.add_argument("--bin", "-b",
+                        help="bridge bootrom binary")
 
-    parser.add_argument("--fail_str", "-f",
-                        action="append",
-                        help="failing string")
+    parser.add_argument("--ffff", "-f",
+                        help="bridge FFFF file")
 
     parser.add_argument("--efuse", "-e",
                         help="The pathname of the e-Fuse file"
                         "(overrides default e-Fuse file)")
 
-    # Create the test folder if needed
-    if not os.path.isdir(test_path):
-        os.makedirs(test_path)
-    test_pathname = os.path.join(test_path, test_file)
+    parser.add_argument("--srvr_bin", "-B",
+                        help="bridge bootrom binary")
 
-    # Extract the name of the test descriptor file
-    script = os.path.basename(desc_pathname)
+    parser.add_argument("--srvr_ffff", "-F",
+                        help="bridge FFFF file")
+
+    tss_folder, tss_file = os.path.split(tss_pathname)
+    test_pathname = os.path.join(test_folder, test_file)
+
+    # Make sure we're not trying to generate over top of the master
+    if os.path.samefile(tss_folder, test_folder):
+        error("--tss must differ from -out_folder")
+        sys.exit(PROGRAM_ERRORS)
+
+    # (Re)create the test folder
+    if os.path.isdir(test_folder):
+        shutil.rmtree(test_folder)
+    if not os.path.isdir(test_folder):
+        shutil.copytree(tss_folder, test_folder)
 
     # Now parse and process each line in the test suite descriptor file
-    with open_rw_file_pair(desc_pathname, test_pathname) as (f_desc, f_test):
+    with open_rw_file_pair(tss_pathname, test_pathname) as (f_desc, f_test):
         line_num = 1
         parse_line = ""
         for line in f_desc:
             # Handle continuation lines
             line = line.rstrip()
-            if (len(line) >=1) and (line[-1] == "\\"):
+            if (len(line) >= 1) and (line[-1] == "\\"):
                 parse_line += line[0:-1]
                 # Note that, while we keep the line number correct, parsing
                 # errors will be displaced to the last line number of a
@@ -275,21 +291,23 @@ def process_desc_file(desc_pathname, flash_pathname, map_pathname,
             # preserving quoted strings
             test_descriptor = shlex.split(parse_line, True)
             if test_descriptor:
-                parser.prog = "{0:s} (line {1:d})".format(script, line_num)
+                parser.prog = "{0:s} (line {1:d})".format(tss_file, line_num)
                 test_args = parser.parse_args(test_descriptor)
-                patch_file = have_patching_args(test_args) and map_pathname
+                patch_file = have_patching_args(test_args)
                 error_string = validate_test_args(test_args, patch_file)
                 if error_string:
-                    error("(line {0:d}) {1:s}:".format(line_num, error_string))
-                    print_to_error(parse_line)
+                    raise ValueError("(line {0:d}) {1:s}:".
+                                     format(line_num, error_string))
                 else:
                     try:
-                        process_1_desc(test_args, patch_file, f_test,
-                                       test_path, bin_pathname,
+                        process_1_desc(test_args, tss_folder, patch_file,
+                                       f_test, test_folder, bin_pathname,
                                        flash_pathname, map_pathname)
-                    except:
-                        print_to_error("Error on line", line_num, "of",
-                                       os.path.basename(desc_pathname))
+                    except ValueError as e:
+                        print_to_error("Error on line {0:d} of {1:s}: {2:s}".
+                                       format(line_num,
+                                              os.path.basename(tss_pathname),
+                                              e))
             line_num += 1
             parse_line = ""
 
@@ -298,13 +316,13 @@ def main():
     """Generate a test file and set of altered BootRom.bin files"""
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--desc", "-d",
+    parser.add_argument("--tss", "-i",
                         required=True,
-                        help="The file containing the test descriptors")
+                        help="The input test script script (.tss) file")
 
     parser.add_argument("--test", "-t",
                         required=True,
-                        help="The output .test file")
+                        help="The output test script (.ts) file")
 
     parser.add_argument("--out_folder", "-o",
                         default="./",
@@ -313,12 +331,12 @@ def main():
 
     parser.add_argument("--bin", "-b",
                         required=True,
-                        help="The BootRom.bin pathname from which "
-                             "altered copies are made")
+                        help="The BootRom.bin pathname")
 
     parser.add_argument("--flash", "-f",
                         required=True,
-                        help="The flash image to (modify and) load")
+                        help="The flash image  from which "
+                             "altered copies are made")
 
     args = parser.parse_args()
 
@@ -333,7 +351,7 @@ def main():
         sys.exit(PROGRAM_ERRORS)
 
     try:
-        process_desc_file(args.desc, args.flash, map_pathname, args.bin,
+        process_desc_file(args.tss, args.flash, map_pathname, args.bin,
                           args.out_folder, args.test)
     except:
         error("Unable to generate test file suite")

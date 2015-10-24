@@ -25,98 +25,166 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #------------------------------------------------------------------------------
-# -t TestName	(Scrozzled Flash file will be flashfile-TestName.bin)
-# -d string	(optional) Test description string
-# -e pathname	(optional) Override e-Fuse file
-# --patch Offset	See: "hexpatch"
-# -p string | -f string
-#		The string to find for a pass (-p) or fail (-f).
-#		A line can have only -p or -f, but can have multiple occurrances of them
-# rep|or|xor|-a	Action (Replace, Or, Xor, And)
-# Bytes...	The replacement bytes to which "Action" applies
+# -t TestName	Name of the test
+#		Notes:
+#		  1. Patched FFFF file will be flashfile-<TestName>.bin
+#		  2. Response file will be <TestName>.rsp
+# --skip_haps	(optional) Skip this test on HAPS
+# -b <file>	Bridge binary image file
+# -f <file>	Bridge FFFF file
+# -B <file>	Server binary image file
+# -F <file>	Server FFFF file
+# -e filename	(optional) Override e-Fuse file
+# --patch <params>	(optional) See: "hexpatch"
 
-# EFUSE error group:
--t PB-00 -e ~/jgdb/zero.efz -p "Hello world from 2nd stage FW"
--t PB-01 -e ~/jgdb/bad-ims.efz -p "Boot failed (status 81000014"
--t PB-02 -e ~/jgdb/bad-pid.efz -p "Boot failed (status 81000012"
--t PB-03 -e ~/jgdb/bad-sn.efz  -p "Boot failed (status 81000013"
--t PB-04 -e ~/jgdb/bad-vid.efz -p "Boot failed (status 81000011"
--t PB-05 -e ~/jgdb/ok.efz -p "Boot failed (status 81000011"
--t PB-06 -e ~/jgdb/toshiba.efz -p "Boot failed (status 81000011"
--t PB-07 -e ~/jgdb/eccerror.efz -p "Boot failed (status 81000010"
+# Pre-Boot Tests (PB-##):
+-t PB-00 -b bootrom-opt-nc-uart-hs.bin -e zero.efz -f ffff.bin -r PB-00.rsp
+-t PB-01 -b bootrom-opt-nc-uart-hs.bin -e bad-ims.efz -f ffff.bin -r PB-01.rsp
+-t PB-02 -b bootrom-opt-nc-uart-hs.bin -e bad-pid.efz -f ffff.bin -r PB-02.rsp
+-t PB-03 -b bootrom-opt-nc-uart-hs.bin -e bad-sn.efz -f ffff.bin -r PB-03.rsp
+-t PB-04 -b bootrom-opt-nc-uart-hs.bin -e bad-vid.efz -f ffff.bin -r PB-04.rsp
+-t PB-05 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin -r PB-05.rsp
+-t PB-07A -b bootrom-opt-nc-uart-hs.bin -e eccerror.efz -f ffff.bin -r PB-07.rsp
+-t PB-07B --skip_haps -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin -r PB-07.rsp
+-t PB-08 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-sign.bin -r PB-08.rsp
 
-# FFFF error group:
-#-t FB-00 "status 82000040" requires SPI failure
--t FB-01 -p "Boot failed (status 82000041" --patch rep ffff[0].header_size ef be ad de \
+# Flash-Boot Tests (FB-##):
+# FB-00 "status 82000040" requires SPI failure
+-t FB-00 --skip_haps -b bootrom-opt-nc-uart-hs.bin -e ok.efz 
+-t FB-01 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-01.bin -r FB-01.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff[0].header_size ef be ad de \
     --patch copy ffff[1] ffff[0] 4096
--t FB-02 -p "Boot failed (status 82000043" --patch rep ffff[0].sentinel ef be ad de \
+-t FB-02 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-02.bin -r FB-02.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff[0].sentinel ef be ad de \
     --patch copy ffff[1] ffff[0] 4096
--t FB-03 -p "Boot failed (status 82000043" --patch rep ffff[0].tail_sentinel ef be ad de \
+-t FB-03 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-03.bin -r FB-03.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff[0].tail_sentinel ef be ad de \
     --patch copy ffff[1] ffff[0] 4096
-#-t FB-04 -p "Boot failed (status 82000044" \
-#    --patch copy ffff[0].element[2].type ffff[0].element[0].type 20 \
-#    --patch copy ffff[0].element[3].type ffff[0].element[0].type 60 \
-#    --patch copy ffff[0].element[6].type ffff[0].element[0].type 120 \
-#    --patch copy ffff[0].element[12].type ffff[0].element[0].type 140 \
-#    --patch copy ffff[1] ffff[0] 4096
--t FB-04 -p "Boot failed (status 82000044" \
+-t FB-04 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-04.bin -r FB-04.rsp \
+    --patch_base ffff.bin \
     --patch rep ffff[0].element[1].type 02 \
     --patch rep ffff[0].element[1].length 00 01 \
     --patch rep ffff[0].element[1].location 00 70 \
     --patch rep ffff[0].element[1].generation 01 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-05 -p "Boot failed (status 82000045" \
+-t FB-05 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-05.bin -r FB-05.rsp \
+    --patch_base ffff.bin \
     --patch rep ffff[0].element[197].generation+5 01 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-06 -p "Boot failed (status 82000046" --patch rep ffff[0].erase_block_size ff ff 8f 00 \
+-t FB-06 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-06.bin -r FB-06.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff[0].erase_block_size ff ff 8f 00 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-07 -p "Boot failed (status 82000047" --patch rep ffff[0].flash_capacity 80 02 00 00 \
+-t FB-07 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-07.bin -r FB-07.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff[0].flash_capacity 80 02 00 00 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-08 -p "Boot failed (status 82000048" --patch rep ffff[0].image_length ff ff ff 80 \
+-t FB-08 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-08.bin -r FB-08.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff[0].image_length ff ff ff 80 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-09 -p "Boot failed (status 8200004A" \
+-t FB-09 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-09.bin -r FB-09.rsp \
+    --patch_base ffff.bin \
     --patch rep ffff[0].element[0].type 02 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-10 -p "Boot failed (status 8200004a" \
+-t FB-10 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-10.bin -r FB-10.rsp \
+    --patch_base ffff.bin \
     --patch rep ffff.element[0].2fw.section[0].type 02 \
     --patch copy ffff[1] ffff[0] 4096
-
-# TFTF error group:
-#-t FB-11 "status 82000020" requires SPI failure
-#-t FB-12 "status 82000021" requires SPI failure
--t FB-13 -p "Boot failed (status 82000022" --patch or ffff.element[0].2fw.start_location ff ff ff 80 \
+# FB-11 "status 82000020" requires SPI failure
+-t FB-11 --skip_haps -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin
+## FB-12 "status 82000021" requires SPI failure
+#-t FB-12 --skip_haps -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin
+-t FB-13 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-13.bin -r FB-13.rsp \
+    --patch_base ffff.bin \
+    --patch or ffff.element[0].2fw.start_location ff ff ff 80 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-14 -p "Boot failed (status 82000023" --patch rep ffff.element[0].2fw.sentinel ef be ad de \
+-t FB-14 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-14.bin -r FB-14.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff.element[0].2fw.sentinel ef be ad de \
     --patch copy ffff[1] ffff[0] 4096
--t FB-15 -p "Boot failed (status 82000024" --patch rep ffff.element[0].2fw.section[2].type 00 \
+-t FB-15 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-15.bin -r FB-15.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff.element[0].2fw.section[2].type 00 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-16 -p "Boot failed (status 82000025" --patch rep ffff.element[0].2fw.section[3].type 57 \
+-t FB-16 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-16.bin -r FB-16.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff.element[0].2fw.section[3].type 57 \
     --patch copy ffff[1] ffff[0] 4096
-#-t FB-17 "status 82000026" requires SPI failure
--t FB-18 -p "Boot failed (status 82000027" --patch rep ffff.element[0].2fw.unipro_mfgr_id a6 a6 a6 a6 \
+# FB-17 "status 82000026" requires SPI failure
+-t FB-17 --skip_haps -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin
+-t FB-18 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-18.bin -r FB-18.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff.element[0].2fw.unipro_mfgr_id a6 a6 a6 a6 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-19 -p "Boot failed (status 82000027" --patch rep ffff.element[0].2fw.unipro_product_id a6 a6 a6 a6 \
+-t FB-19 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-19.bin -r FB-19.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff.element[0].2fw.unipro_product_id a6 a6 a6 a6 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-20 -p "Boot failed (status 82000028" --patch rep ffff.element[0].2fw.section[1].type 03 \
+-t FB-20 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-20.bin -r FB-20.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff.element[0].2fw.section[1].type 03 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-21 -p "Boot failed (status 8200002a" \
+-t FB-21 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-21.bin -r FB-21.rsp \
+    --patch_base ffff.bin \
     --patch rep ffff.element[0].2fw.section[2].type 80 \
     --patch rep ffff.element[0].2fw.section[2].load_address ff ff ff ff \
     --patch rep ffff.element[0].2fw.section[3].type 05 \
     --patch rep ffff.element[0].2fw.section[3].load_address ff ff ff ff \
     --patch rep ffff.element[0].2fw.section[4].type fe \
     --patch copy ffff[1] ffff[0] 4096
--t FB-22 -p "Boot failed (status 8200002b" \
+-t FB-22 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-22.bin -r FB-22.rsp \
+    --patch_base ffff.bin \
     --patch rep ffff.element[0].2fw.section[1].type 10 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-23 -p "Boot failed (status 8200002b" --patch rep ffff.element[0].2fw.section[1].load_address 20 00 00 10 \
+-t FB-23 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-23.bin -r FB-23.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff.element[0].2fw.section[1].load_address 20 00 00 10 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-24 -p "Boot failed (status 82000027" --patch rep ffff.element[0].2fw.ara_vendor_id a6 a6 a6 a6 \
+-t FB-24 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-24.bin -r FB-24.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff.element[0].2fw.ara_vendor_id a6 a6 a6 a6 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-25 -p "Boot failed (status 82000027" --patch rep ffff.element[0].2fw.ara_product_id a6 a6 a6 a6 \
+-t FB-25 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-25.bin -r FB-25.rsp \
+    --patch_base ffff.bin \
+    --patch rep ffff.element[0].2fw.ara_product_id a6 a6 a6 a6 \
     --patch copy ffff[1] ffff[0] 4096
--t FB-26 -p "Boot failed (status 8200002b" \
+-t FB-26 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-26.bin -r FB-26.rsp \
+    --patch_base ffff.bin \
     --patch rep ffff.element[0].2fw.section[0].type 10 \
     --patch rep ffff.element[0].2fw.section[1].type 10 \
     --patch copy ffff[1] ffff[0] 4096
+-t FB-27 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin -r FB-26.rsp
+-t FB-28 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin -r FB-26.rsp
+-t FB-29 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-sign.bin -r FB-26.rsp
+-t FB-30 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-sign.bin -r FB-26.rsp
+
+# Unipro-Boot Tests (UB-##):
+-t UB-00 -b bootrom-opt-nc-uart-hs.bin -e zero.efz -f ffff.bin -r UB-00.rsp \
+    -B gboot_server.bin -F ffff.bin
+-t UB-05 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin -r UB-05.rsp \
+    -B gboot_server.bin -F ffff.bin
+-t UB-08 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-sign.bin -r UB-08.rsp \
+    -B gboot_server.bin -F ffff-sign.bin
+
+# Unipro-Fallback Tests (UF-##):
+-t UF-09 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-01.bin -r UF-09.rsp \
+    -B gboot_server.bin -F ffff.bin
+-t UF-21 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-14.bin -r UF-21.rsp \
+    -B gboot_server.bin -F ffff.bin
+-t UF-21A -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-FB-01.bin -r UF-21A.rsp \
+    -B gboot_server.bin -F ffff-FB-14.bin
+
+# Miscellaneous Tests (MT-##):
+-t MT-01 --skip_haps -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin -r MT-01.rsp \
+    -B gboot_server.bin -F ffff.standby.bin
+-t MT-02 --skip_haps -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin -r MT-02.rsp \
+    -B gboot_server.bin -F ffff.standby.bin
+-t MT-03 --skip_haps -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-sign.bin -r MT-03.rsp \
+    -B gboot_server.bin -F ffff-sign.standby.bin
+
+
 

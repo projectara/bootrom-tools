@@ -32,7 +32,7 @@
 #include<string.h>
 
 /* Include D2XX header*/
-#include "ftd2xx.h"
+#include <ftd2xx.h>
 #ifndef _COMMON_CODE
 #define _COMMON_CODE
 

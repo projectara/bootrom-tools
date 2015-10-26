@@ -29,7 +29,7 @@
 #include "settings.h"
 #include "gpio.h"
 #include "uart.h"
-#include "ftd2xx.h"
+#include <ftd2xx.h>
 #include "reset.h"
 
 

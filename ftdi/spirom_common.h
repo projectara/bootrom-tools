@@ -34,14 +34,15 @@
 #include<string.h>
 /* OS specific libraries */
 #ifdef _WIN32
-#include<windows.h>
+#include <windows.h>
 #endif
 
 /* Include D2XX header*/
-#include "ftd2xx.h"
+#include <ftd2xx.h>
 
 /* Include libMPSSE header */
-#include "spirom_libMPSSE_spi.h"
+//#include "spirom_libMPSSE_spi.h"
+#include "libMPSSE_spi.h"
 /******************************************************************************/
 /*                           Macro and type defines                           */
 /******************************************************************************/

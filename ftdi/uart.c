@@ -124,7 +124,6 @@ FT_STATUS uart_dump(FT_HANDLE ftHandle, FILE *fp, long timeout) {
         ftStatus = FT_GetQueueStatus(ftHandle, &dwNumBytesToRead);
         if (ftStatus != FT_OK || dwNumBytesToRead == 0) continue;
         FT_Read(ftHandle, &byInputBuffer, dwNumBytesToRead, &dwNumBytesRead);
-        printf("Logged %d byte(s)\n", dwNumBytesRead); /*****/
        
 
         int i;

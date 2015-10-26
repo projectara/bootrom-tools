@@ -32,6 +32,8 @@ create-tftf
 create-ffff
 display-ffff
 sign-ffff
+ftdi/haps_test
+ftdi/spirom_write
 
 # Output files
 *.bin

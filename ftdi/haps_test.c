@@ -168,15 +168,6 @@ int main(int argc, char * argv[]) {
         printf("Missing required parameters\n");
         return -1;
     }
-    printf("Proccessed args:\n"); /*****/
-    printf("  test_folder  '%s'\n", test_folder); /*****/
-    printf("  bridge_bin   '%s'\n", bridge_bin); /*****/
-    printf("  bridge_ffff  '%s'\n", bridge_ffff); /*****/
-    printf("  bridge_efuse '%s'\n", bridge_efuse); /*****/
-    printf("  server_bin   '%s'\n", bridge_bin); /*****/
-    printf("  server_ffff  '%s'\n", bridge_ffff); /*****/
-    printf("  log_file     '%s'\n", log_file); /*****/
-    printf("  timeout       %u sec.\n", timeout); /*****/
 
     /* (See: jlink_script.c) */
     if (jlink_prepare_test(test_folder, bridge_efuse, bridge_bin,
@@ -190,7 +181,6 @@ int main(int argc, char * argv[]) {
         return -1;
     }
    
-    printf("haps_semi: open bridge dbgser\n"); /*****/
     ftStatus = mpsse_init(BRIDGE_DBGSER_ID, &ftHandleUartBridge);
     if (ftStatus != FT_OK) {
         fprintf(stderr, "Can't open bridge debug serial (ftStatus %d)\n",
@@ -202,9 +192,7 @@ int main(int argc, char * argv[]) {
     FT_SetDataCharacteristics(ftHandleUartBridge, FT_BITS_8, FT_STOP_BITS_1, FT_PARITY_NONE);
     FT_SetBaudRate(ftHandleUartBridge, FT_BAUD_115200);
 
-    printf("haps_semi: open server gpio\n"); /*****/
     ftStatus = mpsse_init(SERVER_GPIO_ID, &ftHandleGpioServer);
-    printf("haps_semi: open bridge gpio\n"); /*****/
     ftStatus |= mpsse_init(BRIDGE_GPIO_ID, &ftHandleGpioBridge);
     if (ftStatus != FT_OK) {
         fprintf(stderr, "Can't open GPIO devices (ftStatus %d)\n", ftStatus);
@@ -235,20 +223,15 @@ int main(int argc, char * argv[]) {
 
 
     /* Shell out to run the in-reset J-link script */
-    printf("Reset-phase J-link scripts (bridge, server)\n"); /*****/
     sprintf(cmd,
             "JLinkExe -SelectEmuBySN %s -CommanderScript %s",
             BRIDGE_JLINK_SN, jlink_start_script);
-    printf ("system(%s)...\n", cmd); /*****/
     status = system(cmd);
-    printf ("system returned %d\n", status); /*****/
     if (run_server) {
         sprintf(cmd,
                 "JLinkExe -SelectEmuBySN %s -CommanderScript %s",
                 SERVER_JLINK_SN, jlink_start_script);
-        printf ("system(%s)...\n", cmd); /*****/
         status = system(cmd);
-        printf ("system returned %d\n", status); /*****/
     }
 
     /*
@@ -259,16 +242,12 @@ int main(int argc, char * argv[]) {
         reset_gpio_deassert(ftHandleGpioServer);
         sprintf(cmd, "JLinkExe -SelectEmuBySN %s -CommanderScript %s",
                 SERVER_JLINK_SN, server_jlink_script);
-        printf ("system(%s)...\n", cmd); /*****/
         status = system(cmd);
-        printf ("system returned %d\n", status); /*****/
     }
     reset_gpio_deassert(ftHandleGpioBridge);
     sprintf(cmd, "JLinkExe -SelectEmuBySN %s -CommanderScript %s",
             BRIDGE_JLINK_SN, bridge_jlink_script);
-    printf ("system(%s)...\n", cmd); /*****/
     status = system(cmd);
-    printf ("system returned %d\n", status); /*****/
 
     /* Dump the captured debug output, to <log_file> */
     /* (See: uart.c) */
@@ -289,7 +268,6 @@ ErrorReturn:
         FT_Close(ftHandleGpioBridge);
     }
 
-    printf("\n%s returns status %d\n", argv[0], status); /*****/
     return status;
 }
     

@@ -25,31 +25,30 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #------------------------------------------------------------------------------
 
-#binaries=haps_test spirom_write spirom_read haps_autoboot haps_uart haps_reset haps_rom
+# Regarding libMPSSE:
+# Download the source from the FTDI site
+# (http://www.ftdichip.com/Support/SoftwareExamples/MPSSE/LibMPSSE-SPI.htm) -
+# follow the link at the bottom of the text "The source code for the
+# LibMPSSE-SPI library is available for download here", and and unzip the
+# dowloaded file to your home directory. Once unzipped,
+# cd ~/LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux and type "make"
+
 binaries=haps_test spirom_write
+INC_FTD2XX=$(HOME)/LibMPSSE-SPI_source/LibMPSSE-SPI/Release/include/linux
+INC_MPSSE=$(HOME)/LibMPSSE-SPI_source/LibMPSSE-SPI/Release/include
+LIBMPSSE=~/LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux/libMPSSE.a
+CFLAGS=-g -I. -I$(INC_MPSSE) -I$(INC_FTD2XX)
 
 all: $(binaries)
 
-#spirom_read: spirom_read.o spirom_common.o LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux/libMPSSE.a
+#spirom_write: spirom_write.o spirom_common.o LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux/libMPSSE.a
 #	gcc -g -I. $^ LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux/libMPSSE.a -o $@  -ldl
 
-spirom_write: spirom_write.o spirom_common.o LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux/libMPSSE.a
-	gcc -g -I. $^ LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux/libMPSSE.a -o $@  -ldl
-
-#haps_autoboot: haps_autoboot.o gpio.o common.o settings.h
-#	gcc -g -I. $^ -o $@ -ldl -lftd2xx
-
-#haps_uart: haps_uart.o uart.o common.o settings.h
-#	gcc -g -I. $^ -o $@ -ldl -lftd2xx
-
-#haps_reset: haps_reset.o gpio.o uart.o common.o settings.h
-#	gcc -g -I. $^ -o $@ -ldl -lftd2xx
-
-#haps_rom: haps_rom.o gpio.o common.o settings.h
-#	gcc -g -I. $^ -o $@ -ldl -lftd2xx
+spirom_write: spirom_write.o spirom_common.o
+	gcc $(CFLAGS) $^ $(LIBMPSSE) -o $@ -ldl 
 
 haps_test: haps_test.o gpio.o common.o jlink_script.o uart.o reset.o settings.h
-	gcc -g -I. $^ -o $@ -ldl -lftd2xx
+	gcc $(CFLAGS) $^ -o $@ -ldl -lftd2xx
 
 
 .PHONY: all clean

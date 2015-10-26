@@ -7,7 +7,7 @@
 #endif
 
 /* Include D2XX header*/
-#include "ftd2xx.h"
+#include <ftd2xx.h>
 
 /* Include libMPSSE header */
 #include "libMPSSE_spi.h"

@@ -1,12 +1,23 @@
 # bootrom-tools
-## Python scripts for building images for the Trusted Firmware Transfer Format and Flash Format for Firmware
-This repository contains Python scripts for packaging firmware images into Project Ara's
-TFTF and FFFF image formats.  Each script will list its parameters if it is called with the flag `--help`.
+## Building images for the Trusted Firmware Transfer Format and Flash Format for Firmware
+This repository contains Python scripts and C-programs for packaging firmware
+images into Project Ara's TFTF and FFFF image formats.  Each script will list
+its parameters if it is called with the flag `--help`.
 
+## Libraries you must pre-load
+
+### Python
 The `create-dual-image` script requires [pyelftools](https://github.com/eliben/pyelftools) to use its `--elf`
 flag, which can be installed via:
 
     sudo pip install pyelftools
+    
+### C
+FTDI libraries
+(See: https://learn.adafruit.com/adafruit-ft232h-breakout/mpsse-setup for an explanation and links to the installation scripts)
+
+* **D2xx** drivers/ibraries (see: FTDI [AN 220](http://www.ftdichip.com/Support/Documents/AppNotes/AN_220_FTDI_Drivers_Installation_Guide_for_Linux%20.pdf) for download and install instructions)
+* **LibMPSSE_SPI** There doesn't appear to be a place from which one can install the libraries. So, the current approach is to download the source from the [FTDI site](http://www.ftdichip.com/Support/SoftwareExamples/MPSSE/LibMPSSE-SPI.htm) and rebuild the libs. Follow the link at the bottom of the text "The source code for the LibMPSSE-SPI library is available for download here", and and unzip the dowloaded file to your home directory. Once unzipped, cd ~/LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux and type "make"
 
 ## Example 1: packaging a [nuttx](https://github.com/projectara/nuttx) firmware into a TFTF image
 The following command packages a nuttx firmware specified in two raw-binary parts,

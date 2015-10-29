@@ -46,10 +46,6 @@
 # because it only extracts the ones that are germane to suffix generation
 # and it is usually called as "Ornamentation=bootsuffix $*"
 #------------------------------------------------------------------------------
-BuildRoot=~/work/bootrom
-BuildDir=~/work/bootrom/build
-BinDir=~/work/bootrom/binary
-KeyDir=~/bin
 
 #-----
 # Process any args

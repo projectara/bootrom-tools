@@ -225,3 +225,16 @@ unnecessary recompilation.
 * **make3sim** {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-dbg} {-v} {-prod}
 {-spec `<num>`} {-342}
 
+
+## Environment Variables
+The test-drop and delivery tools (found in .../bootrom-tools/scripts)
+require the following environment variables be set in order to function:
+
+Variable | Nominal Value | Purpose
+-------- | ------------- | -------
+BOOTROM_ROOT | ~/work/bootrom | The bootrom repository
+KEY_DIR | ~/bin | Your local source of .pem files (used by makef4 to sign the TFTF)
+DROP_ASSEMBLY_DIR | ~/bootrom-tools/es3-test | Where test drop components are created
+TEST_DROP_DIR | ~/es3-test | The target folder for a given test drop
+DELIVERY_NAME | es3-bootrom-delivery | The name of a delivery (also used in creating the delivery folder)
+DELIVERY_ROOT | ~ | Where the delivery folder will reside

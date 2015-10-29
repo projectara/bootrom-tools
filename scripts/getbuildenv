@@ -33,44 +33,38 @@
 # Check for and list all missing environment variables.
 MissingEnv=false
 if [ ! ${BOOTROM_ROOT} ]; then
-    echo "BOOTROM_ROOT not set, add this to your .bashrc"
-    echo "(e.g., export BOOTROM_ROOT=~/work/bootrom)"
+    echo "BOOTROM_ROOT not defined, (typ. ~/work/bootrom)"
     MissingEnv=true
 fi
 
 if [ ! ${KEY_DIR} ]; then
-    echo "KEY_DIR not set, add this to your .bashrc"
-    echo "(e.g., export KEY_DIR=~/bin)"
+    echo "KEY_DIR not defined, (typ. ~/bin)"
     MissingEnv=true
 fi
 
 if [ ! ${DROP_ASSEMBLY_DIR} ]; then
-    echo "DROP_ASSEMBLY_DIR not set, add this to your .bashrc"
-    echo "(e.g., export DROP_ASSEMBLY_DIR=~/bootrom-tools/es3-test)"
+    echo "DROP_ASSEMBLY_DIR not defined, (typ. ~/bootrom-tools/es3-test)"
     MissingEnv=true
 fi
 
 if [ ! ${TEST_DROP_DIR} ]; then
-    echo "TEST_DROP_DIR not set, add this to your .bashrc"
-    echo "(e.g., export TEST_DROP_DIR=~/es3-test)"
+    echo "TEST_DROP_DIR not defined, (typ. ~/es3-test)"
     MissingEnv=true
 fi
 
 if [ ! ${DELIVERY_NAME} ]; then
-    echo "DELIVERY_NAME not set, add this to your .bashrc"
-    echo "(e.g., export DELIVERY_NAME=es3-bootrom-delivery)"
+    echo "DELIVERY_NAME not defined, (typ. es3-bootrom-delivery)"
     MissingEnv=true
 fi
 
 if [ ! ${DELIVERY_ROOT} ]; then
-    echo "DELIVERY_ROOT not set, add this to your .bashrc"
-    echo "(e.g., export DELIVERY_ROOT=~)"
+    echo "DELIVERY_ROOT not defined, (typ. ~)"
     MissingEnv=true
 fi
 
 # Bail if we're missing any of our environment variables
 if [ ! $MissingEnv ]; then
-    echo "Please edit your .bashrc and try again"
+    echo "Please add the above to your environment and try again"
     exit 1
 fi
 

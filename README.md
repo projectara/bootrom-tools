@@ -1,23 +1,188 @@
 # bootrom-tools
-## Building images for the Trusted Firmware Transfer Format and Flash Format for Firmware
-This repository contains Python scripts and C-programs for packaging firmware
-images into Project Ara's TFTF and FFFF image formats.  Each script will list
-its parameters if it is called with the flag `--help`.
+## Building images using the Trusted Firmware Transfer Format and Flash Format For Firmware files
+This repository contains sofware tool (i.e, Python scripts and C-programs) for
+packaging firmware
+images into Project Ara's Trusted Firmware Transfer Format (TFTF) and Flash
+Format For Firmware (FFFF) file formats. These file formats and the basic
+set of tools used with them are described in [ES3 Bridge ASIC Stage 1 Firmware High Level Design](https://docs.google.com/document/d/1OxjQClSY5cvS370XG9xH7FR9DZgRGv17LXE33EEXSxE/edit)
+document.
 
-## Libraries you must pre-load
+The FFFF file is a filesystem romimage, which is composed of TFTF elements. The
+TFTF elements typically come from the build system, but can also consist of data,
+certificates, etc. The general process flow is outlined below
+
+<center>Create element content -> create-tftf -> sign-tftf -> create-ffff</center>
+
+Each tool will list its parameters if it is called with the flag `--help`.
+
+## Tools
+The tools and their parameters are described briefly below, in roughly the order
+in which one would use them.
+
+* **create-tftf** Assemble content blobs into a TFTF file
+* **display-tftf** Display the contents of a TFTF file
+* **sign-tftf** Cryptographically sign the contents of a TFTF file with the specified private key.
+* **create-ffff** Assemble one or more TFTF blobs into an FFFF file
+* **display-ffff** Display the contents of an FFFF file
+
+### create-tftf
+**create-tftf**
+--out <tftf-file>
+--start <num>
+--unipro-mfg <num>
+--unipro-pid <num>
+--ara-vid <num>
+--ara-pid <num>
+{--name <string>}
+{--ara-stage <num>}
+{--header-size <num>}
+{--map}
+{-v}
+{Section}...
+
+where each [Section] is composed of:
+
+{--elf <file> | [--code <file> --load <num> --start <num>]}...
+{--data <file>}...
+{--manifest <file>}...
+{--class <num>}
+{--id <num>}
+
+The flags can be understood as follows:
+
+* `--out`: Specifies the filename to which the TFTF image should be written.
+* `--start <num>`: The absolute memory address of the firmware's entry-point, as obtained from a disassembler or linker. Note that while there can be multiple code sections, there is only one --start, which must reference an address in one of the code sections.
+* `--unipro-mfg <num>`: The Unipro Manufacturer ID (MID)/Vendor ID (VID) (these are two different phrasings for talking about the same number).  The specific value is obtained from the relevant hardware.
+* `--unipro-pid <num>`: The Unipro Product ID (PID).  The specific value is obtained from the relevant hardware.
+* `--ara-vid <num>`: The Project Ara Vendor ID (VID).  The specific value is obtained from the relevant hardware.
+* `--ara-pid <num>`: The Project Ara Product ID (PID).  The specific value is obtained from the relevant hardware.
+* `--name <string>`: The name of the module
+* `--ara-stage <num>`: (ES3-bringup only) Specify the ARA boot stage.
+* `--header-size <num>`: The size in byts of the TFTF header (defaults to 512).
+* `--map`: Generate a .map file of the TFTF field offsets
+* `-v`: Verbose mode, in which the script will dump the contents of the resultant TFTF headers to stdout when finished.
+
+The section flags are similarly described:
+
+* `--elf <file>`: Specifies a code section from an elf file. it extracts the --code, --load and --start parameters from the elf file.
+* `--code`: Specifies the filename in which the raw binary for a code section can be found.  This should be the Ara firmware's `.text` section.
+* `--load <num>`: The absolute address in memory to which the --code section will be loaded
+boot-time, as obtained from a disassembler or linker.
+* `--data  <file>`: Specifies the filename in which the raw binary for a data section can be found.  This should be the Ara firmware's `.data` section.
+* `--manifest  <file>`:
+section (which must be one of: `--code`, `--data`, or `--manifest`) when loading its contents to memory at boot-time.
+* `--class <num>`: Specifies the TFTF section class
+* `--id <num>`: Specifies the TFTF section ID
+
+At least one section must be given via `--code`/`--elf`, `--data`, or `--manifest`, and an output filename via `--out` is also mandatory.
+
+### display-tftf
+**display-tftf**
+{-v}
+{--map}
+<tftf-file>...
+
+* `-v`: Verbose mode, in which the script will dump the contents of the TFTF headers in greater detail
+* `--map`: Generate a .map file of the TFTF field offsets
+* `<tftf-file>...`: One or more TFTF files to display
+
+### sign-tftf
+**sign-tftf**
+--key <file>
+--type <string>
+--suffix <string>
+--signature-algorithm <string>
+--format [standard | es3]
+{--passin [pass:<passphrase> | stdin | prompt]}
+{--retry}
+{--check}
+{-v}
+<tftf-file>...
+
+* `--key <file>`: The private .pem key file
+* `--type <string>`: The type of the key file (e.g., s2fsk)
+* `--suffix <string>`: The right hand part of the key name (keys.projecatara.com)
+* `--signature-algorithm <string>`: The name of the signing algorithm (e.g., rsa2048-sha256)
+* `--format <string>`: The naming format for keys (standard | es3)
+* `--passin pass:<string>`: Use the specified string as the passphrase
+* `--passin stdin`: Read the passphrase from standard input
+* `--passin prompt`: Prompt for password (this is default behaviour). You can use ^C to exit this if needed
+* `--retry`: If `-passin prompt' is specified, exit with an error status if the password is invalid. If not specified, then it will re-prompt for a valid password.
+* `--check`:
+* `-v`: Verbose mode
+* `<tftf-file>...`: One or more TFTF files to display
+
+
+### create-ffff
+**create-ffff**
+--flash-capacity <num>
+--erase-size <num>
+--length <num>
+--gen <num>
+--out <file>
+{--header-size <num>}
+{--name <string>}
+{-v | --verbose}
+{--map}
+{--header-size <num>}
+[[<element_type> <file>] {<element_option>}]...
+
+* `--flash-capacity <num>`: The capacity of the Flash drive, in bytes.
+* `--erase-size <num>`: The Flash erase block granularity, in bytes.
+* `--length <num>`: The size of the image, in bytes.
+* `--gen <num>`: The header generation number (must be bigger than the generation number of what is currently on the Flash).
+* `--out <file>`: Specifies the output file.
+* `--header-size <num>`: The size of the generated FFFF header, in bytes (default is 4096).
+* `--name <string>`: Flash image name.
+* `-v | --verbose`: Display the FFFF header and a synopsis of each FFFF section
+* `--map`: Create a map file of the FFFF headers and each FFFF sections
+* `--header-size <num>`:
+
+Each element (`[<element_type> <file>] {<element_option>}`)is described with an element type and options.
+
+**Element types:**
+
+* `--s2f <file>`: Stage 2 Firmware file.
+* `--s3f <file>`: Stage 3 Firmware file.
+* `--ims <file>`: Internal Master Secret (IMS) certificate file
+* `--cms <file>`: CMS certificate file.
+* `--data <file>`: Generic data file.
+
+**Element Options:**
+
+* `--element-class`: The element's ID number.
+* `--element-id`: The element's ID number.
+* `--element-generation`: The element's generation number.
+* `--element-location`: The element's absolute location in Flash (must be a multiple of --erase-size).
+* `--element-length`: (Optional) The element's length. If ommitted, the length is extracted from the file.
+
+### display-ffff
+**display-ffff**
+{-v}
+{--map}
+{--explode}
+<ffff-file>...
+* `-v`: Verbose mode, in which the script will dump the contents of the FFFF headers, contained TFTF headers and TFTF sections in greater detail
+* `--map`: Generate a .map file of the FFFF field offsets
+* `--explode`: (Deprecated) Saves FFFF elements in separate files with the same root name
+* `<FFFF-file>...`: One or more FFFF files to display
+
+## Libraries you must load before use
 
 ### Python
 The `create-dual-image` script requires [pyelftools](https://github.com/eliben/pyelftools) to use its `--elf`
 flag, which can be installed via:
 
     sudo pip install pyelftools
-    
+
 ### C
 FTDI libraries
 (See: https://learn.adafruit.com/adafruit-ft232h-breakout/mpsse-setup for an explanation and links to the installation scripts)
 
 * **D2xx** drivers/ibraries (see: FTDI [AN 220](http://www.ftdichip.com/Support/Documents/AppNotes/AN_220_FTDI_Drivers_Installation_Guide_for_Linux%20.pdf) for download and install instructions)
 * **LibMPSSE_SPI** There doesn't appear to be a place from which one can install the libraries. So, the current approach is to download the source from the [FTDI site](http://www.ftdichip.com/Support/SoftwareExamples/MPSSE/LibMPSSE-SPI.htm) and rebuild the libs. Follow the link at the bottom of the text "The source code for the LibMPSSE-SPI library is available for download here", and and unzip the dowloaded file to your home directory. Once unzipped, cd ~/LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux and type "make"
+
+# Examples
 
 ## Example 1: packaging a [nuttx](https://github.com/projectara/nuttx) firmware into a TFTF image
 The following command packages a nuttx firmware specified in two raw-binary parts,
@@ -159,7 +324,7 @@ image names being ornamented with the build mode.
   configuration, creating an ornamented bootrom-xxx.bin
 * **bootsuffix** is a utility which generates the ornamentation string, used
 in various places in the above tools
-      
+
 In addition, there are a few extra scripts which can simplify building
 stock versions for development testing. These tend to be wrappers around
 some of the above-mentioned tools, with most of the boilerplate parameters
@@ -190,7 +355,7 @@ This disables all test parameters and forces a non-debug build.()
 * **-justboot** Normally, makeall will clear the drop folder before
 updating it with the server, bootrom, FFFF images and all the rest of
 the test suite files. Since the server and FFFF images need only be
-built once, and because makeall is called by makedrop for each of the 
+built once, and because makeall is called by makedrop for each of the
 bootrom images, -justboot is set on all but the first invocation, which
 speeds the generation of the drop and prevents the bootrom builds from
 unnecessary recompilation.

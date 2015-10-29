@@ -368,7 +368,7 @@ cp $AssyDir/s1fw/* $DropDir/s1fw
 create-bootrom-test-suite \
   --bin $AssyDir/s1fw/bootrom$Ornamentation.bin \
   --flash $AssyDir/ffff/ffff-sgn.bin \
-  --desc $AssyDir/es3.tss \
+  --tss $AssyDir/es3.tss \
   --test trusted$Ornamentation.ts \
   --out_folder $DropDir/ffff
 if [[ $? != 0 ]]; then
@@ -380,7 +380,7 @@ fi
 create-bootrom-test-suite \
   --bin $AssyDir/s1fw/bootrom$Ornamentation.bin \
   --flash $AssyDir/ffff/ffff.bin \
-  --desc $AssyDir/es3.tss \
+  --tss $AssyDir/es3.tss \
   --test untrusted$Ornamentation.ts \
   --out_folder $DropDir/ffff
 if [[ $? != 0 ]]; then

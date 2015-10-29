@@ -47,6 +47,9 @@
 #    --rev=<revision>	The revision in git to build the boot ROM code
 #------------------------------------------------------------------------------
 
+# Get our build folders from environment variables
+source getbuildenv
+
 #-----
 # Process any args
 #-----

@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# Copyright (c) 2015 Google Inc.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its
+# contributors may be used to endorse or promote products derived from this
+# software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#------------------------------------------------------------------------------
+# Obtain the standard folders for the build environment from the env. vars.
+#------------------------------------------------------------------------------
+
+# Check for and list all missing environment variables.
+MissingEnv=false
+if [ ! ${BOOTROM_ROOT} ]; then
+    echo "BOOTROM_ROOT not set, add this to your .bashrc"
+    echo "(e.g., export BOOTROM_ROOT=~/work/bootrom)"
+    MissingEnv=true
+fi
+
+if [ ! ${KEY_DIR} ]; then
+    echo "KEY_DIR not set, add this to your .bashrc"
+    echo "(e.g., export KEY_DIR=~/bin)"
+    MissingEnv=true
+fi
+
+if [ ! ${DROP_ASSEMBLY_DIR} ]; then
+    echo "DROP_ASSEMBLY_DIR not set, add this to your .bashrc"
+    echo "(e.g., export DROP_ASSEMBLY_DIR=~/bootrom-tools/es3-test)"
+    MissingEnv=true
+fi
+
+if [ ! ${TEST_DROP_DIR} ]; then
+    echo "TEST_DROP_DIR not set, add this to your .bashrc"
+    echo "(e.g., export TEST_DROP_DIR=~/es3-test)"
+    MissingEnv=true
+fi
+
+if [ ! ${DELIVERY_NAME} ]; then
+    echo "DELIVERY_NAME not set, add this to your .bashrc"
+    echo "(e.g., export DELIVERY_NAME=es3-bootrom-delivery)"
+    MissingEnv=true
+fi
+
+if [ ! ${DELIVERY_ROOT} ]; then
+    echo "DELIVERY_ROOT not set, add this to your .bashrc"
+    echo "(e.g., export DELIVERY_ROOT=~)"
+    MissingEnv=true
+fi
+
+# Bail if we're missing any of our environment variables
+if [ ! $MissingEnv ]; then
+    echo "Please edit your .bashrc and try again"
+    exit 1
+fi
+
+# Set the existing script variables from the environment ones.
+BuildRoot=${BOOTROM_ROOT}
+BuildDir=${BOOTROM_ROOT}/build
+BinDir=${BOOTROM_ROOT}/binary
+KeyDir=${KEY_DIR}
+AssyDir=${DROP_ASSEMBLY_DIR}
+DropDir=${TEST_DROP_DIR}
+DeliveryName=${DELIVERY_NAME}
+DeliveryDir=${DELIVERY_ROOT}/${DELIVERY_NAME}
+

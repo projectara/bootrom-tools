@@ -198,7 +198,11 @@ def process_1_test(test_folder, bridge_bin, bridge_efuse, bridge_ffff,
         - Failed-reason string (contains line # in log file)
     """
     # Convert the args into a form that "haps-test" likes
-    args = ["/home/dev/bootrom-tools/ftdi/haps_test"]
+    ftdi_dir = os.getenv("FTDI_DIR")
+    if not ftdi_dir:
+        raise ValueError("Environment var $FTDI_DIR is not set "
+                         "(typ. ~/bootrom-tools/ftdi)")
+    args = ["{0:s}/haps_test".format(ftdi_dir)]
     args += ["--test_folder={0:s}".format(test_folder)]
     if bridge_bin:
         args += ["--bridge_bin={0:s}".format(bridge_bin)]

@@ -46,10 +46,9 @@
 #    -dme               Enable DME-write logging
 #    -342		Substitute the L3FW for L2FW to speed simulation
 #------------------------------------------------------------------------------
-BuildRoot=~/work/bootrom
-BuildDir=~/work/bootrom/build
-BinDir=~/work/bootrom/binary
-KeyDir=~/bin
+
+# Get our build folders from environment variables
+source getbuildenv
 
 #-----
 # Process any args

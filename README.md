@@ -80,7 +80,7 @@ At least one section must be given via `--code`/`--elf`, `--data`, or `--manifes
 **display-tftf**
 {-v}
 {--map}
-<tftf-file>...
+`<tftf-file>`...
 
 * `-v`: Verbose mode, in which the script will dump the contents of the TFTF headers in greater detail
 * `--map`: Generate a .map file of the TFTF field offsets
@@ -97,7 +97,7 @@ At least one section must be given via `--code`/`--elf`, `--data`, or `--manifes
 {--retry}
 {--check}
 {-v}
-<tftf-file>...
+`<tftf-file>`...
 
 * `--key <file>`: The private .pem key file
 * `--type <string>`: The type of the key file (e.g., s2fsk)
@@ -161,7 +161,8 @@ Each element (`[<element_type> <file>] {<element_option>}`)is described with an 
 {-v}
 {--map}
 {--explode}
-<ffff-file>...
+`<ffff-file>`...
+
 * `-v`: Verbose mode, in which the script will dump the contents of the FFFF headers, contained TFTF headers and TFTF sections in greater detail
 * `--map`: Generate a .map file of the FFFF field offsets
 * `--explode`: (Deprecated) Saves FFFF elements in separate files with the same root name

@@ -45,7 +45,7 @@
  * @returns Returns On success, returns the length of the file in bytes;
  *          -1 on failure
  */
-ssize_t size_file(const char * filename);
+size_t size_file(const char * filename);
 
 
 /**
@@ -57,7 +57,20 @@ ssize_t size_file(const char * filename);
  *
  * @returns Returns true on success, false on failure
  */
-bool load_file(const char * filename, uint8_t * buf, ssize_t length);
+bool load_file(const char * filename, uint8_t * buf, size_t length);
+
+
+/**
+ * @brief Allocate a buffer and read a file into it
+ *
+ * @param filename The name of the (TFTF section) file to append to
+ * the TFTF output file
+ * @param length Pointer to a value to hold the length of the blob
+ *
+ * @returns Returns a pointer to an allocated buf containing the file contents
+ *          on success, NULL on failure
+ */
+uint8_t * alloc_load_file(const char * filename, size_t * length);
 
 
 

@@ -82,10 +82,10 @@ static uint32_t section_load_address = 0;
  * @returns Returns On success, returns the length of the file in bytes;
  *          -1 on failure
  */
-ssize_t size_file(const char * filename) {
+size_t size_file(const char * filename) {
     struct stat st;
     int status = 0;
-    ssize_t size = -1;
+    size_t size = -1;
 
 
     if (filename == NULL) {
@@ -114,9 +114,9 @@ ssize_t size_file(const char * filename) {
  *
  * @returns Returns true on success, false on failure
  */
-bool load_file(const char * filename, uint8_t * buf, ssize_t length) {
+bool load_file(const char * filename, uint8_t * buf, size_t length) {
     int section_fd = -1;
-    ssize_t bytes_read;
+    size_t bytes_read;
     bool success = false;
 
     section_fd = open(filename, O_RDONLY);
@@ -150,7 +150,7 @@ bool load_file(const char * filename, uint8_t * buf, ssize_t length) {
  * @returns Returns a pointer to an allocated buf containing the file contents
  *          on success, NULL on failure
  */
-uint8_t * alloc_load_file(const char * filename, ssize_t * length) {
+uint8_t * alloc_load_file(const char * filename, size_t * length) {
     uint8_t * buf = NULL;
     bool success = false;
 
@@ -466,7 +466,7 @@ uint32_t section_cache_entry_count(void) {
  */
 ssize_t section_cache_entries_size(void) {
     uint32_t section;
-    ssize_t total_size = 0;
+    size_t total_size = 0;
 
     for (section = 0; section < current_section; section++) {
         total_size += section_cache[section].section.section_expanded_length;

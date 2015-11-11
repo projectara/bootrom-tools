@@ -35,6 +35,8 @@ bin/create-ffff
 bin/display-ffff
 ftdi/haps_test
 ftdi/spirom_write
+bin
+obj
 
 # Output files
 *.bin

@@ -82,10 +82,10 @@ static uint32_t section_load_address = 0;
  * @returns Returns On success, returns the length of the file in bytes;
  *          -1 on failure
  */
-size_t size_file(const char * filename) {
+ssize_t size_file(const char * filename) {
     struct stat st;
     int status = 0;
-    size_t size = -1;
+    ssize_t size = -1;
 
 
     if (filename == NULL) {
@@ -116,7 +116,7 @@ size_t size_file(const char * filename) {
  */
 bool load_file(const char * filename, uint8_t * buf, size_t length) {
     int section_fd = -1;
-    size_t bytes_read;
+    ssize_t bytes_read;
     bool success = false;
 
     section_fd = open(filename, O_RDONLY);
@@ -150,7 +150,7 @@ bool load_file(const char * filename, uint8_t * buf, size_t length) {
  * @returns Returns a pointer to an allocated buf containing the file contents
  *          on success, NULL on failure
  */
-uint8_t * alloc_load_file(const char * filename, size_t * length) {
+uint8_t * alloc_load_file(const char * filename, ssize_t * length) {
     uint8_t * buf = NULL;
     bool success = false;
 

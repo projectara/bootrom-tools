@@ -45,7 +45,7 @@
  * @returns Returns On success, returns the length of the file in bytes;
  *          -1 on failure
  */
-size_t size_file(const char * filename);
+ssize_t size_file(const char * filename);
 
 
 /**
@@ -70,7 +70,7 @@ bool load_file(const char * filename, uint8_t * buf, size_t length);
  * @returns Returns a pointer to an allocated buf containing the file contents
  *          on success, NULL on failure
  */
-uint8_t * alloc_load_file(const char * filename, size_t * length);
+uint8_t * alloc_load_file(const char * filename, ssize_t * length);
 
 
 

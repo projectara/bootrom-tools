@@ -134,7 +134,7 @@ int main(int argc, char * argv[]) {
         if (optind < argc) {
             for (; optind < argc; optind++) {
                 tftf_header * tftf_hdr = NULL;
-                size_t tftf_size;
+                ssize_t tftf_size;
 
                 /* Read in the TFTF file as a blob... */
                 tftf_hdr = (tftf_header *)alloc_load_file(argv[optind],

@@ -12,6 +12,7 @@
 # 3. Neither the name of the copyright holder nor the names of its
 # contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
 # THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -24,59 +25,80 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #------------------------------------------------------------------------------
-# ...<root>/src/Makefile
+# ...<root>/src/sign-tftf/Makefile
 
 include $(TOPDIR)/Makefile.inc
 
-# Sub-directories
-SUBDIRS   = common create-tftf display-tftf sign-tftf create-ffff display-ffff
-COMMONDIR = ${shell pwd}/common
+ODIR         = obj
+COMMONOBJDIR = $(TOPDIR)/obj
+BINDIR       = $(TOPDIR)/bin
+IDIR         = $(TOPDIR)/include
 
-all: $(SUBDIRS)
+EXE_NAME = sign-tftf
+EXE      = $(BINDIR)/$(EXE_NAME)
 
-.PHONY: all nothing depend clean distclean
+COMMON_NAMES := \
+  $(COMMONDIR)/parse_support.c \
+  $(COMMONDIR)/util.c \
+  $(COMMONDIR)/tftf_common.c \
+  $(COMMONDIR)/tftf_in.c \
+  $(COMMONDIR)/tftf_out.c \
+  $(COMMONDIR)/tftf_print.c
 
-# SDIR_template <SubDir>
-# recursively make <SubDir>
-define SDIR_template0
-$(1): force_look
-	$(MAKE) -C $(1) TOPDIR="$(TOPDIR)" COMMONDIR="$(COMMONDIR)"
-endef
-
-# SDIR_template <SubDir> <Target>
-# recursively make <Target> in <SubDir>
-define SDIR_template
-$(1)_$(2):
-	$(MAKE) -C $(1) $(2) TOPDIR="$(TOPDIR)" COMMONDIR="$(COMMONDIR)"
-endef
-
-# create generic dependencies for all subdirs
-# create-tftf:
-# 	make -C create-tftf
-#  :
-# create-ffff:
-# 	make -C create-ffff
-$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template0,$(SDIR))))
-
-# create targeted dependencies for all subdirs. e.g.:
-# create-tftf_clean:
-# 	make -C create-tftf clean
-#  :
-# create-ffff_clean:m
-# 	make -C create-ffff clean
-$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
-
-#create-tftf/create-tftf:
-#	make -C create-tftf
-
-nothing:
-
-install:
-
-# clean the tree by dependencies on all of the xxx_clean dependencies declared above
-clean: $(foreach SDIR, $(SUBDIRS), $(SDIR)_clean)
+INC_DIRS := -I. -I$(IDIR)
+EXTRA_LIBS := -lelf
 
 
-force_look :
-	true
+_DEPS = \
+  parse_support.h \
+  util.h \
+  tftf_common.h \
+  tftf_in.h \
+  tftf_out.h \
+  tftf_print.h \
+  tftf.h \
+  crypto.h \
+
+DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
+
+_COMMONOBJ = \
+  parse_support.o \
+  util.o \
+  tftf_common.o \
+  tftf_in.o \
+  tftf_out.o \
+  tftf_print.o
+COMMONOBJ = $(patsubst %,$(COMMONOBJDIR)/%,$(_COMMONOBJ))
+OBJ = $(ODIR)/sign.o $(ODIR)/sign-tftf.o $(COMMONOBJ)
+
+INC_DIRS := -I. -I$(IDIR)
+SFILES   := c
+OFILES   := o
+CC       := gcc
+LD       := gcc
+CFLAGS   := -c -Wall
+EXE      := $(BINDIR)/$(EXE_NAME)
+
+.PHONY: all clean exe
+
+all: $(EXE)
+
+$(EXE): $(OBJ)
+	mkdir -p $(ODIR) $(BINDIR)
+	@ echo Compiling exe $<
+	$(CC) $^ $(EXTRA_LIBS) -o $@
+
+$(ODIR)/sign-tftf.o: sign-tftf.c $(DEPS) sign.h
+	mkdir -p $(ODIR)
+	@ echo Compiling $<
+	$(CC) $(CFLAGS) $(INC_DIRS) $< -o $@
+
+$(ODIR)/sign.o: sign.c $(DEPS) sign.h
+	mkdir -p $(ODIR)
+	@ echo Compiling $<
+	$(CC) $(CFLAGS) $(INC_DIRS) $< -o $@
+
+clean:
+	rm -f $(OBJ) $(EXE)
+
 

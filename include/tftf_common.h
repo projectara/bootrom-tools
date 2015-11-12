@@ -52,6 +52,12 @@ static const char tftf_sentinel[] = TFTF_SENTINEL_VALUE;
 #define DFLT_SECT_LOAD      ((uint32_t)-1)
 
 
+/**
+ * @brief Macro to calculate the address of the start of the TFTF payload.
+ */
+#define SECTION_PAYLOAD_START(tftf_hdr) \
+    (((uint8_t *)(tftf_hdr)) + tftf_hdr->header_size)
+
 
 /**
  * @brief Macro to calculate the last address in a section.
@@ -112,6 +118,25 @@ tftf_header *  free_tftf_header(tftf_header * hdr);
 
 
 /**
+ * @brief Append to a TFTF blob
+ *
+ * Expand a TFTF blob, returning a new, larger blob. (The old blob is freed.)
+ *
+ * @param tftf_hdr Pointer to the TFTF header to examine
+ * @param data (optional)Pointer to the data to append (will zero the extended
+ *        region if not supplied)
+ * @param data_length The size of the data to append
+ *
+ * @returns If successful, returns a pointer to a new blob with
+ *          the old blob copied into it (the old blob is freed).
+ *          If not successful, returns NULL.
+ */
+tftf_header * append_to_tftf_blob(tftf_header * tftf_hdr,
+                                  const uint8_t * data,
+                                  const size_t data_length);
+
+
+/**
  * @brief Determine the total payload size
  *
  * @param tftf_hdr Pointer to the TFTF header to examine
@@ -150,6 +175,44 @@ int  tftf_section_collisions(const tftf_header * tftf_hdr,
                              const tftf_section_descriptor * section,
                              uint32_t * collisions,
                              const uint32_t  max_collisions);
+
+
+/**
+ * @brief Determine the signable region of a TFTF
+ *
+ * @param tftf_hdr Pointer to the TFTF header to examine
+ * @param pstart Pointer to a ptr variable that will be set to the start of
+ *               the signable region.
+ * @param length Pointer to a variable which will be set to the length of
+ *               the signable region.
+ *
+ * @returns True on success, false on failure
+ */
+bool tftf_get_signable_region(tftf_header * tftf_hdr, uint8_t ** pstart,
+                              size_t * length);
+
+
+/**
+ * @brief Append a section to a TFTF
+ *
+ * If successful, the old TFTF blob is freed and a new one created.
+ *
+ * @param ptftf_hdr Pointer to the pointer to the existing TFTF blob.
+ *        If we can add the new section to the TFTF, then we allocate
+ *        a new (bigger) blob, copy the old blob to it and append the
+ *        data.
+ * @param type The section Type
+ * @param class The section Class
+ * @param id The section ID
+ * @param load_address The section load address
+ * @param data A pointer to the section payload blob
+ * @param length The size of the payload blob pointed to by "data"
+ *
+ * @returns True on success, false on failure
+ */
+bool tftf_add_section(tftf_header ** ptftf_hdr, uint32_t type, uint32_t class,
+                      uint32_t id, uint32_t load_address, uint8_t *data,
+                      size_t length);
 
 #endif /* !_COMMON_TFTF_COMMON_H */
 

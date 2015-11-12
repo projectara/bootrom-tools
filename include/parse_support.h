@@ -39,6 +39,14 @@
 #include <stdbool.h>
 #include <unistd.h>
 
+
+typedef struct {
+    const char *   string;
+    const uint32_t value;
+} parse_entry;
+
+#define TOKEN_NOT_FOUND ((uint32_t)-1)
+
 struct optionx;
 
 typedef void (*PreprocessCallback)(const int option);
@@ -244,6 +252,28 @@ bool store_flag(const int option, const char * optarg, struct optionx * optx);
  * @returns Returns true on success, false on failure
  */
 extern bool get_num(const char * optarg, const char * optname, uint32_t * num);
+
+
+/**
+ * @brief Simple keyword lookup.
+ *
+ * @param keyword The string to parse (argv[i])
+ * @param token Points to the variable in which to store the parsed type.
+ *
+ * @returns Returns the found token on success, TOKEN_NOT_FOUND on failure
+ */
+uint32_t kw_to_token(const char * keyword, const parse_entry * lookup);
+
+
+/**
+ * @brief Simple keyword reverse lookup.
+ *
+ * @param keyword The string to parse (argv[i])
+ * @param token Points to the variable in which to store the parsed type.
+ *
+ * @returns Returns the string on success, NULL on failure
+ */
+const char * token_to_kw(const uint32_t token, const parse_entry * lookup);
 
 
 /**

@@ -160,6 +160,19 @@ bool endswith(const char * str, const char * suffix);
 
 
 /**
+ * @brief Destructively trim a suffix from a string
+ *
+ * @param str The string to (possibly) modify
+ *        NOTE: This may be destructively modified - send a copy of the string.
+ *        if it is important to retain the original!
+ * @param suffix The string to strip off.
+ *
+ * @returns Returns str
+ */
+char * rchop(char * str, const char * suffix);
+
+
+/**
  * @brief Determine if 2 buffers overlap
  *
  * @param x The 1st buffer
@@ -193,8 +206,8 @@ bool regions_overlap(const size_t x, const size_t xlen,
  * Lightweight safer_strncpy, does not check for unterminated or overlapped
  * strings.
  *
- * @param dest The buffer to copy into
- * @param destsz The size of the destination buffer
+ * @param dst The buffer to copy into
+ * @param dstsz The size of the destination buffer
  * @param src The string to copy
  * @param count The maximum number of bytes to copy
  *
@@ -209,8 +222,8 @@ bool safer_strncpy(char * dest, size_t destsz, const char * src, size_t count);
  * Lightweight safer_strcpy, does not check for unterminated or overlapped
  * strings.
  *
- * @param dest The buffer to copy into
- * @param destsz The size of the destination buffer
+ * @param dst The buffer to copy into
+ * @param dstsz The size of the destination buffer
  * @param src The string to copy
  *
  * @returns True if the string was fully copied, false otherwise
@@ -224,8 +237,8 @@ bool safer_strcpy(char * dest, size_t destsz, const char * src);
  * Lightweight safer_strncat, does not check for unterminated or overlapped
  * strings.
  *
- * @param dest The buffer to append to
- * @param destsz The size of the destination buffer
+ * @param dst The buffer to append to
+ * @param dstsz The size of the destination buffer
  * @param src The string to catenate
  * @param count The maximum number of bytes to copy
  *
@@ -240,8 +253,8 @@ bool safer_strncat(char * dest, size_t destsz, const char * src, size_t count);
  * Lightweight safer_strcat, does not check for unterminated or overlapped
  * strings.
  *
- * @param dest The buffer to append to
- * @param destsz The size of the destination buffer
+ * @param dst The buffer to append to
+ * @param dstsz The size of the destination buffer
  * @param src The string to catenate
  *
  * @returns True if the string was fully copied, false otherwise

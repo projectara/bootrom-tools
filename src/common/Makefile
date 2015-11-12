@@ -108,7 +108,7 @@ $(ODIR)/util.o: util.c $(IDIR)/util.h
 	mkdir -p $(dir $@)
 	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
 
-$(ODIR)/tftf_common.o: tftf_common.c $(IDIR)/tftf_common.h $(IDIR)/tftf.h
+$(ODIR)/tftf_common.o: tftf_common.c $(IDIR)/tftf_common.h $(IDIR)/tftf.h $(IDIR)/tftf_print.h
 	mkdir -p $(dir $@)
 	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
 

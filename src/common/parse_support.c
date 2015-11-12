@@ -47,12 +47,6 @@
 #define USAGE_LINE_LENGTH 80
 
 
-typedef struct {
-    const char *   string;
-    const uint32_t value;
-} parse_entry;
-
-
 static parse_entry element_types[] = {
     {"s3fw", FFFF_ELEMENT_STAGE_2_FW},
     {"s2fw", FFFF_ELEMENT_STAGE_3_FW},
@@ -60,6 +54,7 @@ static parse_entry element_types[] = {
     {"ccert", FFFF_ELEMENT_CMS_CERT},
     {"data", FFFF_ELEMENT_DATA},
     {"end", FFFF_ELEMENT_END},
+    {NULL, 0}
 };
 
 
@@ -455,23 +450,67 @@ bool get_num(const char * optarg, const char * optname, uint32_t * num) {
 
 
 /**
+ * @brief Simple keyword lookup.
+ *
+ * @param keyword The string to parse (argv[i])
+ * @param token Points to the variable in which to store the parsed type.
+ *
+ * @returns Returns the found token on success, TOKEN_NOT_FOUND on failure
+ */
+uint32_t kw_to_token(const char * keyword, const parse_entry * lookup) {
+    uint32_t token = TOKEN_NOT_FOUND;
+    int i;
+
+    if (keyword && lookup) {
+        /* While this is a simple linear search, N is typically < 10 */
+        for (; lookup->string != NULL; lookup++) {
+            if (strcmp(keyword, lookup->string) == 0) {
+                token = lookup->value;
+                break;
+            }
+        }
+    }
+    return token;
+}
+
+
+/**
+ * @brief Simple keyword reverse lookup.
+ *
+ * @param keyword The string to parse (argv[i])
+ * @param token Points to the variable in which to store the parsed type.
+ *
+ * @returns Returns the string on success, NULL on failure
+ */
+const char * token_to_kw(const uint32_t token, const parse_entry * lookup) {
+    const char * keyword = NULL;
+
+    if (lookup) {
+        /* While this is a simple linear search, N is typically < 10 */
+        for (; lookup->string != NULL; lookup++) {
+            if (token == lookup->value) {
+                keyword = lookup->string;
+                break;
+            }
+        }
+    }
+    return keyword;
+}
+
+
+/**
  * @brief Parse an FFFF ElementType/TFTF PackageType.
  *
- * @param optarg The string to parse (argv[i])
+ * @param type_name The string to parse (argv[i])
  * @param type Points to the variable in which to store the parsed type.
  *
  * @returns Returns true on success, false on failure
  */
-bool get_type(const char * optarg, uint32_t * type) {
+bool get_type(const char * type_name, uint32_t * type) {
     int i;
 
-    for (i = 0; i < _countof(element_types); i++) {
-        if (strcmp(optarg, element_types[i].string) == 0) {
-            *type = element_types[i].value;
-            return true;
-        }
-    }
-    return false;
+    *type = kw_to_token(type_name, element_types);
+    return *type != TOKEN_NOT_FOUND;
 }
 
 

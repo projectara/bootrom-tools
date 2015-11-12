@@ -41,6 +41,7 @@
 #include <time.h>
 #include "tftf.h"
 #include "tftf_common.h"
+#include "tftf_print.h"
 
 /* This contains the maximum number of sections in the header. */
 uint32_t tftf_max_sections = TFTF_MAX_SECTIONS;
@@ -89,6 +90,51 @@ tftf_header *  free_tftf_header(tftf_header * tftf_hdr) {
     }
 
     return NULL;
+}
+
+
+/**
+ * @brief Append to a TFTF blob
+ *
+ * Expand a TFTF blob, returning a new, larger blob. (The old blob is freed.)
+ *
+ * @param tftf_hdr Pointer to the TFTF header to examine
+ * @param data (optional)Pointer to the data to append (will zero the extended
+ *        region if not supplied)
+ * @param extra_size The size of the data to append
+ *
+ * @returns If successful, returns a pointer to a new blob with
+ *          the old blob copied into it (the old blob is freed).
+ *          If not successful, returns NULL.
+ */
+tftf_header * append_to_tftf_blob(tftf_header * tftf_hdr,
+                                  const uint8_t * data,
+                                  const size_t extra_size) {
+    tftf_header * new_tftf_hdr = NULL;
+
+    if (tftf_hdr) {
+        size_t length = tftf_hdr->header_size + tftf_payload_size(tftf_hdr);
+        new_tftf_hdr = malloc (length + extra_size);
+        if (!new_tftf_hdr) {
+            fprintf(stderr, "ERROR: Can't allocate an extended TFTF\n");
+        } else {
+            /* Copy the old TFTF blob into the new one */
+            memcpy(new_tftf_hdr, tftf_hdr, length);
+
+            if (data) {
+                /* Copy the extended bytes */
+                memcpy(((uint8_t*)new_tftf_hdr) + length, data, extra_size);
+            } else {
+                /* Zero out the extended bytes */
+                memset(((uint8_t*)new_tftf_hdr) + length, 0, extra_size);
+            }
+
+            /* Dispose of the old blob */
+            free_tftf_header(tftf_hdr);
+        }
+    }
+
+    return new_tftf_hdr;
 }
 
 
@@ -199,4 +245,115 @@ int tftf_section_collisions(const tftf_header * tftf_hdr,
     }
 
     return num_collisions;
+}
+
+
+/**
+ * @brief Determine the signable region of a TFTF
+ *
+ * @param tftf_hdr Pointer to the TFTF blob to examine
+ * @param pstart Pointer to a ptr variable that will be set to the start of
+ *               the signable region.
+ * @param length Pointer to a variable which will be set to the length of
+ *               the signable region.
+ *
+ * @returns True on success, false on failure
+ */
+bool tftf_get_signable_region(tftf_header * tftf_hdr, uint8_t ** pstart,
+                              size_t * length) {
+    tftf_section_descriptor * section;
+    if (!tftf_hdr || !pstart || !length) {
+        return false;
+    }
+
+    *pstart = SECTION_PAYLOAD_START(tftf_hdr);
+    for (section = tftf_hdr->sections, *length = 0;
+         section->section_type < TFTF_SECTION_SIGNATURE;
+         section++) {
+        *length += section->section_length;
+    }
+
+    return true;
+}
+
+
+/**
+ * @brief Append a section to a TFTF
+ *
+ * If successful, the old TFTF blob is freed and a new one created.
+ *
+ * @param ptftf_hdr Pointer to the pointer to the existing TFTF blob.
+ *        If we can add the new section to the TFTF, then we allocate
+ *        a new (bigger) blob, copy the old blob to it and append the
+ *        data.
+ * @param type The section Type
+ * @param class The section Class
+ * @param id The section ID
+ * @param load_address The section load address
+ * @param data A pointer to the section payload blob
+ * @param length The size of the payload blob pointed to by "data"
+ *
+ * @returns True on success, false on failure
+ */
+bool tftf_add_section(tftf_header ** ptftf_hdr, uint32_t type, uint32_t class,
+                      uint32_t id, uint32_t load_address, uint8_t *data,
+                      size_t length) {
+    tftf_header * tftf_hdr = NULL;
+    int i;
+    bool restricted = false;
+    bool success = true;
+
+    /* Sanity check */
+    if (!ptftf_hdr || !*ptftf_hdr) {
+        fprintf (stderr, "ERROR (tftf_add_section): invalid parameters\n");
+        return false;
+    } else {
+        tftf_hdr = *ptftf_hdr;
+    }
+
+    /**
+     *  Find the end-of-table entry and check for any section types
+     *  that would restrict which types of sections we can append.
+     */
+    for (i = 0;
+         ((i < TFTF_MAX_SECTIONS) &&
+          (tftf_hdr->sections[i].section_type != TFTF_SECTION_END));
+         i++) {
+        if (tftf_hdr->sections[i].section_type >= TFTF_SECTION_SIGNATURE) {
+            restricted = true;
+        }
+    }
+    /* Check to see if we can add the section */
+    if (i >= (TFTF_MAX_SECTIONS - 2)) {
+        fprintf(stderr, "ERROR: TFTF section table is full\n");
+        success = false;
+    } else if (restricted && (type < TFTF_SECTION_SIGNATURE)) {
+        fprintf(stderr,
+                "ERROR: You can't add a %s after a signature or certificate\n",
+                tftf_section_type_name(type));
+        success = false;
+    }
+
+    if (success) {
+         /* Allocate a larger blob for the expanded TFTF */
+        tftf_hdr = append_to_tftf_blob(tftf_hdr, data, length);
+        if (tftf_hdr) {
+            /* Make the caller point to the new blob */
+            *ptftf_hdr = tftf_hdr;
+
+            /**
+             *  Copy the end-of-table marker to the next slot and overwrite the
+             *  old end-of-tble marker with the new section info.
+             */
+            tftf_hdr->sections[i+1] = tftf_hdr->sections[i];
+            tftf_hdr->sections[i].section_type = type;
+            tftf_hdr->sections[i].section_class = class;
+            tftf_hdr->sections[i].section_id = id;
+            tftf_hdr->sections[i].section_load_address = load_address;
+            tftf_hdr->sections[i].section_length = (uint32_t)length;
+            tftf_hdr->sections[i].section_expanded_length = (uint32_t)length;
+        }
+    }
+
+    return success;
 }

@@ -69,7 +69,9 @@ typedef struct
 static section_cache_entry   section_cache[MAX_TFTF_SECTION_CACHE];
 static uint32_t current_section = 0;
 static uint32_t section_iterator = -1;
-static bool section_window_open = false;
+static bool     section_window_open = false;
+static uint32_t section_load_address = 0;
+
 
 
 /**
@@ -173,7 +175,7 @@ uint8_t * alloc_load_file(const char * filename, ssize_t * length) {
     if (!success) {
         if (buf != NULL) {
             free(buf);
-            buf = 0;
+            buf = NULL;
         }
         if (length != NULL) {
             *length = 0;
@@ -193,11 +195,25 @@ uint8_t * alloc_load_file(const char * filename, ssize_t * length) {
  *
  * @returns 0 on success, 1 if there were warnings, 2 on failure
  */
-void section_cache_entry_close() {
-    if (section_window_open && (current_section < MAX_TFTF_SECTION_CACHE)) {
-        current_section++;
-    }
+void section_cache_entry_close(void) {
+    if (section_window_open) {
+        uint32_t    this_section_address;
+        /**
+         * Section load_addresses are normally contiguous, so adjust the
+         * running section_load_address to the end of the current section.
+         * The next section will pick this up as the default when opened by
+         * section_cache_entry_open().
+         */
+        section_load_address =
+                section_cache[current_section].section.section_load_address +
+                section_cache[current_section].section.section_length;
+
+        /* Advance to the next section */
+        if (current_section < MAX_TFTF_SECTION_CACHE) {
+            current_section++;
+        }
     section_window_open = false;
+    }
 }
 
 
@@ -240,8 +256,16 @@ bool section_cache_entry_open(const uint32_t section_type,
                 section->section.section_expanded_length =
                     size_file(filename);
         }
+
+        /* By default, each section's load address is contiguous with
+         * the previous section. Set the default load address here - we
+         * will override it in section_cache_entry_set_load_address, and
+         * section_cache_entry_close will advance the running
+         * section_load_address to the section's load_address + load_length.
+         */
+        section->section.section_load_address = section_load_address;
         success = true;
-    }
+   }
 
     return success;
 }
@@ -254,7 +278,7 @@ bool section_cache_entry_open(const uint32_t section_type,
  *
  * @returns true if successful, false otherwise
  */
-bool section_cache_entry_add_class(const uint32_t section_class) {
+bool section_cache_entry_set_class(const uint32_t section_class) {
     bool success = false;  /* assume failure */
 
 
@@ -278,7 +302,7 @@ bool section_cache_entry_add_class(const uint32_t section_class) {
  *
  * @returns true if successful, false otherwise
  */
-bool section_cache_entry_add_id(const uint32_t section_id) {
+bool section_cache_entry_set_id(const uint32_t section_id) {
     bool success = false;  /* assume failure */
 
     if (section_window_open &&
@@ -301,7 +325,7 @@ bool section_cache_entry_add_id(const uint32_t section_id) {
  *
  * @returns true if successful, false otherwise
  */
-bool section_cache_entry_add_load_address(const uint32_t load_address) {
+bool section_cache_entry_set_load_address(const uint32_t load_address) {
     bool success = false;  /* assume failure */
 
     if (section_window_open &&
@@ -324,7 +348,7 @@ bool section_cache_entry_add_load_address(const uint32_t load_address) {
  *
  * @returns true if successful, false otherwise
  */
-bool section_cache_entry_add_blob(const uint8_t *blob, const size_t blob_length) {
+bool section_cache_entry_set_blob(const uint8_t *blob, const size_t blob_length) {
     bool success = false;  /* assume failure */
 
     if (section_window_open &&
@@ -341,7 +365,7 @@ bool section_cache_entry_add_blob(const uint8_t *blob, const size_t blob_length)
             success = true;
         }
     } else {
-        fprintf(stderr, "ERROR: no section to which to add a data blob\n");
+        fprintf(stderr, "ERROR: no section to which to set a data blob\n");
     }
 
     return success;
@@ -430,7 +454,7 @@ int section_cache_get_next_entry(tftf_section_descriptor * section_descriptor,
  *
  * @returns The number of cached sections
  */
-uint32_t section_cache_entry_count() {
+uint32_t section_cache_entry_count(void) {
     return current_section;
 }
 
@@ -440,7 +464,7 @@ uint32_t section_cache_entry_count() {
  *
  * @returns The total number of section bytes
  */
-ssize_t section_cache_entries_size() {
+ssize_t section_cache_entries_size(void) {
     uint32_t section;
     ssize_t total_size = 0;
 
@@ -486,15 +510,13 @@ tftf_header * new_tftf(const uint32_t header_size,
     tftf_hdr = new_tftf_blob(header_size, payload_size);
     if (tftf_hdr != NULL) {
         tftf_section_descriptor *section = tftf_hdr->sections;
+        uint8_t * hdr_end = ((uint8_t *)tftf_hdr) + tftf_hdr->header_size;
         uint8_t * payload = (uint8_t *)tftf_hdr + header_size;
         uint8_t * limit = (uint8_t *)tftf_hdr + blob_length;
         size_t fw_pkg_name_length = sizeof(tftf_hdr->firmware_package_name);
         int status;
 
-        /* Initialize the fixed part of the header */
-        memcpy(tftf_hdr->sentinel_value, TFTF_SENTINEL_VALUE,
-               TFTF_SENTINEL_SIZE);
-        tftf_hdr->header_size = header_size;
+        /* Initialize the remaining fixed parts of the header */
         set_timestamp(tftf_hdr);
         if (firmware_pkg_name != NULL) {
             /* Copy the string, ensuring the buffer is ASCIIZ */
@@ -518,7 +540,8 @@ tftf_header * new_tftf(const uint32_t header_size,
         do {
             status = section_cache_get_next_entry(section, &payload, limit);
             section++;
-        } while ((status > 0) && (payload < limit));
+        } while ((status > 0) && (payload < limit) &&
+                 (section < (tftf_section_descriptor *)hdr_end));
         if (status >= 0) {
             /* Add the end-of-table marker */
             section->section_type = TFTF_SECTION_END;
@@ -579,8 +602,8 @@ static Elf_Scn * elf_getscn_byname(Elf *elf, const char * name) {
 /**
  * @brief Add an ELF section to the TFTF section cache.
  *
- * @param elf The open elf object
- * @param name The section name to find
+ * @param scn The open elf section (e.g., .text, .data)
+ * @param type The corresponding section_type for the cache
  *
  * @returns A pointer to the section if successful, NULL otherwise.
  */
@@ -596,9 +619,10 @@ bool elf_add_section_cache_entry(Elf_Scn *scn, uint32_t type) {
     } else {
         while ((n < shdr.sh_size) &&
                (data = elf_getdata(scn, data)) != NULL) {
-                success = section_cache_entry_open(type, NULL) &&
-                          section_cache_entry_add_blob(data->d_buf, data->d_size);
-                break;
+            success = section_cache_entry_open(type, NULL) &&
+                      section_cache_entry_set_blob(data->d_buf, data->d_size);
+            section_cache_entry_close();
+            break;
         }
     }
 
@@ -804,7 +828,7 @@ bool valid_tftf_section(tftf_section_descriptor * section,
      * Overlap is determined to be "non-disjoint" sections
      */
     for (other_section = section + 1;
-         ((other_section < &header->sections[TFTF_MAX_SECTIONS]) &&
+         ((other_section < &header->sections[tftf_max_sections]) &&
           (other_section->section_type != TFTF_SECTION_END) &&
           (other_section->section_load_address != DATA_ADDRESS_TO_BE_IGNORED));
          other_section++) {
@@ -851,7 +875,7 @@ bool valid_tftf_header(tftf_header * header) {
 
     /* Verify all of the sections */
     for (section = &header->sections[0];
-         (section < &header->sections[TFTF_MAX_SECTIONS]) && !end_of_sections;
+         (section < &header->sections[tftf_max_sections]) && !end_of_sections;
          section++) {
         if (!valid_tftf_section(section, header, &section_contains_start,
                                 &end_of_sections)) {

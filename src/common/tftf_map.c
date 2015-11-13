@@ -70,7 +70,7 @@ void write_tftf_section_table_map(const tftf_header * tftf_hdr,
     offset += offsetof(tftf_header, sections);
 
     /* Print out the occupied entries in the section table */
-    for (index = 0; index < TFTF_MAX_SECTIONS; index++, section++) {
+    for (index = 0; index < tftf_max_sections; index++, section++) {
         fprintf(map_file, "%ssection[%d].type  %08x\n",
                 prefix, index, (uint32_t)(offset));
         fprintf(map_file, "%ssection[%d].class  %08x\n",

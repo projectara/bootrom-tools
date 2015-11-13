@@ -36,6 +36,7 @@
 #define _COMMON_TFTF_COMMON_H
 
 #include "tftf.h"
+#include <stddef.h>
 
 static const char tftf_sentinel[] = TFTF_SENTINEL_VALUE;
 
@@ -60,24 +61,30 @@ static const char tftf_sentinel[] = TFTF_SENTINEL_VALUE;
      (section_ptr)->section_expanded_length - 1)
 
 
-#if 0
-typedef struct
-{
-    const char *    filename;
-    int             type;
-    uint32_t        offset;     /* 0 means no offset specified */
-} section_info;
+/**
+ * @brief Macro to calculate the number of sections in a TFTF header
+ */
+#define CALC_MAX_TFTF_SECTIONS(header_size) \
+		(((header_size) - offsetof(tftf_header, sections)) / \
+		 sizeof(tftf_section_descriptor))
+#ifndef TFTF_HEADER_SIZE_MIN
+    #define TFTF_HEADER_SIZE_MIN            512
+#endif
+
+#ifndef TFTF_HEADER_SIZE_MAX
+    #define TFTF_HEADER_SIZE_MAX            32768
+#endif
+
+#ifndef MAX_TFTF_HEADER_SIZE_SUPPORTED
+    #define MAX_TFTF_HEADER_SIZE_SUPPORTED  TFTF_HEADER_SIZE_MAX
 #endif
 
 
-/**
- * If compress is true, compress the data while copying; if false, just
- * perform a raw copy. (Ignored if COMPRESSED_SUPPORT is not defined.)
- */
-extern bool compress;
-
 /* if verbose is true, print out a summary of the TFTF header on success. */
-extern bool verbose;
+extern int verbose_flag;
+
+/* This contains the maximum number of sections in the header. */
+extern uint32_t tftf_max_sections;
 
 
 /**
@@ -114,7 +121,7 @@ tftf_header *  free_tftf_header(tftf_header * hdr);
  *
  * @returns The number of payload bytes.
  */
-size_t  tftf_payload_size(tftf_header * tftf_hdr);
+size_t  tftf_payload_size(const tftf_header * tftf_hdr);
 
 
 /**

@@ -80,7 +80,7 @@ bool section_cache_entry_open(const uint32_t section_type,
  *
  * @returns true if successful, false otherwise
  */
-bool section_cache_entry_add_class(const uint32_t section_class);
+bool section_cache_entry_set_class(const uint32_t section_class);
 
 
 /**
@@ -90,7 +90,7 @@ bool section_cache_entry_add_class(const uint32_t section_class);
  *
  * @returns true if successful, false otherwise
  */
-bool section_cache_entry_add_id(const uint32_t section_id);
+bool section_cache_entry_set_id(const uint32_t section_id);
 
 
 /**
@@ -100,7 +100,7 @@ bool section_cache_entry_add_id(const uint32_t section_id);
  *
  * @returns true if successful, false otherwise
  */
-bool section_cache_entry_add_load_address(const uint32_t load_address);
+bool section_cache_entry_set_load_address(const uint32_t load_address);
 
 
 /**
@@ -137,7 +137,7 @@ int section_cache_get_next_entry(tftf_section_descriptor * section_descriptor,
  *
  * @returns 0 on success, 1 if there were warnings, 2 on failure
  */
-void section_cache_entry_close();
+void section_cache_entry_close(void);
 
 
 /**
@@ -145,7 +145,7 @@ void section_cache_entry_close();
  *
  * @returns 0 on success, 1 if there were warnings, 2 on failure
  */
-uint32_t section_cache_entry_count();
+uint32_t section_cache_entry_count(void);
 
 
 /**
@@ -153,7 +153,7 @@ uint32_t section_cache_entry_count();
  *
  * @returns The total number of section bytes
  */
-ssize_t section_cache_entries_size();
+ssize_t section_cache_entries_size(void);
 
 
 /**

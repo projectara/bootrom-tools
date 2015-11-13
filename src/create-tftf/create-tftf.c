@@ -63,59 +63,6 @@
 #define PROGRAM_ERRORS      2
 
 
-static char * usage_strings[] =
-{
-    "Usage: create-tftf --start <num> --out <file> {--header-size <num>} \\",
-    "       {--name <string>} {--unipro-mfg} {--unipro-pid} \\",
-    "       {--ara-vid} {--ara-pid} {--ara-stage} {--elf <file>} \\",
-    "       {-v | --verbose} {--map} {--header-size}\\",
-    "       [<section_type> <file> {--load <num>} --class <num>} --id <num>}]...",
-    "Where:",
-    "    -s, --start",
-    "        The memory location of the package entry point.",
-    "    -o, --out",
-    "        Specifies the output file",
-    "    -z, --header-size",
-    "        The size of the generated TFTF header, in bytes (512)",
-    "    -t, --name",
-    "        Package type",
-    "    -n, --name",
-    "        Package name",
-    "    -u, --unipro-mfg",
-    "        Unipro ASIC manufacturer ID",
-    "    -U, --unipro-pid",
-    "        Unipro ASIC product ID",
-    "    -a, --ara-vid",
-    "        ARA vendor ID",
-    "    -A, --ara-pid",
-    "        ARA product ID",
-    "    -S, --ara-stage",
-    "        ARA boot stage (deprecate?)",
-    "    -E, --elf",
-    "        The name of an input ELF image file (extracts -C, -D and -s)",
-    "    -v, --verbose",
-    "        Display the TFTF header and a synopsis of each TFTF section",
-    "    --map",
-    "        Create a map file of the TFTF header and each TFTF section",
-    "",
-    "    <section_type>",
-    "        Specifies a file for a given type of section:",
-    "        -C, --code        code section",
-    "        -D, --data        data section",
-    "        -M, --manifest    manifest section",
-    "        -R, --certificate certificate section.",
-    "        -G, --signature   signature section.",
-    "        Sections are nomally loaded contiguously, starting at --load.",
-    "    -l, --load",
-    "        Set the address of the start of the section to <num>",
-    "    -c, --class",
-    "        Set the section class to <num>",
-    "    -i, --id",
-    "        Set the section id to <num>",
-    "    <num> is a hex number (leading 0x is optional)",
-};
-
-
 /* TFTF parsing args */
 const char * output_filename = NULL;
 uint32_t    header_size = TFTF_HEADER_SIZE;
@@ -127,8 +74,15 @@ uint32_t    unipro_pid;
 uint32_t    ara_vid;
 uint32_t    ara_pid;
 uint32_t    ara_stage;
-int verbose_flag = false;
-int map_flag = false;
+int         map_flag;
+
+
+/**
+ * If compress is true, compress the data while copying; if false, just
+ * perform a raw copy. (Ignored if COMPRESSED_SUPPORT is not defined.)
+ */
+int compress_flag = false;
+
 
 /* TFTF-specific parsing callbacks */
 bool handle_header_size(const int option, const char * optarg,
@@ -150,77 +104,113 @@ bool handle_section_load_address(const int option, const char * optarg,
 /* Parsing table */
 static struct optionx parse_table[] = {
     /* Header args */
-    { 'z', "header-size",   &header_size,       TFTF_HEADER_SIZE,
-      DEFAULT_VAL,    &handle_header_size,       0 },
-    { 't', "type",          &package_type,      0,
-      REQUIRED,       &handle_header_type, 0 },
-    { 'n', "name",          &fw_pkg_name,       0,
-      0,              &store_str, 0 },
-    { 's', "start",         &start_location,    DFLT_START,
-      DEFAULT_VAL,    &store_hex, 0 },
-    { 'u', "unipro-mfg",    &unipro_mfg,        DFLT_UNIPRO_MID,
-      DEFAULT_VAL,    &store_hex, 0 },
-    { 'U', "unipro-pid",    &unipro_pid,        DFLT_UNIPRO_PID,
-      DEFAULT_VAL,    &store_hex, 0 },
-    { 'a', "ara-vid",       &ara_vid,           DFLT_ARA_VID,
-      DEFAULT_VAL,    &store_hex, 0 },
-    { 'A', "ara-pid",       &ara_pid,           DFLT_ARA_PID,
-      DEFAULT_VAL,    &store_hex, 0 },
-    { 'S', "ara-stage",     &ara_stage,         DFLT_ARA_BOOT_STAGE,
-      DEFAULT_VAL,    &store_hex,                      0 }, /* deprecate? */
+    { 'z', "header-size", "num", &header_size, TFTF_HEADER_SIZE,
+      DEFAULT_VAL, &handle_header_size, 0,
+      "The size of the generated TFTF header, in bytes (512)"
+    },
+    { 't', "type", "s2fw | s3fw", &package_type, 0,
+      REQUIRED, &handle_header_type, 0,
+      "Package type"
+    },
+    { 'n', "name", "text", &fw_pkg_name, 0,
+      OPTIONAL, &store_str, 0,
+      "Package name"
+    },
+    { 's', "start", "address", &start_location, DFLT_START,
+      DEFAULT_VAL, &store_hex, 0,
+      "The memory location of the package entry point."
+    },
+    { 'u', "unipro-mfg", "num", &unipro_mfg, DFLT_UNIPRO_MID,
+      DEFAULT_VAL, &store_hex, 0,
+      "Unipro ASIC Manufacturer ID"
+    },
+    { 'U', "unipro-pid", "num", &unipro_pid, DFLT_UNIPRO_PID,
+      DEFAULT_VAL, &store_hex, 0,
+      "Unipro ASIC Product ID"
+    },
+    { 'a', "ara-vid", "num", &ara_vid, DFLT_ARA_VID,
+      DEFAULT_VAL, &store_hex, 0,
+      "Ara Vendor ID"
+    },
+    { 'A', "ara-pid", "num", &ara_pid, DFLT_ARA_PID,
+      DEFAULT_VAL, &store_hex, 0,
+      "Ara Product ID"
+    },
+    { 'S', "ara-stage", "1 | 2 | 3", &ara_stage, DFLT_ARA_BOOT_STAGE,
+      DEFAULT_VAL, &store_hex, 0,
+      "Ara boot stage (deprecate?)"
+    }, /* deprecate? */
 
     /* Section args */
-    { 'E', "elf",           NULL,               0,
-      0,              &handle_section_elf,             0 },
-    { 'C',"code",           NULL,               0,
-      0,              &handle_section_normal,          0 },
-    { 'D', "data",          NULL,               0,
-      0,              &handle_section_normal,          0 },
-    { 'M', "manifest",      NULL,               0,
-      0,              &handle_section_normal,          0 },
-    { 'G', "signature",     NULL,               0,
-      0,              &handle_section_normal,          0 },
-    { 'R', "certificate",   NULL,               0,
-      0,              &handle_section_normal,          0 },
-    { 'c', "class",         NULL,               DFLT_SECT_CLASS,
-      DEFAULT_VAL,    &handle_section_class,           0 },
-    { 'i', "id",            NULL,               DFLT_SECT_ID,
-      DEFAULT_VAL,    &handle_section_id,              0 },
-    { 'l', "load",          NULL,               DFLT_SECT_LOAD,
-      DEFAULT_VAL,    &handle_section_load_address,    0 },
+    { 'E', "elf", NULL, NULL, 0,
+      OPTIONAL, &handle_section_elf, 0,
+      "The name of an input ELF image file (extracts -C, -D and -s)"
+    },
+    { 'C',"code", NULL, NULL, 0,
+      OPTIONAL, &handle_section_normal, 0,
+      "Code section [1]"
+    },
+    { 'D', "data", NULL, NULL, 0,
+      OPTIONAL, &handle_section_normal, 0,
+      "Data  section [1]"
+    },
+    { 'M', "manifest", NULL, NULL, 0,
+      OPTIONAL, &handle_section_normal, 0,
+      "Manifest section [1]"
+    },
+    { 'G', "signature", NULL, NULL, 0,
+      OPTIONAL, &handle_section_normal, 0,
+      "Signature section [1]"
+    },
+    { 'R', "certificate", NULL, NULL, 0,
+      OPTIONAL, &handle_section_normal, 0,
+      "Certificate section [1]"
+    },
+    { 'c', "class", "num", NULL, DFLT_SECT_CLASS,
+      DEFAULT_VAL, &handle_section_class, 0,
+      "Set the section class to <num>"
+    },
+    { 'i', "id", "num", NULL, DFLT_SECT_ID,
+      DEFAULT_VAL, &handle_section_id, 0,
+      "Set the section id to <num>"
+    },
+    { 'l', "load", "address", NULL, DFLT_SECT_LOAD,
+      DEFAULT_VAL, &handle_section_load_address, 0,
+      "Set the address of the start of the section to <num>"
+    },
 
     /* Misc args */
-    { 'o', "out",           &output_filename,   0,
-      REQUIRED,       &store_str, 0 },
-    { 'v', "verbose",       &verbose_flag,      0,
-      DEFAULT_VAL | STORE_TRUE,     NULL,       0 },
-    { 'm', "map",           &map_flag,          0,
-      DEFAULT_VAL | STORE_TRUE,     NULL,       0 },
-    { 0, NULL, NULL, 0, 0, NULL, 0 }
+    { 'o', "out", "file", &output_filename, 0,
+      REQUIRED, &store_str, 0,
+      "Specifies the output file"
+    },
+    { 'v', "verbose", NULL, &verbose_flag, 0,
+      DEFAULT_VAL | STORE_TRUE, &store_flag, 0,
+      "Display the TFTF header and a synopsis of each TFTF section"
+    },
+    { 'm', "map", NULL, &map_flag, 0,
+      DEFAULT_VAL | STORE_TRUE, &store_flag, 0,
+      "Create a map file of the TFTF header and each TFTF section"
+    },
+    { 0, NULL, NULL, NULL, 0, 0, NULL, 0 , NULL}
 };
 
 
 /* The 1-char tags for all args */
-static char * all_args = "z:n:t:s:u:U:a:A:S:E:C:D:M:G:R:c:i:l:o:";
+static char * all_args = "z:n:t:s:u:U:a:A:S:E:C:D:M:G:R:c:i:l:o:vm";
 
-/* The 1-char tags for each of the section-related args (used to filter) */
+/**
+ * The 1-char tags for each of the section-related args
+ * (close_section_if_needed uses this to filter)
+ */
 static char * section_args = "ECDMGRcil";
 
 
-/**
- * @brief Print out the usage message
- *
- * @param None
- *
- * @returns Nothing
- */
-void usage(void) {
-    int i;
-
-    for (i = 0; i < _countof(usage_strings); i++) {
-        fprintf(stderr, "%s\n", usage_strings[i]);
-    }
-}
+static char * epilog =
+    "NOTE: sections are specified as [<section_type> <section_option>]...\n"
+    "   <section_type> ::= [--code | --data | --manifest | --certificate |\n"
+    "                       --signature]\n"
+    "   <section_option> ::= {--load} {--class} {--id}";
 
 
 /**
@@ -240,7 +230,8 @@ bool handle_header_size(const int option, const char * optarg,
     success = get_num(optarg, optx->name, &header_size);
 
     /* Make sure the header size is plausible */
-     if ((header_size < TFTF_HEADER_SIZE) ||
+     if ((header_size < TFTF_HEADER_SIZE_MIN) ||
+         (header_size > TFTF_HEADER_SIZE_MAX) ||
          !is_power_of_2(header_size)) {
          fprintf(stderr, "ERROR: Invalid TFTF header size 0x%x\n",
                  header_size);
@@ -301,6 +292,7 @@ bool handle_section_elf(const int option, const char * optarg,
 bool handle_section_normal(const int option, const char * optarg,
                            struct optionx * optx) {
     bool success;
+    bool known_arg = true;
 
     switch (option) {
     case 'C':   /* code */
@@ -328,9 +320,16 @@ bool handle_section_normal(const int option, const char * optarg,
     default:
         /* We should never get here */
         success = false;
-        fprintf(stderr,
-                "ERROR(handle_section_normal): unknown section type '%c'\n",
-                option);
+        known_arg = false;
+    }
+
+    if (!success) {
+        if (known_arg) {
+            fprintf(stderr, "ERROR: --%s %s failed\n", optx->name, optarg);
+        } else {
+            fprintf(stderr,
+                    "ERROR: unknown section type '%c'\n", option);
+        }
     }
     return success;
 }
@@ -351,7 +350,7 @@ bool handle_section_class(const int option, const char * optarg,
     uint32_t num;
 
     return get_num(optarg, optx->name, &num) &&
-           section_cache_entry_add_class(num);
+           section_cache_entry_set_class(num);
 }
 
 
@@ -370,7 +369,7 @@ bool handle_section_id(const int option, const char * optarg,
     uint32_t num;
 
     return get_num(optarg, optx->name, &num) &&
-           section_cache_entry_add_id(num);
+           section_cache_entry_set_id(num);
 }
 
 
@@ -389,7 +388,7 @@ bool handle_section_load_address(const int option, const char * optarg,
     uint32_t num;
 
     return get_num(optarg, optx->name, &num) &&
-           section_cache_entry_add_load_address(num);
+           section_cache_entry_set_load_address(num);
 }
 
 
@@ -423,38 +422,38 @@ int main(int argc, char * argv[]) {
     int program_status = 0; /* assume success */
 
     /* Parse the command line arguments */
-    parse_tbl = new_argparse(parse_table, close_section_if_needed);
+    parse_tbl = new_argparse(parse_table, argv[0], NULL, epilog, NULL,
+                             close_section_if_needed);
     if (parse_tbl) {
         success =  parse_args(argc, argv, all_args, parse_tbl);
-        parse_tbl = free_argparse(parse_tbl);
     } else {
         success = false;
     }
 
-
-    if (!success) {
-        program_status = PROGRAM_ERRORS;
-    } else {
+    if (success) {
         /* Make sure we close off any under-construction section */
         section_cache_entry_close();
 
         /* Validate that we have the needed args */
         if (!output_filename) {
             fprintf(stderr, "Error: no output file specified\n");
-            success = false;
-            usage();
         }
         else if (section_cache_entry_count() == 0) {
             fprintf(stderr,
                     "%s: missing input (code, data, manifest) section(s)\n",
                     argv[0]);
-            usage();
             success = false;
         }
     }
 
+    if (!success) {
+        usage(parse_tbl);
+        program_status = PROGRAM_ERRORS;
+    } else {
+        /* Calculate the number of sections in this TFTF header */
+        /* TODO: Use macro (TBD) in tftf.h to calculate max_sections */
+        tftf_max_sections = CALC_MAX_TFTF_SECTIONS(header_size);
 
-    if (success) {
         /* Create and initialize the TFTF blob... */
         tftf_hdr = new_tftf(header_size,
                             section_cache_entries_size(),
@@ -480,6 +479,7 @@ int main(int argc, char * argv[]) {
         free_tftf_header(tftf_hdr);
     }
 
+    parse_tbl = free_argparse(parse_tbl);
     return program_status;
 }
 

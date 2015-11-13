@@ -47,7 +47,6 @@
  * @returns True if x is 2**n, false otherwise
  */
 bool is_power_of_2(uint32_t x) {
-    /* TODO: make 64-bit ptr safe */
     return ((x != 0) && !(x & (x - 1)));
 }
 
@@ -56,12 +55,24 @@ bool is_power_of_2(uint32_t x) {
  * @brief Determine if a number is block-aligned
  *
  * @param location The address to check
- * @param block_size The block size (2**n)
+ * @param block_size The block size (assumed to be (2**n).
  *
- * @returns True if locaton is block-aligned, false otherwise
+ * @returns True if location is block-aligned, false otherwise
  */
 bool block_aligned(uint32_t location, uint32_t block_size) {
-    /* TODO: make 64-bit ptr safe */
+    return ((location & (block_size - 1)) == 0);
+}
+
+
+/**
+ * @brief Round an address up to the next block boundary, if needed.
+ *
+ * @param location The address to align
+ * @param block_size The block size (assumed to be (2**n).
+ *
+ * @returns True if location is block-aligned, false otherwise
+ */
+bool next_boundary(uint32_t location, uint32_t block_size) {
     return (location + (block_size - 1)) & ~(block_size - 1);
 }
 
@@ -69,7 +80,7 @@ bool block_aligned(uint32_t location, uint32_t block_size) {
 /**
  * @brief Determine if a region is filled with a constant byte
  *
- * Sort of a "memset" in reverse (is_memset?)
+ * Sort of a "memset" in reverse (is_memset? memcmpf?)
  *
  * @param buf The address to check
  * @param length The length of the region (in bytes) to check
@@ -322,15 +333,8 @@ bool change_extension(char * pathbuf, size_t pathbuf_length,
         if (len_final >= pathbuf_length) {
             return false;
         }
-        if (strcmp(separator + 1, extension) == 0) {
-            /* file already ends in the desired extension */
-            strncpy(pathbuf, filename, pathbuf_length);
-
-        } else {
-            /* Need to change the extension */
-            strncpy(pathbuf, filename, len_root + 1); /* (copy the "." too) */
-            strcat(pathbuf, extension);
-        }
+        strncpy(pathbuf, filename, len_root + 1); /* (copy the "." too) */
+        strcat(pathbuf, extension);
     }
     return true;
 }

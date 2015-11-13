@@ -43,6 +43,9 @@
 #include "ffff.h"
 #include "parse_support.h"
 
+/* Maximum length of a usage line to be displayed */
+#define USAGE_LINE_LENGTH 80
+
 
 typedef struct {
     const char *   string;
@@ -63,14 +66,13 @@ static parse_entry element_types[] = {
 /**
  * @brief Create an option table from an optionx table
  *
- * @param optx Pointer to the src optionx table
- * @param opg Pointer to the dst option table
- * @param count The number of entries in both tables
+ * @param optx Pointer to the src optionx table (must have an all-zero entry
+ *             as an end-of-table marker)
+ * @param opt Pointer to the dst option table to initialize
  *
  * @returns true on success, false on failure
  */
-bool parse_args_init(struct optionx * optx, struct option * opt,
-                     uint32_t count) {
+bool parse_args_init(struct optionx * optx, struct option * opt) {
     struct optionx * optx_end;
 
     if (!optx || !opt) {
@@ -78,7 +80,7 @@ bool parse_args_init(struct optionx * optx, struct option * opt,
         return false;
     }
 
-    for (optx_end = &optx[count]; optx < optx_end; optx++, opt++) {
+    for (; optx->name != NULL; optx++, opt++) {
         /* End of table? */
         if (!optx->name) {
             opt->name = NULL;
@@ -92,13 +94,11 @@ bool parse_args_init(struct optionx * optx, struct option * opt,
         opt->name = optx->name;
         if ((optx->flags & STORE_FALSE) || (optx->flags & STORE_TRUE)) {
             opt->has_arg = no_argument;
-            opt->flag = (int *)optx->var_ptr;
-            opt->val = (optx->flags & STORE_TRUE)? 1 : 0;
         } else {
             opt->has_arg = required_argument;
-            opt->flag = NULL;
-            opt->val = optx->short_name;
         }
+        opt->flag = NULL;
+        opt->val = optx->short_name;
 
         /* Initialize variable portions of the optx entry */
         optx->count = 0;
@@ -112,19 +112,28 @@ bool parse_args_init(struct optionx * optx, struct option * opt,
  * @brief Create an argparse structure, initialized from an optionx table
  *
  * @param optx Pointer to the src optionx table
-  * @param preprocess Optional pointer to a function which performs some
+ * @param prog The name of the program (typically argv.[0])
+ * @param description (optional) Text to display before argument help
+ * @param epilog (optional) Text to display after argument help
+ * @param positional_arg_description (optional) Text to display at the end
+ *        of the usage string for positional args
+ * @param preprocess (optional) Pointer to a function which performs some
  *        check of the current "option" character before parse_args processes
  *        it further. (Typically used to close a multi-arg window.)
  *
  * @returns A pointer to the allocated struct on success, NULL on failure
  */
 struct argparse * new_argparse(struct optionx *optx,
+                               const char * prog,
+                               const char * description,
+                               const char * epilog,
+                               const char * positional_arg_description,
                                PreprocessCallback preprocess) {
     struct optionx *scan = optx;
     int num_entries = 0;
     struct argparse * argp = NULL;
 
-    if (optx != NULL) {
+    if (optx && prog) {
         /**
          *  Count the number of entries in optx, including the terminating entry
          */
@@ -141,6 +150,10 @@ struct argparse * new_argparse(struct optionx *optx,
         if (!argp) {
             fprintf(stderr, "ERROR(new_argparse): Can't allocate argparse\n");
         } else {
+            argp->prog = prog;
+            argp->description = description;
+            argp->epilog = epilog;
+            argp->positional_arg_description = positional_arg_description;
             argp->num_entries = num_entries;
             argp->preprocess = preprocess;
             argp->optx = optx;
@@ -149,8 +162,9 @@ struct argparse * new_argparse(struct optionx *optx,
                 fprintf(stderr,
                         "ERROR(new_argparse): Can't allocate option table\n");
                 free(argp);
+                argp = NULL;
             } else {
-                parse_args_init(argp->optx, argp->opt, argp->num_entries);
+                parse_args_init(argp->optx, argp->opt);
             }
         }
     }
@@ -161,7 +175,7 @@ struct argparse * new_argparse(struct optionx *optx,
 /**
  * @brief Deallocate an argparse structure
  *
- * @param optx Pointer to the src optionx table
+ * @param argp Pointer to the parsing context
  *
  * @returns NULL as a convenience to allow the caller to assign it to the
  *          supplied pointer
@@ -204,20 +218,45 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
             break;
         }
 
+        /* Unrecognized option? */
+        if (option == '?') {
+            success = false;
+            continue;
+        }
+
         /**
-         * Close the window on the current section whenever we see a
-         * non-section arg
+         * Perform any global preprocesing before calling the appropriate callback.
          */
        if (parse_table->preprocess) {
             parse_table->preprocess(option);
         }
 
-        /* Process the option */
+
+
+       /* Process the option */
        if ((option != 0) && (option_index < parse_table->num_entries)) {
-            struct optionx *optx = &parse_table->optx[option_index];
+           struct optionx *optx = &parse_table->optx[option_index];
+
+           /**
+            *  Workaround for getopt_long's handling of args w/o values.
+            *  When getop_long encounters a short-named arg with,
+            *  opt->has_arg = no_argument, it returns an option_index of
+            *  zero. The workaround is to check the option char against the
+            *  short name, and if they don't match, search for it ourselves.
+            */
+           if ((option_index == 0) && (option != optx->short_name)) {
+               for (optx = parse_table->optx; optx->name != NULL; optx++) {
+                   if (optx->short_name == option) {
+                       break;
+                   }
+               }
+           }
+
            if (optx->callback) {
-                optx->count++;
-               optx->callback(option, optarg, optx);
+               optx->count++;
+               if (!optx->callback(option, optarg, optx)) {
+                   success = false;
+               }
            }
         }
     }
@@ -239,7 +278,7 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
 
 
 /**
- * @brief Generic callback to store a hex number.
+ * @brief Generic parsing callback to store a hex number.
  *
  * @param option The option character (may be used to disambiguate a
  *        common function)
@@ -259,7 +298,7 @@ bool store_hex(const int option, const char * optarg, struct optionx * optx) {
 
 
 /**
- * @brief Generic callback to store a string.
+ * @brief Generic parsing callback to store a string.
  *
  * @param option The option character (may be used to disambiguate a
  *        common function)
@@ -271,6 +310,27 @@ bool store_hex(const int option, const char * optarg, struct optionx * optx) {
 bool store_str(const int option, const char * optarg, struct optionx * optx) {
     if (optx->var_ptr) {
         *(const char**)optx->var_ptr = optarg;
+        return true;
+    } else {
+        fprintf(stderr, "ERROR: No var to store --%s", optx->name);
+        return false;
+    }
+}
+
+
+/**
+ * @brief Generic parsing callback to store a flag.
+ *
+ * @param option The option character (may be used to disambiguate a
+ *        common function)
+ * @param optarg The string from the argument parser
+ * @param optx A pointer to the option descriptor
+ *
+ * @returns Returns true on success, false on failure
+ */
+bool store_flag(const int option, const char * optarg, struct optionx * optx) {
+    if (optx->var_ptr) {
+        *(int*)optx->var_ptr = (optx->flags & STORE_TRUE)? true : false;
         return true;
     } else {
         fprintf(stderr, "ERROR: No var to store --%s", optx->name);
@@ -292,7 +352,7 @@ bool get_num(const char * optarg, const char * optname, uint32_t * num) {
     char *tail = NULL;
     bool success = true;
 
-    *num = strtoul(optarg, &tail, 16);
+    *num = strtoul(optarg, &tail, 0);
     if ((errno != errno) || ((tail != NULL) && (*tail != '\0'))) {
         fprintf (stderr, "Error: invalid %s '%s'\n", optname, optarg);
         success = false;
@@ -320,5 +380,109 @@ bool get_type(const char * optarg, uint32_t * type) {
         }
     }
     return false;
+}
+
+
+/**
+ * @brief Print a usage message from the argparse info
+ *
+ * Automatically generates the usage message in a style inspired by Python's
+ * "argparse"
+ *
+ * @param argp Pointer to the parsing context
+ *
+ * @returns Nothing
+ */
+void usage(struct argparse *argp) {
+    if (argp) {
+        char item_buf[256];
+        int line_length;
+        int item_length;
+        struct optionx * optx;
+        size_t longest_required_arg = 0;
+        size_t longest_optional_arg = 0;
+        bool issued_header;
+
+        /* Print the usage string */
+        line_length = fprintf(stderr, "usage: %s ", argp->prog);
+        for (optx = argp->optx; optx->name != NULL; optx++) {
+            /* Determine the longest arg names */
+            size_t len = strlen(optx->name);
+            if (optx->flags & REQUIRED) {
+                if (len > longest_required_arg) {
+                    longest_required_arg = len;
+                }
+            } else {
+                if (len > longest_optional_arg) {
+                    longest_optional_arg = len;
+                }
+            }
+
+            /* Format this argument */
+            item_length = snprintf(item_buf, sizeof(item_buf),
+                                   " [--%s%s%s]",
+                                   optx->name,
+                                   (optx->val_name)? " " : "",
+                                   (optx->val_name)? optx->val_name : "");
+            if ((line_length + item_length) >= USAGE_LINE_LENGTH) {
+                fprintf(stderr, "\n");
+                line_length = 0;
+            }
+            fprintf(stderr, "%s", item_buf);
+            line_length += item_length;
+        }
+        /* Optionally add the nargs section */
+        if (argp->positional_arg_description) {
+            item_length = strlen(argp->positional_arg_description);
+            if ((line_length + item_length) >= USAGE_LINE_LENGTH) {
+                fprintf(stderr, "\n");
+                line_length = 0;
+            }
+            fprintf(stderr, "%s", argp->positional_arg_description);
+            line_length += item_length;
+        }
+        /* Close off the last line of usage */
+        if (line_length != 0) {
+            fprintf(stderr, "\n");
+        }
+
+        /* Optionally print the description */
+        if (argp->description) {
+            fprintf(stderr, "\n%s\n", argp->description);
+        }
+
+       /* Print the (required) argument help */
+        for (optx = argp->optx, issued_header = false;
+             optx->name != NULL;
+             optx++) {
+            if (optx->flags & REQUIRED) {
+                if(!issued_header) {
+                    fprintf (stderr, "\narguments:\n");
+                    issued_header = true;
+                }
+                fprintf(stderr, "  %*s  %s\n",
+                        (int)longest_required_arg, optx->name, optx->help);
+            }
+        }
+
+        /* Print the (optional) argument help */
+        for (optx = argp->optx, issued_header = false;
+              optx->name != NULL;
+              optx++) {
+             if (!(optx->flags & REQUIRED)) {
+                 if(!issued_header) {
+                     fprintf (stderr, "\noptional arguments:\n");
+                     issued_header = true;
+                 }
+                fprintf(stderr, "  %*s  %s\n",
+                        (int)longest_optional_arg, optx->name, optx->help);
+            }
+        }
+
+        /* Optionally print the epilog */
+        if (argp->epilog) {
+            fprintf(stderr, "\n%s\n", argp->epilog);
+        }
+    }
 }
 

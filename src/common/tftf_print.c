@@ -37,6 +37,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
 #include "util.h"
 #include "tftf.h"
 #include "tftf_common.h"
@@ -171,7 +172,7 @@ static void print_tftf_section_data(tftf_header * tftf_hdr,
 
         /* 2. Print the associated data blobs */
         for (index = 0, pdata = ((uint8_t *)tftf_hdr) + tftf_hdr->header_size;
-             ((index < TFTF_MAX_SECTIONS) &&
+             ((index < tftf_max_sections) &&
               (section->section_type != TFTF_SECTION_END));
              pdata += section->section_length, index++, section++) {
             /* Print a generic section header */
@@ -230,9 +231,25 @@ static void print_tftf_section_table(tftf_header * tftf_hdr,
                                      const char * indent) {
     int index;
     tftf_section_descriptor * section = tftf_hdr->sections;
-    uint32_t collisions[TFTF_MAX_SECTIONS];
-    int num_collisions;
+    uint32_t * collisions = NULL;
+    size_t max_collisions;
+    size_t num_collisions;
     int collision;
+
+
+    if (!tftf_hdr) {
+        fprintf(stderr, "ERROR: No TFTF section table to print\n");
+        return;
+    }
+
+
+    /* Allocate our collision table based on the size of the header */
+    max_collisions = CALC_MAX_TFTF_SECTIONS(tftf_hdr->header_size);
+    collisions = (uint32_t *)malloc(max_collisions * sizeof(uint32_t));
+    if (!collisions) {
+        fprintf(stderr, "ERROR: Can't allocate collision table\n");
+        return;
+    }
 
     /* Ensure the indent prints nicely */
     if (!indent) {
@@ -244,7 +261,7 @@ static void print_tftf_section_table(tftf_header * tftf_hdr,
     printf("%s     Type Class  ID       Length   Load     Exp.Len\n", indent);
 
     /* Print out the occupied entries in the section table */
-    for (index = 0; index < TFTF_MAX_SECTIONS; index++, section++) {
+    for (index = 0; index < tftf_max_sections; index++, section++) {
         /* print the section header info */
         printf("%s  %2d %02x   %06x %08x %08x %08x %08x (%s)\n",
                indent,
@@ -275,18 +292,23 @@ static void print_tftf_section_table(tftf_header * tftf_hdr,
     }
 
     /* Print out the unused sections */
-    if (index == TFTF_MAX_SECTIONS - 1) {
+    if (index == (tftf_max_sections - 1)) {
         /* 1 unused section */
         printf("%s  %2d (unused)\n", indent, index);
-    } else if (index == TFTF_MAX_SECTIONS - 2) {
+    } else if (index == (tftf_max_sections - 2)) {
         /* 2 unused sections */
         printf("%s  %2d (unused)\n", indent, index);
-        printf("%s  %2d (unused)\n", indent, TFTF_MAX_SECTIONS - 1);
+        printf("%s  %2d (unused)\n", indent, tftf_max_sections - 1);
     } else {
         /* Many unused, use elipsis */
         printf("%s  %2d (unused)\n", indent, index);
         printf("%s   :    :\n", indent);
-        printf("%s  %2d (unused)\n", indent, TFTF_MAX_SECTIONS - 1);
+        printf("%s  %2d (unused)\n", indent, tftf_max_sections - 1);
+    }
+
+    /* Dispose of the collisions table */
+    if (collisions) {
+        free(collisions);
     }
 }
 

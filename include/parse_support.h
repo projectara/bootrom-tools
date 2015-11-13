@@ -47,18 +47,42 @@ typedef bool (*OptionCallback)(const int option,
                                const char * optarg,
                                struct optionx * optx);
 
+/* Describes (how to parse) a single command line argument */
 struct optionx {
+    /* 1-character short name for the arg, used in the "-x" form */
     const int               short_name;
+
+    /* Long name for the argument, used for the "--xxx" form */
     const char *            name;
+
+    /* (optional) Name for the optarg value  (e.g., --yabba=foo)  */
+    const char *            val_name;
+
+    /* Pointer to the variable which will hold the value */
     void *                  var_ptr;
+
+    /* Default value to assign to var_ptr */
     const int               default_val;
+
+    /* Parsing flags */
     const uint32_t          flags;
+
+    /**
+     * Pointer to the parsing callback function. This is given the short_name
+     * and the optarg string and a pointer to this structure.
+     */
     const OptionCallback    callback;
-    int                     count;  /* # of times this arg was encountered */
+
+    /* The number of times this arg was encountered */
+    int                     count;/* # of times this arg was encountered */
+
+    /* (optional) Help string for this arguments   */
+    const char *            help;
 };
 
 
-/* optionx flags values */
+/* optionx.flags values */
+#define OPTIONAL        0
 #define REQUIRED        BIT(0)
 #define DEFAULT_VAL     BIT(1)
 #define STORE_FALSE     BIT(2)
@@ -66,9 +90,36 @@ struct optionx {
 
 
 struct argparse {
+    /* The name of the program (typically argv.[0]) */
+    const char *        prog;
+
+    /* (optional) Text to display before argument help */
+    const char *        description;
+
+    /* (optional) Text to display after argument help */
+    const char *        epilog;
+
+    /* (optional) Text to display at the end of the usage string for positional args */
+    const char *        positional_arg_description;
+
+    /* The number of entries in optionx and option */
     int                 num_entries;
+
+    /**
+     * (optional) Function to call with the current option before the option
+     * is dispatched to the appropriate OptionCallback()
+     */
     PreprocessCallback  preprocess;
+
+    /* The parse description table - an array of optionx's, with an all-zero
+     * entry as an end-of-table marker.
+    */
     struct optionx *    optx;
+
+    /**
+     *  The allocated option array generated from optx and passed to
+     *  getopt_long()
+     */
     struct option *     opt;
 };
 
@@ -78,26 +129,33 @@ struct argparse {
  *
  * @param optx Pointer to the src optionx table
  * @param opg Pointer to the dst option table
- * @param count The number of entries in both tables
  *
  * @returns true on success, false on failure
  */
 bool parse_args_init(struct optionx * optx,
-                     struct option * opt,
-                     uint32_t count);
+                     struct option * opt);
 
 
 /**
  * @brief Create an argparse structure, initialized from an optionx table
  *
  * @param optx Pointer to the src optionx table
-  * @param preprocess Optional pointer to a function which performs some
+ * @param prog The name of the program (typically argv.[0])
+ * @param description (optional) Text to display before argument help
+ * @param epilog (optional) Text to display after argument help
+ * @param positional_arg_description (optional) Text to display at the end
+ *        of the usage string for positional args
+ * @param preprocess (optional) Pointer to a function which performs some
  *        check of the current "option" character before parse_args processes
  *        it further. (Typically used to close a multi-arg window.)
  *
  * @returns A pointer to the allocated struct on success, NULL on failure
  */
 struct argparse * new_argparse(struct optionx *optx,
+                               const char * prog,
+                               const char * description,
+                               const char * epilog,
+                               const char * positional_arg_description,
                                PreprocessCallback preprocess);
 
 
@@ -110,6 +168,16 @@ struct argparse * new_argparse(struct optionx *optx,
  *          supplied pointer
  */
 struct argparse * free_argparse(struct argparse *argp);
+
+
+/**
+ * @brief Print a usage message from the argparse info
+ *
+ * @param argp Pointer to the parsing context
+ *
+ * @returns Nothing
+ */
+void usage(struct argparse *argp);
 
 
 /**
@@ -150,6 +218,19 @@ bool store_hex(const int option, const char * optarg, struct optionx * optx);
  * @returns Returns true on success, false on failure
  */
 bool store_str(const int option, const char * optarg, struct optionx * optx);
+
+
+/**
+ * @brief Generic parsing callback to store a flag.
+ *
+ * @param option The option character (may be used to disambiguate a
+ *        common function)
+ * @param optarg The string from the argument parser
+ * @param optx A pointer to the option descriptor
+ *
+ * @returns Returns true on success, false on failure
+ */
+bool store_flag(const int option, const char * optarg, struct optionx * optx);
 
 
 /**

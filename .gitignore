@@ -28,10 +28,11 @@
 *.i*86
 *.x86_64
 *.hex
-create-tftf
-create-ffff
-display-ffff
-sign-ffff
+bin/create-tftf
+bin/display-tftf
+bin/sign-tftf
+bin/create-ffff
+bin/display-ffff
 ftdi/haps_test
 ftdi/spirom_write
 

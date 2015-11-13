@@ -69,13 +69,8 @@ bool write_tftf_file(const tftf_header * tftf_hdr,
         fprintf(stderr, "ERROR (write_tftf_file): Invalid args\n");
         errno = EINVAL;
     } else {
-        /* Walk the section table to determine the length of the blob */
-        length = tftf_hdr->header_size;
-        for (section = tftf_hdr->sections;
-             section->section_type != TFTF_SECTION_END;
-             section++) {
-            length += section->section_length;
-        }
+        /* Determine the length of the blob */
+        length = tftf_hdr->header_size + tftf_payload_size(tftf_hdr);
 
         /* Write the blob to the file */
         tftf_fd = open(output_filename, O_RDWR | O_CREAT | O_TRUNC, 0666);

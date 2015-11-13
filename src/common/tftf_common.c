@@ -42,6 +42,12 @@
 #include "tftf.h"
 #include "tftf_common.h"
 
+/* if verbose is true, print out a summary of the TFTF header on success. */
+int verbose_flag = false;
+
+/* This contains the maximum number of sections in the header. */
+uint32_t tftf_max_sections = TFTF_MAX_SECTIONS;
+
 
 /**
  * @brief Allocate a TFTF blob
@@ -96,11 +102,11 @@ tftf_header *  free_tftf_header(tftf_header * tftf_hdr) {
  *
  * @returns The number of payload bytes.
  */
-size_t  tftf_payload_size(tftf_header * tftf_hdr) {
+size_t  tftf_payload_size(const tftf_header * tftf_hdr) {
     size_t size = 0;
 
     if (tftf_hdr) {
-        tftf_section_descriptor * section;
+        const tftf_section_descriptor * section;
         uint8_t * hdr_end = ((uint8_t *)tftf_hdr) + tftf_hdr->header_size;
 
         for (section = tftf_hdr->sections;
@@ -172,16 +178,24 @@ int tftf_section_collisions(tftf_header * tftf_hdr,
         uint32_t index;
         tftf_section_descriptor * sweeper;
 
-        for (index = 0, sweeper = tftf_hdr->sections;
-             sweeper->section_type != TFTF_SECTION_END;
-             index++, sweeper++) {
-            /* Skip over ourselves */
-            if (sweeper != section) {
-                if (regions_overlap(section->section_load_address,
-                                    section->section_length,
-                                    sweeper->section_load_address,
-                                    sweeper->section_length)) {
-                    collisions[num_collisions++] = index;
+        /* Skip comparing any section marked as to be ignored */
+        if (section->section_load_address != DATA_ADDRESS_TO_BE_IGNORED) {
+            for (index = 0, sweeper = tftf_hdr->sections;
+                 sweeper->section_type != TFTF_SECTION_END;
+                 index++, sweeper++) {
+                /**
+                 * Skip over ourself and any sections with an address of
+                 * DATA_ADDRESS_TO_BE_IGNORED
+                 */
+                if ((sweeper != section) &&
+                    (sweeper->section_load_address !=
+                     DATA_ADDRESS_TO_BE_IGNORED)) {
+                    if (regions_overlap(section->section_load_address,
+                                        section->section_length,
+                                        sweeper->section_load_address,
+                                        sweeper->section_length)) {
+                        collisions[num_collisions++] = index;
+                    }
                 }
             }
         }

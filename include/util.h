@@ -53,15 +53,6 @@
 
 
 /**
- * @brief: returns the offset of a structure element in a structure type
- */
-#ifndef offsetof
-    #define offsetof(type,member) \
-        &((type *)NULL->member));
-#endif
-
-
-/**
  * @brief: returns the number of elements in the array
  */
 #define _countof(x)   (sizeof(x)/sizeof((x)[0]))
@@ -88,11 +79,22 @@ bool is_power_of_2(uint32_t x);
  * @brief Determine if a number is block-aligned
  *
  * @param location The address to check
- * @param block_size The block size (2**n)
+ * @param block_size The block size (assumed to be (2**n).
  *
- * @returns True if locaton is block-aligned, false otherwise
+ * @returns True if location is block-aligned, false otherwise
  */
 bool block_aligned(uint32_t location, uint32_t block_size);
+
+
+/**
+ * @brief Round an address up to the next block boundary, if needed.
+ *
+ * @param location The address to align
+ * @param block_size The block size (assumed to be (2**n).
+ *
+ * @returns True if location is block-aligned, false otherwise
+ */
+bool next_boundary(uint32_t location, uint32_t block_size);
 
 
 /**

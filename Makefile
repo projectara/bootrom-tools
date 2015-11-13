@@ -29,6 +29,14 @@
 TOPDIR := ${shell pwd}
 include $(TOPDIR)/Makefile.inc
 
+#  VERBOSE==1:  Echo commands
+#  VERBOSE!=1:  Do not echo commands
+ifeq ($(VERBOSE),1)
+export Q :=
+else
+export Q := @
+endif
+
 # Sub-directories
 SUBDIRS  = src
 
@@ -40,21 +48,17 @@ all: $(SUBDIRS)
 # recursively make <SubDir>
 define SDIR_template0
 $(1): force_look
-#	$(MAKE) -C $(1)
-	$(MAKE) -C $(1) TOPDIR="$(TOPDIR)"
-#	$(Q) $(MAKE) -C $(1) TOPDIR="$(TOPDIR)" APPDIR="$(APPDIR)"
+	$(Q) $(MAKE) -C $(1) TOPDIR="$(TOPDIR)"
 endef
 
 # SDIR_template <SubDir> <Target>
 # recursively make <Target> in <SubDir>
 define SDIR_template
 $(1)_$(2):
-#	$(MAKE) -C $(1) $(2)
-	$(MAKE) -C $(1) $(2) TOPDIR="$(TOPDIR)"
-#	$(Q) $(MAKE) -C $(1) $(2) TOPDIR="$(TOPDIR)" APPDIR="$(APPDIR)"
+	$(Q) $(MAKE) -C $(1) $(2) TOPDIR="$(TOPDIR)"
 endef
 
-# create generic dependencies for all subdirs
+# create generic dependencies for all subdirs. e.g.:
 # create-tftf:
 # 	make -C create-tftf
 #  :
@@ -66,12 +70,10 @@ $(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template0,$(SDIR))))
 # create-tftf_clean:
 # 	make -C create-tftf clean
 #  :
-# create-ffff_clean:m
+# create-ffff_clean:
 # 	make -C create-ffff clean
 $(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
 
-#create-tftf/create-tftf:
-#	make -C create-tftf
 
 nothing:
 
@@ -79,7 +81,6 @@ install:
 
 # clean the tree by dependencies on all of the xxx_clean dependencies declared above
 clean: $(foreach SDIR, $(SUBDIRS), $(SDIR)_clean)
-
 
 force_look :
 	true

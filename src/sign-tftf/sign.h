@@ -47,10 +47,34 @@
 #define FORMAT_TYPE_STANDARD    1
 #define FORMAT_TYPE_ES3         2
 
+#define PASSIN_PROMPT   0
+#define PASSIN_STDIN    1
+#define PASSIN_PASSIN   2
 
 extern parse_entry signature_algorithms[];
 extern parse_entry package_types[];
 extern parse_entry signature_formats[];
+
+extern char *   passphrase;
+
+/**
+ * @brief Initialize the signing subsystem
+ *
+ * @param key_filename The pathname to the private key file
+ *
+ * @returns True on success, false on failure.
+ */
+bool sign_init(char * key_filename);
+
+
+/**
+ * @brief Deinitialize the signing subsystem
+ *
+ * @param none
+ *
+ * @returns Nothing
+ */
+void sign_deinit(void);
 
 
 /**
@@ -61,7 +85,12 @@ extern parse_entry signature_formats[];
  * @param package_type The pathname to the TFTF file to sign.
  * @param signature_algorithm The pathname to the TFTF file to sign.
  * @param key_filename The pathname to the TFTF file to sign.
- * @param suffix The optional suffix to append to the name
+ * @param suffix The optional suffix to append to the name.
+ * @param write_if_good If true and we were able to sign it, write the signed
+ *        TFTF file. If false only verify we can sign the TFTF.
+ * @param verbose If true, display the signed TFTF.
+ * @param passphrase_invalid A pointer to a boolean which will be set if the
+ *        actual signing failed. (This is to support the "--retry" flag.)
  *
  * @returns True on success, false on failure
  */
@@ -70,6 +99,9 @@ bool sign_tftf(const char * filename,
                const uint32_t package_type,
                const uint32_t signature_algorithm,
                const char * key_filename,
-               const char * suffix);
+               const char * suffix,
+               const bool write_if_good,
+               const bool verbose,
+               bool * passphrase_invalid);
 
 #endif /* _SIGN_H */

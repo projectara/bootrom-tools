@@ -65,15 +65,11 @@
 #define PROGRAM_WARNINGS    1
 #define PROGRAM_ERRORS      2
 
-#define PASSIN_PASSIN   0
-#define PASSIN_STDIN    1
-#define PASSIN_PROMPT   2
-
 
 parse_entry passin_modes[] = {
-    {"pass:",   PASSIN_PASSIN},
-    {"stdin",  PASSIN_STDIN},
     {"prompt", PASSIN_PROMPT},
+    {"pass:",  PASSIN_PASSIN},
+    {"stdin",  PASSIN_STDIN},
     {NULL, 0}
 };
 
@@ -97,13 +93,16 @@ parse_entry signature_formats[] = {
 
 /* TFTF parsing args */
 static int      verbose_flag = false;
+static int      retry_flag = false;
+static int      check_flag = false;
 static char *   key_filename;
 static char *   suffix;
 static uint32_t package_type;
 static uint32_t signature_algorithm;
 static uint32_t signature_format;
 static uint32_t passin_mode;
-static char *   passphrase;
+static char     passphrase_buffer[256];
+char *          passphrase;
 
 
 /* TFTF parsing callbacks */
@@ -124,13 +123,13 @@ static struct optionx parse_table[] = {
     { 'a', "signature-algorithm",   &signature_algorithm,   0,              REQUIRED,       &handle_algorithm, 0 },
     { 'f', "format",                &signature_format,      0,              REQUIRED,       &handle_format, 0 },
     { 'k', "key",                   &key_filename,          0,              REQUIRED,       &store_str, 0 },
-    { 'v', "verbose",               &verbose_flag,          0,              DEFAULT_VAL | STORE_TRUE,     NULL,       0 },
+    { 'r', "retry",                 &retry_flag,            0,              DEFAULT_VAL | STORE_TRUE,     NULL, false },
+    { 'c', "check",                 &check_flag,            0,              DEFAULT_VAL | STORE_TRUE,     NULL, false },
+    { 'v', "verbose",               &verbose_flag,          0,              DEFAULT_VAL | STORE_TRUE,     NULL, false },
     { 0, NULL, NULL, 0, 0, NULL, 0 }
 };
 
 static char all_args[] = "p:t:s:a:f:k:";
-
-
 
 static char * usage_strings[] =
 {
@@ -259,6 +258,47 @@ void usage(void) {
 
 
 /**
+ * @brief Get the passphrase from the user
+ *
+ * @param key_filename The name of the private key file.
+ *        If key_filename is NULL, we simply read the next line from stdin.
+ *        If key_filename is non-NULL, we switch stdin to no-echo, prompt the
+ *        user for the passphrase, and switch the mode back.
+ *
+ * @returns A pointer to the passphrase on success, NULL on failure.
+ */
+char * get_passphrase(uint32_t passin_mode) {
+    char * pass = NULL;
+    size_t last;
+
+
+    switch (passin_mode) {
+    case PASSIN_PROMPT:
+        pass = getpass("Enter PEM pass phrase: ");
+        break;
+
+    case PASSIN_STDIN:
+        /* Get the line from stdin and strip off the newline */
+        pass = fgets(passphrase_buffer, sizeof(passphrase_buffer), stdin);
+        if (pass) {
+            /* strip the newline */
+            last = strlen(passphrase_buffer) - 1;
+            if (passphrase_buffer[last] == '\n') {
+                passphrase_buffer[last] = '\0';
+            }
+            pass = passphrase_buffer;
+        }
+        break;
+
+    case PASSIN_PASSIN:
+        pass = passphrase;
+    }
+
+    return pass;
+}
+
+
+/**
  * @brief Entry point for the display-tftf application
  *
  * @param argc The number of elements in argv or parsed_argv (std. unix argc)
@@ -268,6 +308,7 @@ void usage(void) {
  */
 int main(int argc, char * argv[]) {
     bool success = true;
+    bool passphrase_invalid = false;
     struct argparse * parse_tbl = NULL;
     int program_status = PROGRAM_SUCCESS;
 
@@ -282,37 +323,43 @@ int main(int argc, char * argv[]) {
 
 
     /* Perform any argument validation/post-processing */
-    if (passin_mode == PASSIN_STDIN) {
-        size_t  len = 0;
-        ssize_t length_read;
-
-        length_read = getline(&passphrase, &len, stdin);
-        /* Strip off the newline */
-        if (length_read > 1) {
-            passphrase[length_read - 1] = '\0';
-        }
+    printf("passin_mode %u\n", passin_mode);
+    passphrase = get_passphrase(passin_mode);
+    if (!passphrase) {
+        fprintf(stderr, "ERROR: Missing passphrase for private key %s\n",
+                key_filename);
     }
 
 
+    /* Process the remaining command line arguments as files to sign. */
     if (success) {
-        /* Process the remaining command line arguments as files to sign. */
         if (optind < argc) {
-            for (; optind < argc; optind++) {
-                if (!sign_tftf(argv[optind], signature_format, package_type,
-                               signature_algorithm, key_filename, suffix)) {
-                    fprintf(stderr, "ERROR: Unable to sign %s\n",
-                            argv[optind]);
-                    success = false;
+            if (sign_init(key_filename)) {
+                for (; optind < argc; optind++) {
+                    if (!sign_tftf(argv[optind], signature_format,
+                                   package_type, signature_algorithm,
+                                   key_filename, suffix, !check_flag,
+                                   verbose_flag, &passphrase_invalid)) {
+                        fprintf(stderr, "ERROR: Unable to sign %s\n",
+                                argv[optind]);
+                        success = false;
+                    }
+                    if (passphrase_invalid && retry_flag &&
+                        (passin_mode == PASSIN_PROMPT)) {
+                        fprintf(stderr, "ERROR: Invalid passphrase\n");
+                        success = false;
+                        break;
+                    }
                 }
+                sign_deinit();
+            } else {
+                fprintf(stderr, "ERROR: Couldn't initialize crypto\n");
+                success = false;
             }
         } else {
-            fprintf(stderr, "ERROR: No TFTF files to display\n");
-            program_status = PROGRAM_ERRORS;
+            fprintf(stderr, "ERROR: No TFTF files to sign\n");
+            success = false;
         }
-    }
-
-    if (passphrase) {
-        free(passphrase);
     }
 
     if (!success) {

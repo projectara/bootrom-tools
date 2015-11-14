@@ -543,7 +543,7 @@ void display_binary_data(const uint8_t * blob, const size_t length,
             /* Nominally a small blob */
             for (start = 0; start < length; start += max_on_line) {
                 size_t num_bytes = min(length, max_on_line);
-                printf("%s%s", indent, hexlify(&blob[start], num_bytes,
+                printf("%s%s\n", indent, hexlify(&blob[start], num_bytes,
                                                linebuf, sizeof(linebuf)));
             }
         } else {

@@ -46,7 +46,7 @@ COMMON_NAMES := \
   $(COMMONDIR)/tftf_print.c
 
 INC_DIRS := -I. -I$(IDIR)
-EXTRA_LIBS := -lelf
+EXTRA_LIBS := -lelf -lcrypto
 
 
 _DEPS = \

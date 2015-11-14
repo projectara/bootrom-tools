@@ -96,22 +96,22 @@ const char * tftf_section_type_name(const uint8_t type) {
 static void print_tftf_signature(const tftf_signature * sig_block,
                                  const char * indent) {
     if (sig_block) {
-        char indent_buf[256];
+        char data_indent[256];
 
         /* Format the indent for the binary data */
         if (!indent) {
             indent = "";
         }
-        snprintf(indent_buf, sizeof(indent_buf), "%s       ", indent);
+        snprintf(data_indent, sizeof(data_indent), "%s       ", indent);
 
-        printf("%s  Length:    %08x", indent, sig_block->length);
-        printf("%s  Sig. type: %d (%s)", indent, sig_block->type,
+        printf("%s  Length:    %08x\n", indent, sig_block->length);
+        printf("%s  Sig. type: %d (%s)\n", indent, sig_block->type,
                tftf_section_type_name(sig_block->type));
-        printf("%s  Key name:", indent);
-        printf("%s      '%4s'", indent, sig_block->key_name);
-        printf("%s  Signature:", indent);
+        printf("%s  Key name:\n", indent);
+        printf("%s      '%4s'\n", indent, sig_block->key_name);
+        printf("%s  Signature:\n", indent);
         display_binary_data((uint8_t *)sig_block->signature, sig_block->length, true,
-                            indent_buf);
+                            data_indent);
     }
 }
 
@@ -147,7 +147,7 @@ static void print_tftf_section_data(const tftf_header * tftf_hdr,
 
         /* 1. Print the title line */
         if (title_string) {
-            printf("%sTFTF contents for %s (%u bytes)\n",
+            printf("\n%sTFTF section contents for %s (%u bytes)\n",
                    indent, title_string,
                    (uint32_t)tftf_payload_size(tftf_hdr));
         } else {

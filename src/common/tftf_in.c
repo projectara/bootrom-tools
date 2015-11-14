@@ -223,11 +223,11 @@ void section_cache_entry_close(void) {
  * @param section_type The type of the section
  * @param filename The name of the file
  *
- * @returns true if successful, false otherwise
+ * @returns 0 if successful, -1 otherwise
  */
-bool section_cache_entry_open(const uint32_t section_type,
+int section_cache_entry_open(const uint32_t section_type,
                               const char * filename) {
-    bool success = false;  /* assume failure */
+    int linux_style_status = -1;  /* assume failure */
     section_cache_entry * section = NULL;
 
     if (current_section < MAX_TFTF_SECTION_CACHE) {
@@ -264,10 +264,10 @@ bool section_cache_entry_open(const uint32_t section_type,
          * section_load_address to the section's load_address + load_length.
          */
         section->section.section_load_address = section_load_address;
-        success = true;
+        linux_style_status = 0;
    }
 
-    return success;
+    return linux_style_status;
 }
 
 
@@ -520,7 +520,7 @@ tftf_header * new_tftf(const uint32_t header_size,
         set_timestamp(tftf_hdr);
         if (firmware_pkg_name != NULL) {
             /* Copy the string, ensuring the buffer is ASCIIZ */
-            strncpy_s(tftf_hdr->firmware_package_name, fw_pkg_name_length,
+            safer_strncpy(tftf_hdr->firmware_package_name, fw_pkg_name_length,
                       firmware_pkg_name, fw_pkg_name_length);
             if (strlen(tftf_hdr->firmware_package_name) < strlen(firmware_pkg_name)) {
                 fprintf(stderr,
@@ -619,7 +619,7 @@ bool elf_add_section_cache_entry(Elf_Scn *scn, uint32_t type) {
     } else {
         while ((n < shdr.sh_size) &&
                (data = elf_getdata(scn, data)) != NULL) {
-            success = section_cache_entry_open(type, NULL) &&
+            success = (section_cache_entry_open(type, NULL) == 0) &&
                       section_cache_entry_set_blob(data->d_buf, data->d_size);
             section_cache_entry_close();
             break;

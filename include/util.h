@@ -154,7 +154,7 @@ bool regions_overlap(const size_t x, const size_t xlen,
 /**
  * @brief Mostly-safe string copy (bounded)
  *
- * Lightweight strncpy_s, does not check for unterminated or overlapped
+ * Lightweight safer_strncpy, does not check for unterminated or overlapped
  * strings.
  *
  * @param dest The buffer to copy into
@@ -164,13 +164,13 @@ bool regions_overlap(const size_t x, const size_t xlen,
  *
  * @returns True if the string was fully copied, false otherwise
  */
-bool strncpy_s(char * dest, size_t destsz, const char * src, size_t count);
+bool safer_strncpy(char * dest, size_t destsz, const char * src, size_t count);
 
 
 /**
  * @brief Mostly-safe string copy
  *
- * Lightweight strcpy_s, does not check for unterminated or overlapped
+ * Lightweight safer_strcpy, does not check for unterminated or overlapped
  * strings.
  *
  * @param dest The buffer to copy into
@@ -179,13 +179,13 @@ bool strncpy_s(char * dest, size_t destsz, const char * src, size_t count);
  *
  * @returns True if the string was fully copied, false otherwise
  */
-bool strcpy_s(char * dest, size_t destsz, const char * src);
+bool safer_strcpy(char * dest, size_t destsz, const char * src);
 
 
 /**
  * @brief Mostly-safe string catenate (bounded)
  *
- * Lightweight strncat_s, does not check for unterminated or overlapped
+ * Lightweight safer_strncat, does not check for unterminated or overlapped
  * strings.
  *
  * @param dest The buffer to append to
@@ -195,13 +195,13 @@ bool strcpy_s(char * dest, size_t destsz, const char * src);
  *
  * @returns True if the string was fully copied, false otherwise
  */
-bool strncat_s(char * dest, size_t destsz, const char * src, size_t count);
+bool safer_strncat(char * dest, size_t destsz, const char * src, size_t count);
 
 
 /**
  * @brief Mostly-safe string catnenation
  *
- * Lightweight strcat_s, does not check for unterminated or overlapped
+ * Lightweight safer_strcat, does not check for unterminated or overlapped
  * strings.
  *
  * @param dest The buffer to append to
@@ -210,7 +210,7 @@ bool strncat_s(char * dest, size_t destsz, const char * src, size_t count);
  *
  * @returns True if the string was fully copied, false otherwise
  */
-bool strcat_s(char * dest, size_t destsz, const char * src);
+bool safer_strcat(char * dest, size_t destsz, const char * src);
 
 
 

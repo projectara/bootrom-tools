@@ -138,14 +138,9 @@ bool endswith(const char * str, const char * suffix) {
  */
 bool overlap(const uint8_t * x, const size_t xlen,
              const uint8_t * y, const size_t ylen) {
-    if (x && y) {
-        const uint8_t * x_end = x + xlen;
-        const uint8_t * y_end = y + ylen;
-        return ((y < x_end) && (x < y_end));
-    } else {
-        /* one or more are null */
-        return false;
-    }
+    const uint8_t * x_end = x + xlen;
+    const uint8_t * y_end = y + ylen;
+    return ((y < x_end) && (x < y_end));
 }
 
 
@@ -170,7 +165,7 @@ bool regions_overlap(const size_t x, const size_t xlen,
 /**
  * @brief Mostly-safe string copy (bounded)
  *
- * Lightweight strncpy_s, does not check for unterminated or overlapped
+ * Lightweight safer_strncpy, does not check for unterminated or overlapped
  * strings.
  *
  * @param dest The buffer to copy into
@@ -180,7 +175,7 @@ bool regions_overlap(const size_t x, const size_t xlen,
  *
  * @returns True if the string was fully copied, false otherwise
  */
-bool strncpy_s(char * dest, size_t destsz, const char * src, size_t count) {
+bool safer_strncpy(char * dest, size_t destsz, const char * src, size_t count) {
     bool success = true;
 
     if ((dest) && (destsz > 0) && (src) && (count > 0)) {
@@ -214,7 +209,7 @@ bool strncpy_s(char * dest, size_t destsz, const char * src, size_t count) {
 /**
  * @brief Mostly-safe string copy
  *
- * Lightweight strcpy_s, does not check for unterminated or overlapped
+ * Lightweight safer_strcpy, does not check for unterminated or overlapped
  * strings.
  *
  * @param dest The buffer to copy into
@@ -223,15 +218,15 @@ bool strncpy_s(char * dest, size_t destsz, const char * src, size_t count) {
  *
  * @returns True if the string was fully copied, false otherwise
  */
-bool strcpy_s(char * dest, size_t destsz, const char * src) {
-    return (src)? strncpy_s(dest, destsz, src, strlen(src)) : false;
+bool safer_strcpy(char * dest, size_t destsz, const char * src) {
+    return (src)? safer_strncpy(dest, destsz, src, strlen(src)) : false;
 }
 
 
 /**
  * @brief Mostly-safe string catenate (bounded)
  *
- * Lightweight strncat_s, does not check for unterminated or overlapped
+ * Lightweight safer_strncat, does not check for unterminated or overlapped
  * strings.
  *
  * @param dest The buffer to append to
@@ -241,7 +236,7 @@ bool strcpy_s(char * dest, size_t destsz, const char * src) {
  *
  * @returns True if the string was fully copied, false otherwise
  */
-bool strncat_s(char * dest, size_t destsz, const char * src, size_t count) {
+bool safer_strncat(char * dest, size_t destsz, const char * src, size_t count) {
     bool success = true;
 
     if (dest && (destsz > 0) && src && (count > 0)) {
@@ -288,7 +283,7 @@ bool strncat_s(char * dest, size_t destsz, const char * src, size_t count) {
  * @returns True if the string was fully copied, false otherwise
  */
 bool strcat_s(char * dest, size_t destsz, const char * src) {
-    return (src != NULL)? strncat_s(dest, destsz, src, strlen(src)) :
+    return (src != NULL)? safer_strncat(dest, destsz, src, strlen(src)) :
                           false;
 }
 

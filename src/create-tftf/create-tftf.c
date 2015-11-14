@@ -296,25 +296,27 @@ bool handle_section_normal(const int option, const char * optarg,
 
     switch (option) {
     case 'C':   /* code */
-        success = section_cache_entry_open(TFTF_SECTION_RAW_CODE, optarg);
+        success = section_cache_entry_open(TFTF_SECTION_RAW_CODE, optarg) == 0;
         break;
 
     case 'D':   /* data */
-        success = section_cache_entry_open(TFTF_SECTION_RAW_DATA, optarg);
+        success = section_cache_entry_open(TFTF_SECTION_RAW_DATA, optarg) == 0;
         break;
 
     case 'G':   /* siGnature */
         /* TODO: We may want to validate the signature we fetch */
-        success = section_cache_entry_open(TFTF_SECTION_SIGNATURE, optarg);
+        success =
+            section_cache_entry_open(TFTF_SECTION_SIGNATURE, optarg) == 0;
         break;
 
     case 'R':   /* ceRtificate */
         /* TODO: We may want to validate the certificate we fetch */
-        success = section_cache_entry_open(TFTF_SECTION_CERTIFICATE, optarg);
+        success =
+            section_cache_entry_open(TFTF_SECTION_CERTIFICATE, optarg) == 0;
         break;
 
     case 'M':   /* manifest */
-        success = section_cache_entry_open(TFTF_SECTION_MANIFEST, optarg);
+        success = section_cache_entry_open(TFTF_SECTION_MANIFEST, optarg) == 0;
         break;
 
     default:

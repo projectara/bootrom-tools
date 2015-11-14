@@ -67,9 +67,9 @@ bool load_file(const char * filename, uint8_t * buf, ssize_t length);
  * @param section_type The type of the section
  * @param filename The name of the file
  *
- * @returns true if successful, false otherwise
+ * @returns 0 if successful, -1 otherwise
  */
-bool section_cache_entry_open(const uint32_t section_type,
+int section_cache_entry_open(const uint32_t section_type,
                               const char * filename);
 
 

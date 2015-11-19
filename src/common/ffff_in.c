@@ -485,48 +485,77 @@ struct ffff * new_ffff_romimage(const char *   name,
  */
 struct ffff * read_ffff_romimage(const char * ffff_file) {
     ssize_t image_length;
+    ssize_t bytes_read;
+    int ffff_fd;
     struct ffff * romimage = NULL;
     ffff_header * ffff_hdr;
     uint32_t offset;
+    bool success = false;
 
     image_length = size_file(ffff_file);
     if (image_length > (2 * FFFF_HEADER_SIZE_MIN)) {
         romimage = new_ffff((uint32_t)image_length, 0, 0);
         if (romimage != NULL) {
-            romimage->ffff_hdrs[1] = NULL; /* invalid until we find it */
 
-            /**
-             * Examine the file for the FFFF headers
-             *
-             * According to the spec., the 1st FFFF header should be at offset
-             * 0, and the 2nd at the first 2**n boundary (at least as big as the
-             * minimum FFFF header size) past that. */
-            if (validate_ffff_header(romimage->ffff_hdrs[0], 0)) {
-                /* Found the 1st header, search for the 2nd */
-                ffff_header * ffff_hdr2 = NULL;
-
-                ffff_hdr = romimage->ffff_hdrs[0];
-                for (offset = next_boundary(ffff_hdr->header_size,
-                                            ffff_hdr->erase_block_size);
-                     offset < image_length;
-                     offset *= 2) {
-                    ffff_hdr2 = (ffff_header *)&romimage->blob[offset];
-                    if (validate_ffff_header(ffff_hdr2, 0)) {
-                        romimage->ffff_hdrs[1] = ffff_hdr2;
-                    }
-                }
+            /* Read the purported FFFF file */
+            ffff_fd = open(ffff_file, O_RDONLY, 0666);
+            if (ffff_fd < 0) {
+                fprintf(stderr, "Error: unable to open '%s' (err %d)\n",
+                        ffff_file,
+                        ffff_fd);
             } else {
-                /* No valid header at location 0, search for the 2nd */
-                for (offset = next_boundary(FFFF_HEADER_SIZE_MIN,
-                                            FFFF_HEADER_SIZE_MIN);
-                     offset < image_length;
-                     offset *= 2) {
-                    ffff_hdr = (ffff_header *)&romimage->blob[offset];
-                    if (validate_ffff_header(ffff_hdr, 0)) {
-                        romimage->ffff_hdrs[0] = ffff_hdr;
+                bytes_read =
+                    read(ffff_fd, romimage->blob, image_length);
+                if (bytes_read != image_length) {
+                    fprintf(stderr, "Error: Only read %u/%u bytes from '%s' (err %d)\n",
+                            (uint32_t)bytes_read, (uint32_t)image_length,
+                            ffff_file, errno);
+                } else {
+                    success = true;
+                }
+
+                /* Done with the FFFF file. */
+                close(ffff_fd);
+            }
+
+            if (success) {
+                ffff_hdr = romimage->ffff_hdrs[0];
+                romimage->ffff_hdrs[1] = NULL; /* invalid until we find it */
+
+                /**
+                 * Examine the file for the FFFF headers
+                 *
+                 * According to the spec., the 1st FFFF header should be at offset
+                 * 0, and the 2nd at the first 2**n boundary (at least as big as the
+                 * minimum FFFF header size) past that. */
+                if (validate_ffff_header(romimage->ffff_hdrs[0], 0) == 0) {
+                    /* Found the 1st header, search for the 2nd */
+                    ffff_header * ffff_hdr2 = NULL;
+
+                    for (offset = next_boundary(ffff_hdr->header_size,
+                                                ffff_hdr->erase_block_size);
+                         offset < image_length;
+                         offset *= 2) {
+                        ffff_hdr2 = (ffff_header *)&romimage->blob[offset];
+                        if (validate_ffff_header(ffff_hdr2, 0) == 0) {
+                            romimage->ffff_hdrs[1] = ffff_hdr2;
+                            break;
+                        }
+                    }
+                } else {
+                    /* No valid header at location 0, search for the 2nd */
+                    for (offset = next_boundary(FFFF_HEADER_SIZE_MIN,
+                                                FFFF_HEADER_SIZE_MIN);
+                         offset < image_length;
+                         offset *= 2) {
+                        ffff_hdr = (ffff_header *)&romimage->blob[offset];
+                        if (validate_ffff_header(ffff_hdr, offset) == 0) {
+                            romimage->ffff_hdrs[0] = ffff_hdr;
+                            break;
+                        }
                     }
                 }
-            }
+             }
         }
     }
 
@@ -688,7 +717,7 @@ int validate_ffff_header(ffff_header *header, uint32_t address) {
 
     if (header->flash_capacity < (header->erase_block_size << 1)) {
         set_last_error(BRE_FFFF_FLASH_CAPACITY);
-       return -1;
+        return -1;
     }
 
     if (header->flash_image_length > header->flash_capacity) {

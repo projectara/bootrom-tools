@@ -46,7 +46,6 @@
 #include "tftf_print.h"
 
 
-
 /**
  * @brief Convert a FFFF element type into a human-readable string
  *
@@ -75,6 +74,40 @@ const char * ffff_element_type_name(const uint8_t type) {
         break;
     case FFFF_ELEMENT_END:
         name = "end";
+        break;
+    }
+    return name;
+}
+
+
+/**
+ * @brief Convert a FFFF element type into a human-readable string
+ *
+ * @param type the FFFF element type
+ *
+ * @returns A string
+ */
+const char * ffff_element_type_long_name(const uint8_t type) {
+    char * name = "?";
+
+    switch (type) {
+    case FFFF_ELEMENT_STAGE_2_FW:
+        name = "stage 2 firwmware";
+        break;
+    case FFFF_ELEMENT_STAGE_3_FW:
+        name = "stage 3 firmware";
+        break;
+    case FFFF_ELEMENT_IMS_CERT:
+        name = "IMS certificate";
+        break;
+    case FFFF_ELEMENT_CMS_CERT:
+        name = "CMS certificate";
+        break;
+    case FFFF_ELEMENT_DATA:
+        name = "data";
+        break;
+    case FFFF_ELEMENT_END:
+        name = "end of elements";
         break;
     }
     return name;
@@ -203,7 +236,7 @@ static void print_ffff_element_table(const ffff_header * ffff_hdr,
                    element->element_length,
                    element->element_location,
                    element->element_generation,
-                   ffff_element_type_name(element->element_type));
+                   ffff_element_type_long_name(element->element_type));
 
             /* Note any collisions on a separate line */
             num_collisions = ffff_element_collisions(ffff_hdr, element,
@@ -280,21 +313,21 @@ static void print_ffff_header(const ffff_header * ffff_hdr,
         /* Print out the fixed part of the header */
         safer_strncpy(sentinel_buf, sizeof(sentinel_buf),
                       ffff_hdr->sentinel_value, FFFF_SENTINEL_SIZE);
-        printf("%s  Sentinel:         '%s'\n", indent, sentinel_buf);
-        printf("%s  Timestamp:        '%s'\n",
+        printf("%s  Sentinel:             '%s'\n", indent, sentinel_buf);
+        printf("%s  Timestamp:            '%s'\n",
                indent,  ffff_hdr->build_timestamp);
-        printf("%s  Image_name:       '%s'\n",
+        printf("%s  Image_name:           '%s'\n",
                indent,  ffff_hdr->flash_image_name);
-        printf("%s  flash_capacity:    %08x\n",
+        printf("%s  flash_capacity:       %08x\n",
                indent, ffff_hdr->flash_capacity);
-        printf("%s  erase_block_size:  %08x\n",
+        printf("%s  erase_block_size:     %08x\n",
                indent, ffff_hdr->erase_block_size);
-        printf("%s  Header_size:       %08x\n",
+        printf("%s  Header_size:          %08x\n",
                indent, ffff_hdr->header_size);
-        printf("%s  flash_image_length:%08x\n",
+        printf("%s  flash_image_length:   %08x\n",
                indent, ffff_hdr->flash_image_length);
         for (index = 0; index < FFFF_RESERVED; index++) {
-            printf("%s    Reserved [%d]:    %08x\n",
+            printf("%s    Reserved [%d]:       %08x\n",
                    indent, index, ffff_hdr->reserved[index]);
         }
 
@@ -304,7 +337,7 @@ static void print_ffff_header(const ffff_header * ffff_hdr,
         /* Print out the tail sentinel */
         safer_strncpy(sentinel_buf, sizeof(sentinel_buf),
                       ffff_hdr->trailing_sentinel_value, FFFF_SENTINEL_SIZE);
-        printf("%s  Tail sentinel:    '%s'\n", indent, sentinel_buf);
+        printf("%s  Sentinel:             '%s'\n", indent, sentinel_buf);
         printf("\n");
     }
 }

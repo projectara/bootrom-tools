@@ -33,10 +33,126 @@
  */
 #include <stdint.h>
 #include <stdbool.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include "util.h"
+
+
+/**
+ * @brief Determine the size of a file
+ *
+ * @param filename The name of the file to check
+ *
+ * @returns Returns On success, returns the length of the file in bytes;
+ *          -1 on failure
+ */
+ssize_t size_file(const char * filename) {
+    struct stat st;
+    int status = 0;
+    ssize_t size = -1;
+
+
+    if (filename == NULL) {
+        errno = EINVAL;
+        fprintf(stderr, "Error (size_file): invalid args\n");
+    } else {
+        status = stat(filename, &st);
+        if (status != 0) {
+            fprintf(stderr, "Error: unable to stat '%s' - (err %d)\n",
+                    filename, errno);
+        } else {
+            size = st.st_size;
+        }
+    }
+
+    return size;
+}
+
+
+/**
+ * @brief Read a file into a buffer
+ *
+ * @param filename The name of the file to load into buf
+ * @param buf A pointer to the buffer in which to load the file
+ * @param length The length of the buffer
+ *
+ * @returns Returns true on success, false on failure
+ */
+bool load_file(const char * filename, uint8_t * buf, const ssize_t length) {
+    int section_fd = -1;
+    ssize_t bytes_read;
+    bool success = false;
+
+    section_fd = open(filename, O_RDONLY);
+    if (section_fd < 0) {
+       fprintf(stderr, "Error: unable to open '%s' - (err %d)\n",
+               filename, section_fd);
+       errno = -section_fd;
+    } else {
+       bytes_read = read(section_fd, buf, length);
+       if (bytes_read != length) {
+           fprintf(stderr,
+                   "Error: couldn't read all of '%s' - (err %d)\n",
+                   filename, errno);
+       } else {
+           success = true;
+       }
+       close(section_fd);
+    }
+
+    return success;
+}
+
+
+/**
+ * @brief Allocate a buffer and read a file into it
+ *
+ * @param filename The name of the file to load
+ * @param length Pointer to a value to hold the length of the blob
+ *
+ * @returns Returns a pointer to an allocated buf containing the file contents
+ *          on success, NULL on failure
+ */
+uint8_t * alloc_load_file(const char * filename, ssize_t * length) {
+    uint8_t * buf = NULL;
+    bool success = false;
+
+
+    if ((filename == NULL) || (length == NULL)) {
+        errno = EINVAL;
+        fprintf(stderr, "Error (alloc_load_file): invalid parameters\n");
+    } else {
+        *length = size_file(filename);
+        if (length > 0) {
+            buf = malloc(*length);
+            if (buf == NULL) {
+                fprintf(stderr, "Error: Unable to allocate buffer for '%s'\n",
+                        filename);
+            } else {
+                success = load_file(filename, buf, *length);
+            }
+        }
+    }
+
+    /* cleanup */
+    if (!success) {
+        if (buf != NULL) {
+            free(buf);
+            buf = NULL;
+        }
+        if (length != NULL) {
+            *length = 0;
+        }
+    }
+
+    return buf;
+}
 
 
 /**
@@ -46,7 +162,7 @@
  *
  * @returns True if x is 2**n, false otherwise
  */
-bool is_power_of_2(uint32_t x) {
+bool is_power_of_2(const uint32_t x) {
     return ((x != 0) && !(x & (x - 1)));
 }
 
@@ -59,7 +175,7 @@ bool is_power_of_2(uint32_t x) {
  *
  * @returns True if location is block-aligned, false otherwise
  */
-bool block_aligned(uint32_t location, uint32_t block_size) {
+bool block_aligned(const uint32_t location, const uint32_t block_size) {
     return ((location & (block_size - 1)) == 0);
 }
 
@@ -70,9 +186,9 @@ bool block_aligned(uint32_t location, uint32_t block_size) {
  * @param location The address to align
  * @param block_size The block size (assumed to be (2**n).
  *
- * @returns True if location is block-aligned, false otherwise
+ * @returns The (possibly adjusted) address
  */
-bool next_boundary(uint32_t location, uint32_t block_size) {
+uint32_t next_boundary(const uint32_t location, const uint32_t block_size) {
     return (location + (block_size - 1)) & ~(block_size - 1);
 }
 
@@ -184,7 +300,7 @@ bool safer_strncpy(char * dest, size_t destsz, const char * src, size_t count) {
 
             /**
              * In case count is greater than the actual src length, check
-             * so see if the actual length of the src string will fit in
+             * to see if the actual length of the src string will fit in
              * the buffer. If so, We're OK with the strncpy because it will
              */
             if (src_length < destsz) {
@@ -299,7 +415,7 @@ bool strcat_s(char * dest, size_t destsz, const char * src) {
  * @returns Returns true on success, false on error or if the resulting
  * string is truncated.
  */
-bool change_extension(char * pathbuf, size_t pathbuf_length,
+bool change_extension(char * pathbuf, const size_t pathbuf_length,
                       const char * filename, const char * extension) {
     size_t len_root;
     size_t len_ext;
@@ -328,7 +444,7 @@ bool change_extension(char * pathbuf, size_t pathbuf_length,
         if (len_final >= pathbuf_length) {
             return false;
         }
-        strncpy(pathbuf, filename, len_root + 1); /* (copy the "." too) */
+        safer_strncpy(pathbuf, pathbuf_length, filename, len_root);
         strcat(pathbuf, extension);
     }
     return true;
@@ -345,7 +461,8 @@ bool change_extension(char * pathbuf, size_t pathbuf_length,
  *
  * @returns Returns the formatted buffer.
  */
-char * hexlify(uint8_t * buf, size_t buflen, char * hexbuf, size_t hexbuflen) {
+char * hexlify(const uint8_t * buf, const size_t buflen,
+               char * hexbuf, const size_t hexbuflen) {
     /* Ensure the text buffer is terminated */
     if (hexbuf) {
         hexbuf[0] = '\n';
@@ -380,7 +497,8 @@ char * hexlify(uint8_t * buf, size_t buflen, char * hexbuf, size_t hexbuflen) {
  *
  * @returns Nothing
  */
-void display_binary_data(uint8_t * blob, size_t length, bool show_all, char * indent) {
+void display_binary_data(const uint8_t * blob, const size_t length,
+                         const bool show_all, const char * indent) {
     if ((blob) && (length > 0)) {
         const size_t max_on_line = 32;
         size_t start;

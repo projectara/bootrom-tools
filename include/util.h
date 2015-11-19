@@ -65,6 +65,42 @@
     #define BIT(n)    (1 << (n))
 #endif
 
+
+/**
+ * @brief Determine the size of a file
+ *
+ * @param filename The name of the file to check
+ *
+ * @returns Returns On success, returns the length of the file in bytes;
+ *          -1 on failure
+ */
+ssize_t size_file(const char * filename);
+
+
+/**
+ * @brief Read a file into a buffer
+ *
+ * @param filename The name of the file to load into buf
+ * @param buf A pointer to the buffer in which to load the file
+ * @param length The length of the buffer
+ *
+ * @returns Returns true on success, false on failure
+ */
+bool load_file(const char * filename, uint8_t * buf, const ssize_t length);
+
+
+/**
+ * @brief Allocate a buffer and read a file into it
+ *
+ * @param filename The name of the file to load
+ * @param length Pointer to a value to hold the length of the blob
+ *
+ * @returns Returns a pointer to an allocated buf containing the file contents
+ *          on success, NULL on failure
+ */
+uint8_t * alloc_load_file(const char * filename, ssize_t * length);
+
+
 /**
  * @brief Determine if a number is a power of 2
  *
@@ -72,7 +108,7 @@
  *
  * @returns True if x is 2**n, false otherwise
  */
-bool is_power_of_2(uint32_t x);
+bool is_power_of_2(const uint32_t x);
 
 
 /**
@@ -83,7 +119,7 @@ bool is_power_of_2(uint32_t x);
  *
  * @returns True if location is block-aligned, false otherwise
  */
-bool block_aligned(uint32_t location, uint32_t block_size);
+bool block_aligned(const uint32_t location, const uint32_t block_size);
 
 
 /**
@@ -92,9 +128,9 @@ bool block_aligned(uint32_t location, uint32_t block_size);
  * @param location The address to align
  * @param block_size The block size (assumed to be (2**n).
  *
- * @returns True if location is block-aligned, false otherwise
+ * @returns The (possibly adjusted) address
  */
-bool next_boundary(uint32_t location, uint32_t block_size);
+uint32_t next_boundary(const uint32_t location, const uint32_t block_size);
 
 
 /**
@@ -224,7 +260,7 @@ bool safer_strcat(char * dest, size_t destsz, const char * src);
  *
  * @returns Returns zero on success, the needed buffer size on failure.
  */
-bool change_extension(char * pathbuf, size_t pathbuf_length,
+bool change_extension(char * pathbuf, const size_t pathbuf_length,
                       const char * filename, const char * extension);
 
 
@@ -238,7 +274,8 @@ bool change_extension(char * pathbuf, size_t pathbuf_length,
  *
  * @returns Returns the formatted buffer.
  */
-char * hexlify(uint8_t * buf, size_t buflen, char * hexbuf, size_t hexbuflen);
+char * hexlify(const uint8_t * buf, const size_t buflen,
+               char * hexbuf, const size_t hexbuflen);
 
 
 /**
@@ -254,7 +291,8 @@ char * hexlify(uint8_t * buf, size_t buflen, char * hexbuf, size_t hexbuflen);
  *
  * @returns Nothing
  */
-void display_binary_data(uint8_t * blob, size_t length, bool show_all, char * indent);
+void display_binary_data(const uint8_t * blob, const size_t length,
+                         const bool show_all, const char * indent);
 
 #endif /* !_COMMON_UTIL_H */
 

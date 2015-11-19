@@ -43,7 +43,7 @@
  *
  * @returns A string
  */
-char * tftf_section_type_name(uint8_t type);
+const char * tftf_section_type_name(const uint8_t type);
 
 
 /**
@@ -55,7 +55,7 @@ char * tftf_section_type_name(uint8_t type);
  *
  * @returns Nothing
  */
-void print_tftf(tftf_header * tftf_hdr,
+void print_tftf(const tftf_header * tftf_hdr,
                 const char * title_string,
                 const char * indent);
 
@@ -71,7 +71,7 @@ void print_tftf(tftf_header * tftf_hdr,
  *
  * @returns Nothing
  */
-void print_tftf_file(tftf_header * tftf_hdr, const char * filename);
+void print_tftf_file(const tftf_header * tftf_hdr, const char * filename);
 
 #endif /* _COMMON_TFTF_DISPLAY_H */
 

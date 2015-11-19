@@ -70,7 +70,9 @@ void write_tftf_section_table_map(const tftf_header * tftf_hdr,
     offset += offsetof(tftf_header, sections);
 
     /* Print out the occupied entries in the section table */
-    for (index = 0; index < tftf_max_sections; index++, section++) {
+    for (index = 0;
+         index < tftf_max_sections;
+         index++, section++, offset += sizeof(*section)) {
         fprintf(map_file, "%ssection[%d].type  %08x\n",
                 prefix, index, (uint32_t)(offset));
         fprintf(map_file, "%ssection[%d].class  %08x\n",
@@ -96,7 +98,7 @@ void write_tftf_section_table_map(const tftf_header * tftf_hdr,
 
 
 /**
- * @brief Write the TFTF field offsets to the map file.
+ * @brief Write the TFTF field offsets to the currently open map file.
  *
  * Append the map for this TFTF to the map file.
  *
@@ -133,7 +135,7 @@ void write_tftf_map(const tftf_header * tftf_hdr,
 
 
     /* Print out the fixed part of the header */
-    fprintf(map_file, "%ssentinel %08x\n",
+    fprintf(map_file, "%ssentinel  %08x\n",
             prefix,
             (uint32_t)(offset + offsetof(tftf_header, sentinel_value)));
     fprintf(map_file, "%sheader_size  %08x\n",
@@ -157,7 +159,7 @@ void write_tftf_map(const tftf_header * tftf_hdr,
     fprintf(map_file, "%sara_product_id  %08x\n",
             prefix, (uint32_t)(offset + offsetof(tftf_header, ara_pid)));
     for (index = 0; index < TFTF_RESERVED; index++) {
-        fprintf(map_file, "%sreserved [%d]:  %08x\n",
+        fprintf(map_file, "%sreserved[%d]  %08x\n",
                 prefix, index,
                 (uint32_t)(offset + offsetof(tftf_header, reserved[index])));
     }

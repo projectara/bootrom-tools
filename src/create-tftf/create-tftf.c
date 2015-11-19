@@ -75,7 +75,7 @@ uint32_t    ara_vid;
 uint32_t    ara_pid;
 uint32_t    ara_stage;
 int         verbose_flag = false;
-int         map_flag;
+int         map_flag = false;
 
 
 /**
@@ -467,6 +467,7 @@ int main(int argc, char * argv[]) {
                             unipro_pid,
                             ara_vid,
                             ara_pid);
+#if 0
         if (success) {
             /* ...write it out and... */
             success = write_tftf_file(tftf_hdr, output_filename);
@@ -479,6 +480,7 @@ int main(int argc, char * argv[]) {
         if (success && verbose_flag) {
             print_tftf_file(tftf_hdr, output_filename);
         }
+#endif // 0/1
         free_tftf_header(tftf_hdr);
     }
 

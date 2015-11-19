@@ -73,119 +73,6 @@ static bool     section_window_open = false;
 static uint32_t section_load_address = 0;
 
 
-
-/**
- * @brief Determine the size of a file
- *
- * @param filename The name of the file to check
- *
- * @returns Returns On success, returns the length of the file in bytes;
- *          -1 on failure
- */
-ssize_t size_file(const char * filename) {
-    struct stat st;
-    int status = 0;
-    ssize_t size = -1;
-
-
-    if (filename == NULL) {
-        errno = EINVAL;
-        fprintf(stderr, "Error (size_file): invalid args\n");
-    } else {
-        status = stat(filename, &st);
-        if (status != 0) {
-            fprintf(stderr, "Error: unable to stat '%s' - (err %d)\n",
-                    filename, errno);
-        } else {
-            size = st.st_size;
-        }
-    }
-
-    return size;
-}
-
-
-/**
- * @brief Read a file into a buffer
- *
- * @param filename The name of the file to load into buf
- * @param buf A pointer to the buffer in which to load the file
- * @param length The length of the buffer
- *
- * @returns Returns true on success, false on failure
- */
-bool load_file(const char * filename, uint8_t * buf, size_t length) {
-    int section_fd = -1;
-    ssize_t bytes_read;
-    bool success = false;
-
-    section_fd = open(filename, O_RDONLY);
-    if (section_fd < 0) {
-       fprintf(stderr, "Error: unable to open '%s' - (err %d)\n",
-               filename, section_fd);
-       errno = -section_fd;
-    } else {
-       bytes_read = read(section_fd, buf, length);
-       if (bytes_read != length) {
-           fprintf(stderr,
-                   "Error: couldn't read all of '%s' - (err %d)\n",
-                   filename, errno);
-       } else {
-           success = true;
-       }
-       close(section_fd);
-    }
-
-    return success;
-}
-
-
-/**
- * @brief Allocate a buffer and read a file into it
- *
- * @param filename The name of the (TFTF section) file to append to
- * the TFTF output file
- * @param length Pointer to a value to hold the length of the blob
- *
- * @returns Returns a pointer to an allocated buf containing the file contents
- *          on success, NULL on failure
- */
-uint8_t * alloc_load_file(const char * filename, ssize_t * length) {
-    uint8_t * buf = NULL;
-    bool success = false;
-
-
-    if ((filename == NULL) || (length == NULL)) {
-        errno = EINVAL;
-        fprintf(stderr, "Error (alloc_load_file): invalid parameters\n");
-    } else {
-        *length = size_file(filename);
-        if (length > 0) {
-            buf = malloc(*length);
-            if (buf == NULL) {
-                fprintf(stderr, "Error: Unable to allocate buffer for '%s'\n",
-                        filename);
-            } else {
-                success = load_file(filename, buf, *length);
-            }
-        }
-    }
-
-    /* cleanup */
-    if (!success) {
-        if (buf != NULL) {
-            free(buf);
-            buf = NULL;
-        }
-        if (length != NULL) {
-            *length = 0;
-        }
-    }
-
-    return buf;
-}
-
-
 /**
  * @brief Close the active cached section
  *
@@ -910,3 +797,15 @@ bool valid_tftf_header(tftf_header * header) {
     return true;
 }
 
+
+/**
+ * @brief Perform a "sniff test" validation of aa TFTF header
+ *
+ * @param header The TFTF header to sniff
+ *
+ * @returns True if the TFTF header passes a sniff test, false otherwise
+ */
+bool sniff_tftf_header(tftf_header * header) {
+    /* Verify the sentinel */
+    return (memcmp(header->sentinel_value, tftf_sentinel, TFTF_SENTINEL_SIZE) == 0);
+    }

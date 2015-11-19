@@ -66,43 +66,96 @@ static parse_entry element_types[] = {
 /**
  * @brief Create an option table from an optionx table
  *
- * @param optx Pointer to the src optionx table (must have an all-zero entry
- *             as an end-of-table marker)
- * @param opt Pointer to the dst option table to initialize
+ * @param opt Pointer to the dst option entry to initialize
+ * @param name Pointer to the name to use for the option
+ * @param optx Pointer to the src optionx entry
+ *
+ * @returns Nothing
+ */
+void parse_args_init_opt_entry(struct option * opt, const char * name, struct optionx * optx) {
+    opt->val = optx->short_name;
+    opt->name = name;
+    opt->flag = NULL;
+
+    if (optx->flags & (STORE_FALSE | STORE_TRUE)) {
+        opt->has_arg = no_argument;
+    } else {
+        opt->has_arg = required_argument;
+    }
+}
+
+
+/**
+ * @brief Create an option table from an optionx table
+ *
+ * @param argp Pointer to the parsing context
  *
  * @returns true on success, false on failure
  */
-bool parse_args_init(struct optionx * optx, struct option * opt) {
-    struct optionx * optx_end;
+bool parse_args_init(struct argparse * argp) {
+    struct option * opt;
+    struct optionx * optx;
 
-    if (!optx || !opt) {
+    if (!argp || !argp->optx || !argp->opt) {
         fprintf(stderr, "ERROR (getoptionx_init): Invalid args\n");
         return false;
     }
 
-    for (; optx->name != NULL; optx++, opt++) {
-        /* End of table? */
-        if (!optx->name) {
-            opt->name = NULL;
-            opt->has_arg = 0;
-            opt->flag = NULL;
-            opt->val = 0;
-            break;
-        }
+    opt = argp->opt;
+    optx = argp->optx;
 
-        /* Normal case */
-        opt->name = optx->name;
-        if ((optx->flags & STORE_FALSE) || (optx->flags & STORE_TRUE)) {
-            opt->has_arg = no_argument;
-        } else {
-            opt->has_arg = required_argument;
-        }
-        opt->flag = NULL;
-        opt->val = optx->short_name;
+    /* Process the primary names */
+    for (optx = argp->optx; optx->name != NULL; optx++, opt++) {
+        if (optx->name) {
+            /* Normal case */
+            parse_args_init_opt_entry(opt, optx->name, optx);
 
-        /* Initialize variable portions of the optx entry */
-        optx->count = 0;
+            if (optx->flags & (STORE_FALSE | STORE_TRUE)) {
+                optx->flags |= DEFAULT_VAL;
+                optx->default_val = optx->flags & (STORE_FALSE)? true : false;
+                if (!optx->callback) {
+                    optx->callback = &store_flag;
+                }
+            }
+
+            /* Initialize variable portions of the optx entry */
+            optx->count = 0;
+        }
     }
+
+    /**
+     * Process the secondary names (these are comma-separated in the name
+     * field). What we will do is add additional "opt" entries, each pointing
+     * into the name field, and we will change all of the commas in the name
+     * field into null characters
+     */
+    if (argp->num_secondary_entries > 0) {
+        for (optx = argp->optx; optx->name != NULL; optx++) {
+            if (optx->name) {
+                char * comma = optx->name;
+                while (comma != NULL) {
+                    comma = strchr(comma, ',');
+                    if (comma != NULL) {
+                        /*
+                         * Convert the comma to a null and add an opt with
+                         * the remaining string as the name. (Doing so will
+                         * trim the previous entries pointing at the original
+                         * comma-separated name.
+                         */
+                        *comma++ = '\0';
+                        parse_args_init_opt_entry(opt, comma, optx);
+                        opt++;
+                     }
+                }
+            }
+        }
+    }
+
+    /* Add the End-Of-Table marker to the opt array */
+    opt->name = NULL;
+    opt->has_arg = 0;
+    opt->flag = NULL;
+    opt->val = 0;
 
     return true;
 }
@@ -131,6 +184,7 @@ struct argparse * new_argparse(struct optionx *optx,
                                PreprocessCallback preprocess) {
     struct optionx *scan = optx;
     int num_entries = 0;
+    int num_secondary_entries = 0;
     struct argparse * argp = NULL;
 
     if (optx && prog) {
@@ -141,6 +195,19 @@ struct argparse * new_argparse(struct optionx *optx,
             num_entries++;
             if (scan->name == NULL) {
                 break;
+            } else {
+                /**
+                 * Count the number of secondary name strings in the
+                 * comma-separated list
+                 */
+                char * comma = scan->name;
+                while (comma != NULL) {
+                    comma = strchr(comma, ',');
+                    if (comma != NULL) {
+                        num_secondary_entries++;
+                        comma++;
+                    }
+                }
             }
             scan++;
         }
@@ -155,19 +222,22 @@ struct argparse * new_argparse(struct optionx *optx,
             argp->epilog = epilog;
             argp->positional_arg_description = positional_arg_description;
             argp->num_entries = num_entries;
+            argp->num_secondary_entries = num_secondary_entries;
             argp->preprocess = preprocess;
             argp->optx = optx;
-            argp->opt = calloc(num_entries, sizeof(struct option));
+            argp->opt = calloc(num_entries + num_secondary_entries,
+                               sizeof(struct option));
             if (!argp->opt) {
                 fprintf(stderr,
                         "ERROR(new_argparse): Can't allocate option table\n");
                 free(argp);
                 argp = NULL;
             } else {
-                parse_args_init(argp->optx, argp->opt);
+                parse_args_init(argp);
             }
         }
     }
+
     return argp;
 }
 
@@ -203,8 +273,12 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
                 struct argparse *parse_table) {
     int option;
     int option_index;
+    int total_entries;
     struct optionx *optx = NULL;
     bool success = true;
+
+    total_entries = parse_table->num_entries +
+            parse_table->num_secondary_entries;
 
     /* Parsing loop */
     while (true) {
@@ -227,24 +301,42 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
         /**
          * Perform any global preprocesing before calling the appropriate callback.
          */
-       if (parse_table->preprocess) {
+        if (parse_table->preprocess) {
             parse_table->preprocess(option);
         }
 
 
+       /* Map secondary names into primary names */
+       if ((option != 0) &&
+           (option_index >= parse_table->num_entries) &&
+           (option_index < total_entries)) {
+           /**
+            * The index belongs to one of the secondary names, scan through
+            * the primary names for a matching option character
+            */
+           for (option_index = 0; option_index < parse_table->num_entries; option_index++) {
+               if (option == parse_table->optx[option_index].short_name) {
+                   break;
+               }
+           }
+       }
+
 
        /* Process the option */
-       if ((option != 0) && (option_index < parse_table->num_entries)) {
+       if ((option != 0) &&
+           (option_index >= 0) &&
+           (option_index < parse_table->num_entries)) {
            struct optionx *optx = &parse_table->optx[option_index];
 
            /**
-            *  Workaround for getopt_long's handling of args w/o values.
+            *  Workaround for getopt_long's handling of args w/o values
+            *  (e.g., flags).
             *  When getop_long encounters a short-named arg with,
-            *  opt->has_arg = no_argument, it returns an option_index of
+            *  "opt->has_arg = no_argument", it returns an option_index of
             *  zero. The workaround is to check the option char against the
             *  short name, and if they don't match, search for it ourselves.
             */
-           if ((option_index == 0) && (option != optx->short_name)) {
+           if (/*(option_index == 0) &&*/ (option != optx->short_name)) {
                for (optx = parse_table->optx; optx->name != NULL; optx++) {
                    if (optx->short_name == option) {
                        break;

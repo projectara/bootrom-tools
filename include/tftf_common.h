@@ -80,9 +80,6 @@ static const char tftf_sentinel[] = TFTF_SENTINEL_VALUE;
 #endif
 
 
-/* if verbose is true, print out a summary of the TFTF header on success. */
-extern int verbose_flag;
-
 /* This contains the maximum number of sections in the header. */
 extern uint32_t tftf_max_sections;
 
@@ -149,10 +146,10 @@ void set_timestamp(tftf_header * hdr);
  *
  * @returns The number of collisions.
  */
-int  tftf_section_collisions(tftf_header * tftf_hdr,
-                                tftf_section_descriptor * section,
-                                uint32_t * collisions,
-                                uint32_t  max_collisions);
+int  tftf_section_collisions(const tftf_header * tftf_hdr,
+                             const tftf_section_descriptor * section,
+                             uint32_t * collisions,
+                             const uint32_t  max_collisions);
 
 #endif /* !_COMMON_TFTF_COMMON_H */
 

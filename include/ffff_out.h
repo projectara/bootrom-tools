@@ -28,45 +28,26 @@
 
 /**
  *
- * @brief: This file contains the includes for writing a TFTF file.
+ * @brief: This file contains the includes for writing a FFFF file.
  *
  */
 
-#ifndef _COMMON_TFTF_MAP_H
-#define _COMMON_TFTF_MAP_H
+#ifndef _COMMON_FFFF_OUT_H
+#define _COMMON_FFFF_OUT_H
 
 
 /**
- * @brief Write the TFTF field offsets to the currently open map file.
+ * @brief Write the FFFF blob to the output file.
  *
- * Append the map for this TFTF to the map file.
+ * Create a FFFF file from the FFFF blob.
  *
- * @param tftf_hdr The TFTF blob to write
- * @param prefix Optional prefix for each map entry
- * @param offset The starting offset of the TFTF (zero for a standalone
- *        tftf map; non-zero for a TFTF in an FFFF).
- * @param map_file The open file object for the map file.
- *
- * @returns Returns nothing.
- */
-void write_tftf_map(const tftf_header * tftf_hdr,
-                    const char * prefix,
-                    uint32_t offset,
-                    FILE * map_file);
-
-
-/**
- * @brief Create a map file and write the TFTF field offsets to it
- *
- * Create a TFTF map file from the TFTF blob.
- *
- * @param tftf_hdr The TFTF blob to write
- * @param output_filename Pathname to the TFTF output file.
+ * @param ffff_romimage The FFFF romimage to write
+ * @param output_filename Pathname to the FFFF output file.
  *
  * @returns Returns true on success, false on failure.
  */
-bool write_tftf_map_file(const tftf_header * tftf_hdr,
-                         const char * output_filename);
+bool write_ffff_file(const struct ffff * ffff_romimage,
+                     const char * output_filename);
 
-#endif /* !_COMMON_TFTF_MAP_H */
+#endif /* !_COMMON_FFFF_OUT_H */
 

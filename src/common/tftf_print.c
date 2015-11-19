@@ -46,28 +46,13 @@
 
 
 /**
- * @brief Macro to convert tftf_section_type to a human-readable form
- * (intended for debugging)
- */
-#define PRINT_TFTF_SECTION_TYPE(t)\
-        (((t) == TFTF_SECTION_RAW_CODE)? "code" : \
-         ((t) == TFTF_SECTION_RAW_DATA)? "data" : \
-         ((t) == TFTF_SECTION_COMPRESSED_CODE)? "compressed code" : \
-         ((t) == TFTF_SECTION_COMPRESSED_DATA)? "compressed data" : \
-         ((t) == TFTF_SECTION_MANIFEST)? "manifest" : \
-         ((t) == TFTF_SECTION_SIGNATURE)? "signature" :  \
-         ((t) == TFTF_SECTION_CERTIFICATE)? "certificate" : \
-         ((t) == TFTF_SECTION_END)? "end of sections" : "?")
-
-
-/**
  * @brief Convert a TFTF section type into a human-readable string
  *
  * @param type the TFTF section type
  *
  * @returns A string
  */
-char * tftf_section_type_name(uint8_t type) {
+const char * tftf_section_type_name(const uint8_t type) {
     char * name = "?";
 
     switch (type) {
@@ -108,7 +93,7 @@ char * tftf_section_type_name(uint8_t type) {
  *
  * @returns Nothing
  */
-static void print_tftf_signature(tftf_signature * sig_block,
+static void print_tftf_signature(const tftf_signature * sig_block,
                                  const char * indent) {
     if (sig_block) {
         char indent_buf[256];
@@ -140,13 +125,13 @@ static void print_tftf_signature(tftf_signature * sig_block,
  *
  * @returns Nothing
  */
-static void print_tftf_section_data(tftf_header * tftf_hdr,
+static void print_tftf_section_data(const tftf_header * tftf_hdr,
                                     const char * title_string,
                                     const char * indent) {
 
     if (tftf_hdr) {
         int index;
-        tftf_section_descriptor * section = tftf_hdr->sections;
+        const tftf_section_descriptor * section = tftf_hdr->sections;
         uint8_t * pdata = NULL;
         char indent_section_hdr[256];
         char indent_section_contents[256];
@@ -176,8 +161,8 @@ static void print_tftf_section_data(tftf_header * tftf_hdr,
               (section->section_type != TFTF_SECTION_END));
              pdata += section->section_length, index++, section++) {
             /* Print a generic section header */
-            printf("  section [%d] (%d bytes): %s\n", index,
-                   section->section_length,
+            printf("%s  section [%d] (%d bytes): %s\n",
+                   indent, index, section->section_length,
                    tftf_section_type_name(section->section_type));
 
             /* Print the section data proper */
@@ -227,10 +212,10 @@ static void print_tftf_section_data(tftf_header * tftf_hdr,
  *
  * @returns Nothing
  */
-static void print_tftf_section_table(tftf_header * tftf_hdr,
+static void print_tftf_section_table(const tftf_header * tftf_hdr,
                                      const char * indent) {
     int index;
-    tftf_section_descriptor * section = tftf_hdr->sections;
+    const tftf_section_descriptor * section = tftf_hdr->sections;
     uint32_t * collisions = NULL;
     size_t max_collisions;
     size_t num_collisions;
@@ -278,11 +263,12 @@ static void print_tftf_section_table(tftf_header * tftf_hdr,
         num_collisions = tftf_section_collisions(tftf_hdr, section,
                                                  collisions, num_collisions);
         if (num_collisions > 0) {
-            printf("     Collides with section(s):");
+            printf("%s     (Collides with section%s:",
+                   indent, (num_collisions > 1)? "s" : "");
             for (collision = 0; collision < num_collisions; collision++) {
                 printf (" %d", collisions[collision]);
             }
-            printf ("\n");
+            printf (")\n");
         }
 
         /* Done? */
@@ -322,11 +308,11 @@ static void print_tftf_section_table(tftf_header * tftf_hdr,
  *
  * @returns Nothing
  */
-static void print_tftf_header(tftf_header * tftf_hdr,
+static void print_tftf_header(const tftf_header * tftf_hdr,
                               const char * title_string,
                               const char * indent) {
     if (tftf_hdr) {
-        char * ptr = tftf_hdr->sentinel_value;
+        const char * ptr = tftf_hdr->sentinel_value;
         uint32_t * sentinel = (uint32_t *)tftf_hdr->sentinel_value;
         int index;
 
@@ -393,7 +379,7 @@ static void print_tftf_header(tftf_header * tftf_hdr,
  *
  * @returns Nothing
  */
-void print_tftf(tftf_header * tftf_hdr,
+void print_tftf(const tftf_header * tftf_hdr,
                 const char * title_string,
                 const char * indent) {
     if (tftf_hdr) {
@@ -417,7 +403,7 @@ void print_tftf(tftf_header * tftf_hdr,
  *
  * @returns Nothing
  */
-void print_tftf_file(tftf_header * tftf_hdr, const char * filename) {
+void print_tftf_file(const tftf_header * tftf_hdr, const char * filename) {
     if ((tftf_hdr) &&(filename)) {
         print_tftf_header(tftf_hdr, filename, NULL);
         print_tftf_section_data(tftf_hdr, filename, NULL);

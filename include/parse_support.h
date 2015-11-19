@@ -50,31 +50,31 @@ typedef bool (*OptionCallback)(const int option,
 /* Describes (how to parse) a single command line argument */
 struct optionx {
     /* 1-character short name for the arg, used in the "-x" form */
-    const int               short_name;
+    const int       short_name;
 
     /* Long name for the argument, used for the "--xxx" form */
-    const char *            name;
+    char *          name;
 
     /* (optional) Name for the optarg value  (e.g., --yabba=foo)  */
-    const char *            val_name;
+    const char *    val_name;
 
     /* Pointer to the variable which will hold the value */
-    void *                  var_ptr;
+    void *          var_ptr;
 
     /* Default value to assign to var_ptr */
-    const int               default_val;
+    int             default_val;
 
     /* Parsing flags */
-    const uint32_t          flags;
+    uint32_t        flags;
 
     /**
      * Pointer to the parsing callback function. This is given the short_name
      * and the optarg string and a pointer to this structure.
      */
-    const OptionCallback    callback;
+    OptionCallback  callback;
 
     /* The number of times this arg was encountered */
-    int                     count;/* # of times this arg was encountered */
+    int             count;/* # of times this arg was encountered */
 
     /* (optional) Help string for this arguments   */
     const char *            help;
@@ -105,6 +105,9 @@ struct argparse {
     /* The number of entries in optionx and option */
     int                 num_entries;
 
+    /* The number of secondary entries */
+    int                 num_secondary_entries;
+
     /**
      * (optional) Function to call with the current option before the option
      * is dispatched to the appropriate OptionCallback()
@@ -127,13 +130,11 @@ struct argparse {
 /**
  * @brief Create an option table from an optionx table
  *
- * @param optx Pointer to the src optionx table
- * @param opg Pointer to the dst option table
+ * @param argp Pointer to the parsing context
  *
  * @returns true on success, false on failure
  */
-bool parse_args_init(struct optionx * optx,
-                     struct option * opt);
+bool parse_args_init(struct argparse * argp);
 
 
 /**

@@ -25,13 +25,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #------------------------------------------------------------------------------
-# ...<root>/src/create-tftf/Makefile
+# ...bootrom-tools/src/commom/Makefile
 
 include $(TOPDIR)/Makefile.inc
 
 IDIR = $(TOPDIR)/include
 #ODIR = obj
 ODIR = $(TOPDIR)/obj
+LIBDIR = $(TOPDIR)/libs
 
 _DEPS = \
   parse_support.h \
@@ -40,22 +41,64 @@ _DEPS = \
   tftf_in.h \
   tftf_out.h \
   tftf_map.h \
-  tftf_print.h
+  tftf_print.h \
+  ffff_common.h \
+  ffff_in.h \
+  ffff_out.h \
+  ffff_map.h \
+  ffff_print.h
+
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = \
+_COMMONOBJ = \
   parse_support.o \
-  util.o \
+  util.o
+
+_TFTFOBJ = \
   tftf_common.o \
   tftf_in.o \
   tftf_out.o \
   tftf_map.o \
   tftf_print.o
+
+_FFFFOBJ = \
+  ffff_common.o \
+  ffff_in.o \
+  ffff_out.o \
+  ffff_map.o \
+  ffff_print.o
+
+_OBJ = $(_COMMONOBJ) $(_TFTFOBJ) $(_FFFFOBJ)
+
+COMMONOBJ = $(patsubst %,$(ODIR)/%,$(_COMMONOBJ))
+TFTFOBJ = $(patsubst %,$(ODIR)/%,$(_TFTFOBJ))
+FFFFOBJ = $(patsubst %,$(ODIR)/%,$(_FFFFOBJ))
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
+
+_LIBS = libcommon.a libtftf.a libffff.a
+LIBS = $(patsubst %,$(LIBDIR)/%,$(_LIBS))
 
 INC_DIRS := -I. -I$(IDIR)
 
-all: $(OBJ)
+all: $(OBJ) $(LIBS)
+
+
+$(LIBDIR)/libcommon.a: $(COMMONOBJ)
+	mkdir -p $(dir $@)
+	ar rcs $@ $^
+	ranlib $@
+
+$(LIBDIR)/libtftf.a: $(TFTFOBJ)
+	mkdir -p $(dir $@)
+	ar rcs $@ $^
+	ranlib $@
+
+$(LIBDIR)/libffff.a: $(FFFFOBJ)
+	mkdir -p $(dir $@)
+	ar rcs $@ $^
+	ranlib $@
+
+
 
 $(ODIR)/parse_support.o: parse_support.c $(IDIR)/parse_support.h $(IDIR)/ffff.h
 	mkdir -p $(dir $@)
@@ -85,10 +128,30 @@ $(ODIR)/tftf_print.o: tftf_print.c $(IDIR)/util.h $(IDIR)/tftf.h $(IDIR)/tftf_pr
 	mkdir -p $(dir $@)
 	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
 
+$(ODIR)/ffff_common.o: ffff_common.c $(IDIR)/ffff_common.h $(IDIR)/ffff.h $(IDIR)/util.h
+	mkdir -p $(dir $@)
+	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
+
+$(ODIR)/ffff_in.o: ffff_in.c $(IDIR)/util.h $(IDIR)/ffff.h $(IDIR)/ffff_in.h $(IDIR)/ffff_common.h
+	mkdir -p $(dir $@)
+	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
+
+$(ODIR)/ffff_out.o: ffff_out.c $(IDIR)/util.h $(IDIR)/ffff.h $(IDIR)/ffff_out.h $(IDIR)/ffff_common.h
+	mkdir -p $(dir $@)
+	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
+
+$(ODIR)/ffff_map.o: ffff_map.c $(IDIR)/util.h $(IDIR)/ffff.h $(IDIR)/ffff_map.h $(IDIR)/ffff_common.h
+	mkdir -p $(dir $@)
+	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
+
+$(ODIR)/ffff_print.o: ffff_print.c $(IDIR)/util.h $(IDIR)/ffff.h $(IDIR)/ffff_print.h $(IDIR)/ffff_common.h
+	mkdir -p $(dir $@)
+	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
+
 
 .PHONY: all clean
 
 clean:
-	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~
+	rm -f $(ODIR)/*.o $(LIBDIR)/*.a *~ core $(INCDIR)/*~
 
 

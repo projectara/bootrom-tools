@@ -28,45 +28,50 @@
 
 /**
  *
- * @brief: This file contains the includes for writing a TFTF file.
+ * @brief: This file contains the includes for displaying an FFFF file
  *
  */
 
-#ifndef _COMMON_TFTF_MAP_H
-#define _COMMON_TFTF_MAP_H
+#ifndef _COMMON_FFFF_DISPLAY_H
+#define _COMMON_FFFF_DISPLAY_H
 
 
 /**
- * @brief Write the TFTF field offsets to the currently open map file.
+ * @brief Convert an FFFF element type into a human-readable string
  *
- * Append the map for this TFTF to the map file.
+ * @param type the FFFF element type
  *
- * @param tftf_hdr The TFTF blob to write
- * @param prefix Optional prefix for each map entry
- * @param offset The starting offset of the TFTF (zero for a standalone
- *        tftf map; non-zero for a TFTF in an FFFF).
- * @param map_file The open file object for the map file.
- *
- * @returns Returns nothing.
+ * @returns A string
  */
-void write_tftf_map(const tftf_header * tftf_hdr,
-                    const char * prefix,
-                    uint32_t offset,
-                    FILE * map_file);
+const char * ffff_element_type_name(const uint8_t type);
 
 
 /**
- * @brief Create a map file and write the TFTF field offsets to it
+ * @brief Print out an FFFF blob Typically called from "create_ffff".
  *
- * Create a TFTF map file from the TFTF blob.
+ * @param romimage Pointer to the FFFF to display
+ * @param title_string Optional title string
+ * @param indent Optional prefix string
  *
- * @param tftf_hdr The TFTF blob to write
- * @param output_filename Pathname to the TFTF output file.
- *
- * @returns Returns true on success, false on failure.
+ * @returns Nothing
  */
-bool write_tftf_map_file(const tftf_header * tftf_hdr,
-                         const char * output_filename);
+void print_ffff(const struct ffff *romimage,
+                const char * title_string,
+                const char * indent);
 
-#endif /* !_COMMON_TFTF_MAP_H */
+
+/**
+ * @brief Print out an FFFF file
+ *
+ * Prints out an in-memory FFFF blob, associated with a file. Typically
+ * called from "create_ffff".
+ *
+ * @param romimage Pointer to the FFFF to display
+ * @param filename Name of the FFFF file
+ *
+ * @returns Nothing
+ */
+void print_ffff_file(const struct ffff *romimage, const char * filename);
+
+#endif /* _COMMON_FFFF_DISPLAY_H */
 

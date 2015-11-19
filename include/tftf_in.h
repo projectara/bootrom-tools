@@ -38,43 +38,6 @@
 
 
 /**
- * @brief Determine the size of a file
- *
- * @param filename The name of the file to check
- *
- * @returns Returns On success, returns the length of the file in bytes;
- *          -1 on failure
- */
-ssize_t size_file(const char * filename);
-
-
-/**
- * @brief Read a file into a buffer
- *
- * @param filename The name of the file to load into buf
- * @param buf A pointer to the buffer in which to load the file
- * @param length The length of the buffer
- *
- * @returns Returns true on success, false on failure
- */
-bool load_file(const char * filename, uint8_t * buf, size_t length);
-
-
-/**
- * @brief Allocate a buffer and read a file into it
- *
- * @param filename The name of the (TFTF section) file to append to
- * the TFTF output file
- * @param length Pointer to a value to hold the length of the blob
- *
- * @returns Returns a pointer to an allocated buf containing the file contents
- *          on success, NULL on failure
- */
-uint8_t * alloc_load_file(const char * filename, ssize_t * length);
-
-
-
-/**
  * @brief Open up an empty section cache entry and add the filename
  *
  * @param section_type The type of the section
@@ -223,5 +186,14 @@ bool load_elf(const char * filename, uint32_t * start_address);
  */
 bool validate_tftf_header(tftf_header * tftf_hdr);
 
+
+/**
+ * @brief Perform a "sniff test" validation of aa TFTF header
+ *
+ * @param header The TFTF header to sniff
+ *
+ * @returns True if the TFTF header passes a sniff test, false otherwise
+ */
+bool sniff_tftf_header(tftf_header * header);
 #endif /* _COMMON_TFTF_IN_H */
 

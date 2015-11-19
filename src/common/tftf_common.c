@@ -163,17 +163,17 @@ void set_timestamp(tftf_header * tftf_hdr) {
  *
  * @returns The number of collisions.
  */
-int tftf_section_collisions(tftf_header * tftf_hdr,
-                            tftf_section_descriptor * section,
+int tftf_section_collisions(const tftf_header * tftf_hdr,
+                            const tftf_section_descriptor * section,
                             uint32_t * collisions,
-                            uint32_t  max_collisions) {
+                            const uint32_t  max_collisions) {
     int num_collisions = 0;
 
     if (!tftf_hdr || !collisions) {
         fprintf(stderr, "ERROR(tftf_section_collisions): invalid parameters\n");
     } else {
         uint32_t index;
-        tftf_section_descriptor * sweeper;
+        const tftf_section_descriptor * sweeper;
 
         /* Skip comparing any section marked as to be ignored */
         if (section->section_load_address != DATA_ADDRESS_TO_BE_IGNORED) {

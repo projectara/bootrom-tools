@@ -48,7 +48,6 @@
 #include "ffff_in.h"
 #include "ffff_print.h"
 
-const char ffff_sentinel_value[FFFF_SENTINEL_SIZE] = FFFF_SENTINEL_VALUE;
 
 /*
  * Structure for caching element information during parsing.
@@ -61,8 +60,7 @@ typedef struct
 
 
 /* Cache for element information from the command line. */
-#define MAX_FFFF_SECTION_CACHE	256  /* arbitrary # */
-static element_cache_entry   element_cache[MAX_FFFF_SECTION_CACHE];
+static element_cache_entry  element_cache[CALC_MAX_FFFF_ELEMENTS(FFFF_HEADER_SIZE_MAX)];
 static uint32_t current_element = 0;
 static uint32_t element_iterator = -1;
 static bool     element_window_open = false;
@@ -81,7 +79,7 @@ static bool     element_window_open = false;
 void element_cache_entry_close(void) {
     if (element_window_open) {
         /* Advance to the next element */
-        if (current_element < MAX_FFFF_SECTION_CACHE) {
+        if (current_element < _countof(element_cache)) {
             current_element++;
         }
     element_window_open = false;
@@ -102,7 +100,7 @@ int element_cache_entry_open(const uint32_t element_type,
     int linux_style_status = -1;  /* assume failure */
     element_cache_entry * element = NULL;
 
-    if (current_element < MAX_FFFF_SECTION_CACHE) {
+    if (current_element < _countof(element_cache)) {
         /**
          * If the args are such that we go directly from one element to the
          * next, we need to close the previous element before opening this
@@ -144,7 +142,7 @@ bool element_cache_entry_set_class(const uint32_t element_class) {
 
 
     if (element_window_open &&
-        (current_element < MAX_FFFF_SECTION_CACHE)) {
+        (current_element < _countof(element_cache))) {
         /* Open the window and save the filename and type */
         element_cache[current_element].element.element_class = element_class;
         success = true;
@@ -167,7 +165,7 @@ bool element_cache_entry_set_id(const uint32_t element_id) {
     bool success = false;  /* assume failure */
 
     if (element_window_open &&
-        (current_element < MAX_FFFF_SECTION_CACHE)) {
+        (current_element < _countof(element_cache))) {
         /* Open the window and save the filename and type */
         element_cache[current_element].element.element_id = element_id;
         success = true;
@@ -190,7 +188,7 @@ bool element_cache_entry_set_length(const uint32_t element_length) {
     bool success = false;  /* assume failure */
 
     if (element_window_open &&
-        (current_element < MAX_FFFF_SECTION_CACHE)) {
+        (current_element < _countof(element_cache))) {
         /* Open the window and save the filename and type */
         element_cache[current_element].element.element_length = element_length;
         success = true;
@@ -213,7 +211,7 @@ bool element_cache_entry_set_location(const uint32_t element_location) {
     bool success = false;  /* assume failure */
 
     if (element_window_open &&
-        (current_element < MAX_FFFF_SECTION_CACHE)) {
+        (current_element < _countof(element_cache))) {
         /* Open the window and save the filename and type */
         element_cache[current_element].element.element_location = element_location;
         success = true;
@@ -236,7 +234,7 @@ bool element_cache_entry_set_generation(const uint32_t element_generation) {
     bool success = false;  /* assume failure */
 
     if (element_window_open &&
-        (current_element < MAX_FFFF_SECTION_CACHE)) {
+        (current_element < _countof(element_cache))) {
         /* Open the window and save the filename and type */
         element_cache[current_element].element.element_generation = element_generation;
         success = true;
@@ -419,7 +417,7 @@ struct ffff * new_ffff_romimage(const char *   name,
         ffff_hdr = romimage->ffff_hdrs[0];
         element = &ffff_hdr->elements[0];
         last_element = &ffff_hdr->elements[ffff_max_elements];
-        memcpy(ffff_hdr->sentinel_value, ffff_sentinel_value, FFFF_SENTINEL_SIZE);
+        memcpy(ffff_hdr->sentinel_value, ffff_sentinel, FFFF_SENTINEL_SIZE);
         ffff_set_timestamp(ffff_hdr);
         safer_strcpy(ffff_hdr->flash_image_name,
                      sizeof(ffff_hdr->flash_image_name),
@@ -455,7 +453,7 @@ struct ffff * new_ffff_romimage(const char *   name,
         }
 
         /* Add the tail sentinel at the end of the header */
-        memcpy(&romimage->blob[tail_sentinel_offset], ffff_sentinel_value,
+        memcpy(&romimage->blob[tail_sentinel_offset], ffff_sentinel,
                FFFF_SENTINEL_SIZE);
 
         /**
@@ -671,13 +669,13 @@ int validate_ffff_header(ffff_header *header, uint32_t address) {
 
     /* Check for leading and trailing sentinels */
     for (i = 0; i < FFFF_SENTINEL_SIZE; i++) {
-        if (header->sentinel_value[i] != ffff_sentinel_value[i]) {
+        if (header->sentinel_value[i] != ffff_sentinel[i]) {
             set_last_error(BRE_FFFF_SENTINEL);
             return -1;
         }
     }
     for (i = 0; i < FFFF_SENTINEL_SIZE; i++) {
-        if (tail_sentinel[i] != ffff_sentinel_value[i]) {
+        if (tail_sentinel[i] != ffff_sentinel[i]) {
             set_last_error(BRE_FFFF_SENTINEL);
             return -1;
         }

@@ -42,7 +42,13 @@
 #include "ffff.h"
 #include "ffff_common.h"
 
-/* This contains the maximum number of elements in the header. */
+/**
+ * This contains the maximum number of elements in the header.
+ * NOTE: This initial value is a placeholder and will be overwritten in
+ * "main()" using the CALC_MAX_FFFF_ELEMENTS macro to calculate the correct
+ * value based on the header_size (which is unavailable until either command
+ * line args have been parsed or an FFFF file read in).
+ */
 uint32_t ffff_max_elements = FFFF_MAX_ELEMENTS;
 
 
@@ -175,13 +181,12 @@ int ffff_element_collisions(const ffff_header * ffff_hdr,
                             uint32_t * collisions,
                             const uint32_t  max_collisions) {
     int num_collisions = 0;
-    const ffff_element_descriptor * sweeper;
 
     if (!ffff_hdr || !collisions) {
         fprintf(stderr, "ERROR(ffff_element_collisions): invalid parameters\n");
     } else {
         uint32_t index;
-        ffff_element_descriptor * sweeper;
+        const ffff_element_descriptor * sweeper;
 
         for (index = 0, sweeper = ffff_hdr->elements;
              ((index < ffff_max_elements) &&

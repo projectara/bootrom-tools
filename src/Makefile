@@ -29,7 +29,7 @@
 include $(TOPDIR)/Makefile.inc
 
 # Sub-directories
-SUBDIRS   = common create-tftf display-tftf create-ffff
+SUBDIRS   = common create-tftf display-tftf create-ffff display-ffff
 COMMONDIR = ${shell pwd}/common
 
 all: $(SUBDIRS)

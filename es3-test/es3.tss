@@ -47,6 +47,7 @@
 -t PB-07A -b bootrom-opt-nc-uart-hs.bin -e eccerror.efz -f ffff.bin -r PB-07.rsp
 -t PB-07B --skip_haps -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff.bin -r PB-07.rsp
 -t PB-08 -b bootrom-opt-nc-uart-hs.bin -e ok.efz -f ffff-sign.bin -r PB-08.rsp
+-t PB-09 -b bootrom-opt-nc-uart-hs.bin -e zero.efz -f ffff-sign.bin -r PB-09.rsp
 
 # Flash-Boot Tests (FB-##):
 # FB-00 "status 82000040" requires SPI failure

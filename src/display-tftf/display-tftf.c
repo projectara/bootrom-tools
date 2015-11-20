@@ -63,47 +63,20 @@
 #define PROGRAM_ERRORS      2
 
 
-static char * usage_strings[] =
-{
-    "Usage: display-tftf {-v | --verbose} {--map} <file>...",
-    "Where:",
-    "    -v, --verbose",
-    "        Display the TFTF header and a synopsis of each TFTF section",
-    "    --map",
-    "        Create a map file of the TFTF header and each TFTF section",
-    "    <file> is a tftf file",
-};
-
-
 /* TFTF parsing args */
 int verbose_flag = false;
 int map_flag = false;
 
 /* Parsing table */
 static struct optionx parse_table[] = {
-    { 'v', "verbose",       &verbose_flag,      0,
-      DEFAULT_VAL | STORE_TRUE,     NULL,       0 },
-    { 'm', "map",           &map_flag,          0,
-      DEFAULT_VAL | STORE_TRUE,     NULL,       0 },
-    { 0, NULL, NULL, 0, 0, NULL, 0 }
+    { 'v', "verbose", NULL, &verbose_flag, 0,
+      DEFAULT_VAL | STORE_TRUE, NULL, 0,
+      "Display the TFTF header and a synopsis of each TFTF section"},
+    { 'm', "map", NULL, &map_flag, 0,
+      DEFAULT_VAL | STORE_TRUE, NULL, 0,
+      "Create a map file of the TFTF header and each TFTF section"},
+    { 0, NULL, NULL, NULL, 0, 0, NULL, 0, NULL }
 };
-
-
-
-/**
- * @brief Print out the usage message
- *
- * @param None
- *
- * @returns Nothing
- */
-void usage(void) {
-    int i;
-
-    for (i = 0; i < _countof(usage_strings); i++) {
-        fprintf(stderr, "%s\n", usage_strings[i]);
-    }
-}
 
 
 /**
@@ -120,7 +93,9 @@ int main(int argc, char * argv[]) {
     int program_status = PROGRAM_SUCCESS;
 
     /* Parse the command line arguments */
-    parse_tbl = new_argparse(parse_table, NULL);
+    parse_tbl = new_argparse(parse_table, argv[0], NULL,
+                             "<file> is a tftf file",
+                             "<file>...", NULL);
     if (parse_tbl) {
         success =  parse_args(argc, argv, "", parse_tbl);
         parse_tbl = free_argparse(parse_tbl);

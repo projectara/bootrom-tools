@@ -42,9 +42,6 @@
 #include "tftf.h"
 #include "tftf_common.h"
 
-/* if verbose is true, print out a summary of the TFTF header on success. */
-int verbose_flag = false;
-
 /* This contains the maximum number of sections in the header. */
 uint32_t tftf_max_sections = TFTF_MAX_SECTIONS;
 

@@ -74,6 +74,7 @@ uint32_t    unipro_pid;
 uint32_t    ara_vid;
 uint32_t    ara_pid;
 uint32_t    ara_stage;
+int         verbose_flag = false;
 int         map_flag;
 
 

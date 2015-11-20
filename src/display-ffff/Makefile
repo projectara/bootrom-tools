@@ -38,7 +38,6 @@ LIBDIR       = $(TOPDIR)/libs
 EXE_NAME = display-ffff
 EXE      = $(BINDIR)/$(EXE_NAME)
 
-INC_DIRS := -I. -I$(IDIR)
 EXTRA_LIBS := -lelf
 
 _DEPS = \
@@ -82,5 +81,4 @@ $(ODIR)/display-ffff.o: display-ffff.c $(DEPS)
 
 clean:
 	rm -f $(OBJ) $(EXE)
-
 

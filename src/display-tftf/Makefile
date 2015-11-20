@@ -33,22 +33,12 @@ ODIR         = obj
 COMMONOBJDIR = $(TOPDIR)/obj
 BINDIR       = $(TOPDIR)/bin
 IDIR         = $(TOPDIR)/include
+LIBDIR       = $(TOPDIR)/libs
 
 EXE_NAME = display-tftf
 EXE      = $(BINDIR)/$(EXE_NAME)
 
-COMMON_NAMES := \
-  $(COMMONDIR)/parse_support.c \
-  $(COMMONDIR)/util.c \
-  $(COMMONDIR)/tftf_common.c \
-  $(COMMONDIR)/tftf_in.c \
-  $(COMMONDIR)/tftf_out.c \
-  $(COMMONDIR)/tftf_map.c \
-  $(COMMONDIR)/tftf_print.c
-
-INC_DIRS := -I. -I$(IDIR)
 EXTRA_LIBS := -lelf
-
 
 _DEPS = \
   parse_support.h \
@@ -60,16 +50,11 @@ _DEPS = \
   tftf_print.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_COMMONOBJ = \
-  parse_support.o \
-  util.o \
-  tftf_common.o \
-  tftf_in.o \
-  tftf_out.o \
-  tftf_map.o \
-  tftf_print.o
-COMMONOBJ = $(patsubst %,$(COMMONOBJDIR)/%,$(_COMMONOBJ))
-OBJ = $(ODIR)/display-tftf.o $(COMMONOBJ)
+OBJ = $(ODIR)/display-tftf.o
+
+_LIBS = -lcommon -ltftf
+_LIBDEPS = libcommon.a libtftf.a
+LIBDEPS = $(patsubst %,$(LIBDIR)/%,$(_LIBDEPS))
 
 INC_DIRS := -I. -I$(IDIR)
 SFILES   := c
@@ -83,10 +68,10 @@ EXE      := $(BINDIR)/$(EXE_NAME)
 
 all: $(EXE)
 
-$(EXE): $(OBJ)
+$(EXE): $(OBJ) $(LIBDEPS)
 	mkdir -p $(ODIR) $(BINDIR)
-	@ echo Compiling exe $<
-	$(CC) $^ $(EXTRA_LIBS) -o $@
+	@ echo Compiling exe: $<
+	$(CC) $^ $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -lelf -o $@
 
 $(ODIR)/display-tftf.o: display-tftf.c $(DEPS)
 	mkdir -p $(ODIR)
@@ -95,5 +80,4 @@ $(ODIR)/display-tftf.o: display-tftf.c $(DEPS)
 
 clean:
 	rm -f $(OBJ) $(EXE)
-
 

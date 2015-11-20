@@ -83,4 +83,3 @@ $(ODIR)/create-ffff.o: create-ffff.c $(DEPS)
 clean:
 	rm -f $(OBJ) $(EXE)
 
-

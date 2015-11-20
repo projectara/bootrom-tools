@@ -97,11 +97,11 @@ static FT_STATUS getDeviceHandle(char *id_string, FT_HANDLE *pftHandle) {
         for (i = 0; i < numDevs; i++) {
 #ifdef FTDI_USE_DESCRIPTION
             if (strcmp(devInfo[i].Description, id_string) == 0) {
-                printf("Found device id '%s'\n", id_string);
+                printf("Found FTDI device id '%s'\n", id_string);
                 break;
 #else
             if (strcmp(devInfo[i].SerialNumber, id_string) == 0) {
-                printf("Found device s/n '%s'\n", id_string);
+                printf("Found FTDI device s/n '%s'\n", id_string);
                 break;
 #endif
             }
@@ -109,9 +109,9 @@ static FT_STATUS getDeviceHandle(char *id_string, FT_HANDLE *pftHandle) {
         free(devInfo);
         if (i == numDevs) {
 #ifdef FTDI_USE_DESCRIPTION
-            printf("Failed to find device id '%s'\n", id_string);
+            printf("Failed to find FTFI device id '%s'\n", id_string);
 #else
-            printf("Failed to find device s/n '%s'\n", id_string);
+            printf("Failed to find FTDI device s/n '%s'\n", id_string);
 #endif
             return FT_DEVICE_NOT_FOUND;
         }

@@ -81,7 +81,7 @@ int reset_haps_pulse(void) {
     unsigned int bytesRead;
     int status = 0;
 
-    ftStatus = mpsse_init(MONITOR_SN, &ftHandle);
+    ftStatus = mpsse_init(MONITOR_ID, &ftHandle);
     if (ftStatus != FT_OK) {
         status = -1;
     } else {

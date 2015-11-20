@@ -142,13 +142,6 @@ FT_STATUS uart_dump(FT_HANDLE ftHandle, FILE *fp, long timeout) {
             }
 
             ch = byInputBuffer[i];
-#if 0
-            printf("%c", byInputBuffer[i]);
-            fprintf(fp, "%c", byInputBuffer[i]);
-            if (byInputBuffer[i] == '\n') {
-                newline = true;
-            }
-#else
             /* Strip out all control characters except newline and tab */
             if ((ch == '\n') || (ch == '\t') || 
                 ((ch >= ' ') && (ch <= '~'))) {
@@ -158,7 +151,6 @@ FT_STATUS uart_dump(FT_HANDLE ftHandle, FILE *fp, long timeout) {
                     newline = true;
                 }
             }
-#endif
         }
     }
     return ftStatus;

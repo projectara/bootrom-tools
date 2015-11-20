@@ -109,7 +109,7 @@ int main(int argc, char * argv[]) {
         option_index = 0;
         option = getopt_long (argc,
                               argv,
-                              "T:b:f:e:B:F:l:t",
+                              "T:b:f:e:B:F:l:t:",
                               long_options,
                               &option_index);
         if (option == -1) {
@@ -154,18 +154,21 @@ int main(int argc, char * argv[]) {
 
         default:
             /* Should never get here */
-            printf("?? getopt returned character code 0%o ??\n", option);
+            fprintf(stderr"?? getopt returned character code 0%o ??\n", option);
             /* and fall through to... */
         case '?':   // extraneous parameter
-            fprintf(stderr, "Usage: %s -b=bridge_bin [-f=bridge_ffff] [-e=bridge_efuse]\n", argv[0]);
-            fprintf(stderr, "    [-B=server_bin] [-F=server_ffff] [-l=log_file] [-t=timeout]\n");
+            fprintf(stderr,
+                    "Usage: %s -b=bridge_bin [-f=bridge_ffff] [-e=bridge_efuse]\n",
+                    argv[0]);
+            fprintf(stderr,
+                    "    [-B=server_bin] [-F=server_ffff] [-l=log_file] [-t=timeout]\n");
             break;
         }
     } /* Parsing loop */
 
     /* Check for required parameters */
     if ((test_folder == NULL) || (bridge_bin == NULL)) {
-        printf("Missing required parameters\n");
+        fprintf(stderr, "Missing required parameters\n");
         return -1;
     }
 
@@ -177,8 +180,15 @@ int main(int argc, char * argv[]) {
 
     FILE *fpLog = fopen(log_file, "w");
     if (fpLog == NULL) {
-        printf("Failed to create log file: %s (err %d)\n", log_file, errno);
+        fprintf(stderr, "Failed to create log file: %s (err %d)\n",
+                log_file, errno);
         return -1;
+    } else {
+        /*
+         * Since we run as root, the log file perms get clipped to 0644,
+         * so force it back to 0666
+         */
+        chmod(log_file, 0666);
     }
    
     ftStatus = mpsse_init(BRIDGE_DBGSER_ID, &ftHandleUartBridge);
@@ -189,7 +199,8 @@ int main(int argc, char * argv[]) {
         goto ErrorReturn;
     }
     FT_SetFlowControl(ftHandleUartBridge, FT_FLOW_NONE, 0x00, 0x00);
-    FT_SetDataCharacteristics(ftHandleUartBridge, FT_BITS_8, FT_STOP_BITS_1, FT_PARITY_NONE);
+    FT_SetDataCharacteristics(ftHandleUartBridge,
+                              FT_BITS_8, FT_STOP_BITS_1, FT_PARITY_NONE);
     FT_SetBaudRate(ftHandleUartBridge, FT_BAUD_115200);
 
     ftStatus = mpsse_init(SERVER_GPIO_ID, &ftHandleGpioServer);
@@ -206,13 +217,13 @@ int main(int argc, char * argv[]) {
 
     /* Flash the server */
     if (run_server && (server_ffff != NULL)) {
-        printf("Flashing the Server...\n");
+        fprintf(stderr"Flashing the Server...\n");
         sprintf(cmd, "%s/spirom_write A %s", FTDI_DIR, server_ffff);
         status = system(cmd);
     }
     /* Flash the bridge */
     if (bridge_ffff != NULL) {
-        printf("Flashing the Bridge...\n");
+        fprintf(stderr"Flashing the Bridge...\n");
         sprintf(cmd, "%s/spirom_write B %s", FTDI_DIR, bridge_ffff);
         status = system(cmd);
     }
@@ -270,5 +281,3 @@ ErrorReturn:
 
     return status;
 }
-    
-

@@ -79,7 +79,7 @@ TFTF_HEADER_SIZE_DEFAULT = 512
 TFTF_SENTINEL = "TFTF"
 TFTF_TIMESTAMP_LENGTH = 16
 TFTF_FW_PKG_NAME_LENGTH = 48
-TFTF_HDR_NUM_RESERVED_MIN = 4
+TFTF_HDR_NUM_RESERVED = 4
 TFTF_RSVD_SIZE = 4      # Size of each reserved item
 
 # TFTF section field lengths
@@ -117,7 +117,7 @@ TFTF_HDR_LEN_UNIPRO_MFGR_ID = 4
 TFTF_HDR_LEN_UNIPRO_PRODUCT_ID = 4
 TFTF_HDR_LEN_ARA_VENDOR_ID = 4
 TFTF_HDR_LEN_ARA_PRODUCT_ID = 4
-TFTF_HDR_LEN_MIN_RESERVED = (TFTF_HDR_NUM_RESERVED_MIN * TFTF_RSVD_SIZE)
+TFTF_HDR_LEN_RESERVED = (TFTF_HDR_NUM_RESERVED * TFTF_RSVD_SIZE)
 TFTF_HDR_LEN_FIXED_PART = (TFTF_HDR_LEN_SENTINEL +
                            TFTF_HDR_LEN_HEADER_SIZE +
                            TFTF_HDR_LEN_TIMESTAMP +
@@ -127,16 +127,11 @@ TFTF_HDR_LEN_FIXED_PART = (TFTF_HDR_LEN_SENTINEL +
                            TFTF_HDR_LEN_UNIPRO_MFGR_ID +
                            TFTF_HDR_LEN_UNIPRO_PRODUCT_ID +
                            TFTF_HDR_LEN_ARA_VENDOR_ID +
-                           TFTF_HDR_LEN_ARA_PRODUCT_ID)
+                           TFTF_HDR_LEN_ARA_PRODUCT_ID +
+                           TFTF_HDR_LEN_RESERVED)
 TFTF_HDR_NUM_SECTIONS = \
     ((TFTF_HEADER_SIZE_DEFAULT - TFTF_HDR_LEN_FIXED_PART) // TFTF_SECTION_LEN)
 TFTF_HDR_LEN_SECTION_TABLE = (TFTF_HDR_NUM_SECTIONS * TFTF_SECTION_LEN)
-# (The reserved array is made up of what's left over after creating the
-# section array.)
-TFTF_HDR_LEN_RESERVED = \
-    (TFTF_HEADER_SIZE_DEFAULT -
-     (TFTF_HDR_LEN_FIXED_PART + TFTF_HDR_LEN_SECTION_TABLE))
-TFTF_HDR_NUM_RESERVED = (TFTF_HDR_LEN_RESERVED / TFTF_RSVD_SIZE)
 
 # TFTF header field offsets
 TFTF_HDR_OFF_SENTINEL = 0
@@ -436,17 +431,10 @@ class Tftf:
             TFTF_HDR_OFF_SECTIONS, TFTF_HDR_NUM_RESERVED
         # TFTF section table and derived lengths
         TFTF_HDR_NUM_SECTIONS = \
-            ((self.header_size -
-             (TFTF_HDR_LEN_FIXED_PART + TFTF_HDR_LEN_MIN_RESERVED)) //
+            ((self.header_size - TFTF_HDR_LEN_FIXED_PART) //
              TFTF_SECTION_LEN)
         TFTF_HDR_LEN_SECTION_TABLE = (TFTF_HDR_NUM_SECTIONS * TFTF_SECTION_LEN)
 
-        # (The reserved array is made up of what's left over after creating the
-        # section array.)
-        TFTF_HDR_LEN_RESERVED = \
-            self.header_size - \
-            (TFTF_HDR_LEN_FIXED_PART + TFTF_HDR_LEN_SECTION_TABLE)
-        TFTF_HDR_NUM_RESERVED = TFTF_HDR_LEN_RESERVED / TFTF_RSVD_SIZE
         self.reserved = [0] * TFTF_HDR_NUM_RESERVED
 
         # Offsets to fields following the first variable-length table

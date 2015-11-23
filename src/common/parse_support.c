@@ -90,6 +90,7 @@ void parse_args_init_opt_entry(struct option * opt, const char * name, struct op
 bool parse_args_init(struct argparse * argp) {
     struct option * opt;
     struct optionx * optx;
+    int index;
 
     if (!argp || !argp->optx || !argp->opt) {
         fprintf(stderr, "ERROR (getoptionx_init): Invalid args\n");
@@ -100,10 +101,10 @@ bool parse_args_init(struct argparse * argp) {
     optx = argp->optx;
 
     /* Process the primary names */
-    for (optx = argp->optx; optx->name != NULL; optx++, opt++) {
-        if (optx->name) {
+    for (optx = argp->optx; optx->long_names != NULL; optx++, opt++) {
+        if ((optx->long_names)[0]) {
             /* Normal case */
-            parse_args_init_opt_entry(opt, optx->name, optx);
+            parse_args_init_opt_entry(opt, (optx->long_names)[0], optx);
 
             if (optx->flags & (STORE_FALSE | STORE_TRUE)) {
                 optx->flags |= DEFAULT_VAL;
@@ -119,34 +120,20 @@ bool parse_args_init(struct argparse * argp) {
     }
 
     /**
-     * Process the secondary names (these are comma-separated in the name
-     * field). What we will do is add additional "opt" entries, each pointing
-     * into the name field, and we will change all of the commas in the name
-     * field into null characters
+     * Process the secondary names.
+     * What we will do is add additional "opt" entries, each pointing
+     * into the additional names in the long_names array
      */
     if (argp->num_secondary_entries > 0) {
-        for (optx = argp->optx; optx->name != NULL; optx++) {
-            if (optx->name) {
-                char * comma = optx->name;
-                while (comma != NULL) {
-                    comma = strchr(comma, ',');
-                    if (comma != NULL) {
-                        /*
-                         * Convert the comma to a null and add an opt with
-                         * the remaining string as the name. (Doing so will
-                         * trim the previous entries pointing at the original
-                         * comma-separated name.
-                         */
-                        *comma++ = '\0';
-                        parse_args_init_opt_entry(opt, comma, optx);
-                        opt++;
-                     }
-                }
+        for (optx = argp->optx; optx->long_names != NULL; optx++) {
+            index = 1;
+            for (index=1; (optx->long_names)[index] != NULL; index++, opt++) {
+                parse_args_init_opt_entry(opt, (optx->long_names)[index], optx);
             }
         }
     }
 
-    /* Add the End-Of-Table marker to the opt array */
+    /* Finally, add the End-Of-Table marker to the opt array */
     opt->name = NULL;
     opt->has_arg = 0;
     opt->flag = NULL;
@@ -180,6 +167,7 @@ struct argparse * new_argparse(struct optionx *optx,
     struct optionx *scan = optx;
     int num_entries = 0;
     int num_secondary_entries = 0;
+    int index;
     struct argparse * argp = NULL;
 
     if (optx && prog) {
@@ -188,20 +176,12 @@ struct argparse * new_argparse(struct optionx *optx,
          */
         while (true) {
             num_entries++;
-            if (scan->name == NULL) {
+            if (scan->long_names == NULL) {
                 break;
             } else {
-                /**
-                 * Count the number of secondary name strings in the
-                 * comma-separated list
-                 */
-                char * comma = scan->name;
-                while (comma != NULL) {
-                    comma = strchr(comma, ',');
-                    if (comma != NULL) {
-                        num_secondary_entries++;
-                        comma++;
-                    }
+                /* Count the number of secondary name strings */
+                for (index = 1; (scan->long_names)[index] != NULL; index++) {
+                    num_secondary_entries++;
                 }
             }
             scan++;
@@ -332,7 +312,7 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
             *  short name, and if they don't match, search for it ourselves.
             */
            if (/*(option_index == 0) &&*/ (option != optx->short_name)) {
-               for (optx = parse_table->optx; optx->name != NULL; optx++) {
+               for (optx = parse_table->optx; (optx->long_names) != NULL; optx++) {
                    if (optx->short_name == option) {
                        break;
                    }
@@ -349,11 +329,11 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
     }
 
     /* Post-parsing, apply defaults or squawk about missing params */
-    for (optx = parse_table->optx; optx->name != NULL; optx++) {
+    for (optx = parse_table->optx; (optx->long_names) != NULL; optx++) {
         if (optx->count == 0) {
             /* Missing arg */
             if (optx->flags & REQUIRED) {
-                fprintf (stderr, "ERROR: --%s is required\n", optx->name);
+                fprintf (stderr, "ERROR: --%s is required\n", (optx->long_names)[0]);
                 success = false;
             } else if ((optx->flags & DEFAULT_VAL) && optx->var_ptr) {
                 *(uint32_t*)optx->var_ptr = optx->default_val;
@@ -376,9 +356,9 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
  */
 bool store_hex(const int option, const char * optarg, struct optionx * optx) {
     if (optx->var_ptr) {
-        return get_num(optarg, optx->name, (uint32_t *)optx->var_ptr);
+        return get_num(optarg, (optx->long_names)[0], (uint32_t *)optx->var_ptr);
     } else {
-        fprintf(stderr, "ERROR: No var to store --%s", optx->name);
+        fprintf(stderr, "ERROR: No var to store --%s", (optx->long_names)[0]);
         return false;
     }
 }
@@ -399,7 +379,7 @@ bool store_str(const int option, const char * optarg, struct optionx * optx) {
         *(const char**)optx->var_ptr = optarg;
         return true;
     } else {
-        fprintf(stderr, "ERROR: No var to store --%s", optx->name);
+        fprintf(stderr, "ERROR: No var to store --%s", (optx->long_names)[0]);
         return false;
     }
 }
@@ -420,7 +400,7 @@ bool store_flag(const int option, const char * optarg, struct optionx * optx) {
         *(int*)optx->var_ptr = (optx->flags & STORE_TRUE)? true : false;
         return true;
     } else {
-        fprintf(stderr, "ERROR: No var to store --%s", optx->name);
+        fprintf(stderr, "ERROR: No var to store --%s", (optx->long_names)[0]);
         return false;
     }
 }
@@ -515,6 +495,25 @@ bool get_type(const char * type_name, uint32_t * type) {
 
 
 /**
+ * @brief Print a single option's usage message
+ *
+ * @param optx Pointer to the opion to print
+ *
+ * @returns Nothing
+ */
+void usage_arg(struct optionx *optx) {
+    int index;
+
+    fprintf(stderr, "  -%c", optx->short_name);
+    for (index = 0; (optx->long_names)[index] != NULL; index++) {
+        fprintf(stderr, " | --%s", (optx->long_names)[index]);
+    }
+    fprintf(stderr, "\n");
+    fprintf(stderr, "    %s\n", optx->help);
+}
+
+
+/**
  * @brief Print a usage message from the argparse info
  *
  * Automatically generates the usage message in a style inspired by Python's
@@ -530,29 +529,16 @@ void usage(struct argparse *argp) {
         int line_length;
         int item_length;
         struct optionx * optx;
-        size_t longest_required_arg = 0;
-        size_t longest_optional_arg = 0;
         bool issued_header;
 
         /* Print the usage string */
         line_length = fprintf(stderr, "usage: %s ", argp->prog);
-        for (optx = argp->optx; optx->name != NULL; optx++) {
-            /* Determine the longest arg names */
-            size_t len = strlen(optx->name);
-            if (optx->flags & REQUIRED) {
-                if (len > longest_required_arg) {
-                    longest_required_arg = len;
-                }
-            } else {
-                if (len > longest_optional_arg) {
-                    longest_optional_arg = len;
-                }
-            }
+        for (optx = argp->optx; (optx->long_names) != NULL; optx++) {
 
             /* Format this argument */
             item_length = snprintf(item_buf, sizeof(item_buf),
                                    " [--%s%s%s]",
-                                   optx->name,
+                                   (optx->long_names)[0],
                                    (optx->val_name)? " " : "",
                                    (optx->val_name)? optx->val_name : "");
             if ((line_length + item_length) >= USAGE_LINE_LENGTH) {
@@ -584,29 +570,27 @@ void usage(struct argparse *argp) {
 
        /* Print the (required) argument help */
         for (optx = argp->optx, issued_header = false;
-             optx->name != NULL;
+             (optx->long_names) != NULL;
              optx++) {
             if (optx->flags & REQUIRED) {
                 if(!issued_header) {
                     fprintf (stderr, "\narguments:\n");
                     issued_header = true;
                 }
-                fprintf(stderr, "  %*s  %s\n",
-                        (int)longest_required_arg, optx->name, optx->help);
+                usage_arg(optx);
             }
         }
 
         /* Print the (optional) argument help */
         for (optx = argp->optx, issued_header = false;
-              optx->name != NULL;
+              (optx->long_names) != NULL;
               optx++) {
-             if (!(optx->flags & REQUIRED)) {
-                 if(!issued_header) {
-                     fprintf (stderr, "\noptional arguments:\n");
-                     issued_header = true;
-                 }
-                fprintf(stderr, "  %*s  %s\n",
-                        (int)longest_optional_arg, optx->name, optx->help);
+            if (!(optx->flags & REQUIRED)) {
+                if(!issued_header) {
+                    fprintf (stderr, "\noptional arguments:\n");
+                    issued_header = true;
+                }
+                usage_arg(optx);
             }
         }
 

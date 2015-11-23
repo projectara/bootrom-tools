@@ -101,25 +101,26 @@ uint32_t element_length;
 int verbose_flag = false;
 int map_flag = false;
 
-static char flash_capacity_names[] = "flash-capacity,fc";
-static char erase_block_size_names[] = "erase-size,ebs";
-static char image_length_names[] = "image-length,length";
-static char generation_names[] = "generation,gen";
-static char output_filename_names[] = "out";
-static char header_size_names[] = "header-size";
-static char name_names[] = "name";
-static char s2fw_filename_names[] = "stage-2-fw,s2fw";
-static char s3fw_filename_names[] = "stage-3-fw,s3fw";
-static char ims_filename_names[] = "ims";
-static char cms_filename_names[] = "cms";
-static char data_filename_names[] = "data";
-static char element_class_names[] = "element-class,eclass";
-static char element_id_names[] = "element-id,eid";
-static char element_generation_names[] = "element-generation,egen";
-static char element_location_names[] = "element-location,eloc";
-static char element_length_names[] = "element-length,elen";
-static char verbose_flag_names[] = "verbose";
-static char map_flag_names[] = "map";
+static char * flash_capacity_names[] = { "flash-capacity", "fc", NULL };
+static char * erase_block_size_names[] = { "erase-size", "ebs", NULL };
+static char * image_length_names[] = { "image-length", "length", NULL };
+static char * generation_names[] = { "generation", "gen", NULL };
+static char * output_filename_names[] = { "out", NULL };
+static char * header_size_names[] = { "header-size", NULL };
+static char * name_names[] = { "name", NULL };
+static char * s2fw_filename_names[] = { "stage-2-fw", "s2fw", NULL };
+static char * s3fw_filename_names[] = { "stage-3-fw", "s3fw", NULL };
+static char * ims_filename_names[] = { "ims", NULL };
+static char * cms_filename_names[] = { "cms", NULL };
+static char * data_filename_names[] = { "data", NULL };
+static char * element_class_names[] = { "element-class", "eclass", NULL };
+static char * element_id_names[] = { "element-id", "eid", NULL };
+static char * element_generation_names[] =
+    { "element-generation", "egen", NULL };
+static char * element_location_names[] = { "element-location", "eloc", NULL };
+static char * element_length_names[] = { "element-length", "elen", NULL };
+static char * verbose_flag_names[] = { "verbose", NULL };
+static char * map_flag_names[] = { "map", NULL };
 
 static const char flash_capacity_help[] =
         "The capacity of the Flash drive, in bytes";
@@ -271,7 +272,7 @@ bool handle_element(const int option, const char * optarg,
 
     if (!success) {
         if (known_arg) {
-            fprintf(stderr, "ERROR: --%s %s failed\n", optx->name, optarg);
+            fprintf(stderr, "ERROR: --%s %s failed\n", (optx->long_names)[0], optarg);
         } else {
             fprintf(stderr,
                     "ERROR: unknown section type '%c'\n", option);
@@ -295,7 +296,7 @@ bool handle_element_class(const int option, const char * optarg,
                           struct optionx * optx) {
     uint32_t num;
 
-    return get_num(optarg, optx->name, &num) &&
+    return get_num(optarg, (optx->long_names)[0], &num) &&
             element_cache_entry_set_class(num);
 }
 
@@ -314,7 +315,7 @@ bool handle_element_id(const int option, const char * optarg,
                           struct optionx * optx) {
     uint32_t num;
 
-    return get_num(optarg, optx->name, &num) &&
+    return get_num(optarg, (optx->long_names)[0], &num) &&
             element_cache_entry_set_id(num);
 }
 
@@ -333,7 +334,7 @@ bool handle_element_length(const int option, const char * optarg,
                           struct optionx * optx) {
     uint32_t num;
 
-    return get_num(optarg, optx->name, &num) &&
+    return get_num(optarg, (optx->long_names)[0], &num) &&
             element_cache_entry_set_length(num);
 }
 
@@ -352,7 +353,7 @@ bool handle_element_location(const int option, const char * optarg,
                           struct optionx * optx) {
     uint32_t num;
 
-    return get_num(optarg, optx->name, &num) &&
+    return get_num(optarg, (optx->long_names)[0], &num) &&
             element_cache_entry_set_location(num);
 }
 
@@ -371,7 +372,7 @@ bool handle_element_generation(const int option, const char * optarg,
                           struct optionx * optx) {
     uint32_t num;
 
-    return get_num(optarg, optx->name, &num) &&
+    return get_num(optarg, (optx->long_names)[0], &num) &&
             element_cache_entry_set_generation(num);
 }
 

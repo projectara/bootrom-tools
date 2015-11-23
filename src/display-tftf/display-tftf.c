@@ -67,14 +67,18 @@
 int verbose_flag = false;
 int map_flag = false;
 
+static char * verbose_flag_names[] = { "verbose", NULL };
+static char * map_flag_names[] = { "map", NULL };
+
+
 /* Parsing table */
 static struct optionx parse_table[] = {
-    { 'v', "verbose", NULL, &verbose_flag, 0,
+    { 'v', verbose_flag_names, NULL, &verbose_flag, 0,
       DEFAULT_VAL | STORE_TRUE, NULL, 0,
       "Display the TFTF header and a synopsis of each TFTF section"},
-    { 'm', "map", NULL, &map_flag, 0,
+    { 'm', map_flag_names, NULL, &map_flag, 0,
       DEFAULT_VAL | STORE_TRUE, NULL, 0,
-      "Create a map file of the TFTF header and each TFTF section"},
+      "Create a map file of the TFTF header and TFTF sections"},
     { 0, NULL, NULL, NULL, 0, 0, NULL, 0, NULL }
 };
 

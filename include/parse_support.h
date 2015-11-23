@@ -60,8 +60,11 @@ struct optionx {
     /* 1-character short name for the arg, used in the "-x" form */
     const int       short_name;
 
-    /* Long name for the argument, used for the "--xxx" form */
-    char *          name;
+    /**
+     * Long name(s) for the argument, used for the "--xxx" form. This
+     * points to a NULL-terminated array of pointers to strings
+     */
+    char **         long_names;
 
     /* (optional) Name for the optarg value  (e.g., --yabba=foo)  */
     const char *    val_name;

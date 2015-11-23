@@ -30,7 +30,6 @@
 #define __COMMON_INCLUDE_FFFF_H
 
 #include <stdint.h>
-//*****#include "data_loading.h"
 
 #define FFFF_HEADER_SIZE                  4096
 #define FFFF_ERASE_BLOCK_SIZE_MAX         (1024 * 512)

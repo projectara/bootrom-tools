@@ -67,7 +67,7 @@
 /* FFFF parsing args */
 int map_flag = false;
 
-static char map_flag_names[] = "map";
+static char * map_flag_names[] = { "map", NULL };
 
 static const char map_flag_help[] =
         "Create a map file of the FFFF headers and each FFFF sections";

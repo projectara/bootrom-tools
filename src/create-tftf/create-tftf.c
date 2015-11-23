@@ -101,95 +101,118 @@ bool handle_section_id(const int option, const char * optarg,
 bool handle_section_load_address(const int option, const char * optarg,
         struct optionx * optx);
 
+static char * header_size_names[] = { "header-size", NULL };
+static char * fw_pkg_name_names[] = { "type", NULL };
+static char * package_type_names[] = { "name", NULL };
+static char * start_location_names[] = { "start", NULL };
+static char * unipro_mfg_names[] = { "unipro-mfg", NULL };
+static char * unipro_pid_names[] = { "unipro-pid", NULL };
+static char * ara_vid_names[] = { "ara-vid", NULL };
+static char * ara_pid_names[] = { "ara-pid", NULL };
+static char * ara_stage_names[] = { "ara-stage", NULL };
+static char * section_elf_names[] = { "elf", NULL };
+static char * section_code_names[] = { "code", NULL };
+static char * section_data_names[] = { "data", NULL };
+static char * section_manifest_names[] = { "manifest", NULL };
+static char * section_signature_names[] = { "signature", NULL };
+static char * section_certificate_names[] = { "certificate", NULL };
+static char * section_class_names[] = { "class", NULL };
+static char * section_id_names[] = { "id", NULL };
+static char * section_load_address_names[] = { "load", "load-address", NULL };
+static char * output_filename_names[] = { "out", NULL };
+static char * verbose_flag_names[] = { "verbose", NULL };
+static char * map_flag_names[] = { "map", NULL };
+
+char ** foo = header_size_names;
 
 /* Parsing table */
 static struct optionx parse_table[] = {
     /* Header args */
-    { 'z', "header-size", "num", &header_size, TFTF_HEADER_SIZE,
+    { 'z', header_size_names, "num", &header_size, TFTF_HEADER_SIZE,
       DEFAULT_VAL, &handle_header_size, 0,
       "The size of the generated TFTF header, in bytes (512)"
     },
-    { 't', "type", "s2fw | s3fw", &package_type, 0,
+    { 't', fw_pkg_name_names, "s2fw | s3fw", &package_type, 0,
       REQUIRED, &handle_header_type, 0,
       "Package type"
     },
-    { 'n', "name", "text", &fw_pkg_name, 0,
+    { 'n', package_type_names, "text", &fw_pkg_name, 0,
       OPTIONAL, &store_str, 0,
       "Package name"
     },
-    { 's', "start", "address", &start_location, DFLT_START,
+    { 's', start_location_names, "address", &start_location, DFLT_START,
       DEFAULT_VAL, &store_hex, 0,
       "The memory location of the package entry point."
     },
-    { 'u', "unipro-mfg", "num", &unipro_mfg, DFLT_UNIPRO_MID,
+    { 'u', unipro_mfg_names, "num", &unipro_mfg, DFLT_UNIPRO_MID,
       DEFAULT_VAL, &store_hex, 0,
       "Unipro ASIC Manufacturer ID"
     },
-    { 'U', "unipro-pid", "num", &unipro_pid, DFLT_UNIPRO_PID,
+    { 'U', unipro_pid_names, "num", &unipro_pid, DFLT_UNIPRO_PID,
       DEFAULT_VAL, &store_hex, 0,
       "Unipro ASIC Product ID"
     },
-    { 'a', "ara-vid", "num", &ara_vid, DFLT_ARA_VID,
+    { 'a', ara_vid_names, "num", &ara_vid, DFLT_ARA_VID,
       DEFAULT_VAL, &store_hex, 0,
       "Ara Vendor ID"
     },
-    { 'A', "ara-pid", "num", &ara_pid, DFLT_ARA_PID,
+    { 'A', ara_pid_names, "num", &ara_pid, DFLT_ARA_PID,
       DEFAULT_VAL, &store_hex, 0,
       "Ara Product ID"
     },
-    { 'S', "ara-stage", "1 | 2 | 3", &ara_stage, DFLT_ARA_BOOT_STAGE,
+    { 'S', ara_stage_names, "1 | 2 | 3", &ara_stage, DFLT_ARA_BOOT_STAGE,
       DEFAULT_VAL, &store_hex, 0,
       "Ara boot stage (deprecate?)"
     }, /* deprecate? */
 
     /* Section args */
-    { 'E', "elf", NULL, NULL, 0,
+    { 'E', section_elf_names, NULL, NULL, 0,
       OPTIONAL, &handle_section_elf, 0,
       "The name of an input ELF image file (extracts -C, -D and -s)"
     },
-    { 'C',"code", NULL, NULL, 0,
+    { 'C', section_code_names, NULL, NULL, 0,
       OPTIONAL, &handle_section_normal, 0,
       "Code section [1]"
     },
-    { 'D', "data", NULL, NULL, 0,
+    { 'D', section_data_names, NULL, NULL, 0,
       OPTIONAL, &handle_section_normal, 0,
       "Data  section [1]"
     },
-    { 'M', "manifest", NULL, NULL, 0,
+    { 'M', section_manifest_names, NULL, NULL, 0,
       OPTIONAL, &handle_section_normal, 0,
       "Manifest section [1]"
     },
-    { 'G', "signature", NULL, NULL, 0,
+    { 'G', section_signature_names, NULL, NULL, 0,
       OPTIONAL, &handle_section_normal, 0,
       "Signature section [1]"
     },
-    { 'R', "certificate", NULL, NULL, 0,
+    { 'R', section_certificate_names, NULL, NULL, 0,
       OPTIONAL, &handle_section_normal, 0,
       "Certificate section [1]"
     },
-    { 'c', "class", "num", NULL, DFLT_SECT_CLASS,
+    { 'c', section_class_names, "num", NULL, DFLT_SECT_CLASS,
       DEFAULT_VAL, &handle_section_class, 0,
       "Set the section class to <num>"
     },
-    { 'i', "id", "num", NULL, DFLT_SECT_ID,
+    { 'i', section_id_names, "num", NULL, DFLT_SECT_ID,
       DEFAULT_VAL, &handle_section_id, 0,
       "Set the section id to <num>"
     },
-    { 'l', "load", "address", NULL, DFLT_SECT_LOAD,
+    { 'l', section_load_address_names, "num", NULL, DFLT_SECT_LOAD,
       DEFAULT_VAL, &handle_section_load_address, 0,
       "Set the address of the start of the section to <num>"
     },
 
     /* Misc args */
-    { 'o', "out", "file", &output_filename, 0,
+    { 'o', output_filename_names, "file", &output_filename, 0,
       REQUIRED, &store_str, 0,
       "Specifies the output file"
     },
-    { 'v', "verbose", NULL, &verbose_flag, 0,
+    { 'v', verbose_flag_names, NULL, &verbose_flag, 0,
       DEFAULT_VAL | STORE_TRUE, &store_flag, 0,
       "Display the TFTF header and a synopsis of each TFTF section"
     },
-    { 'm', "map", NULL, &map_flag, 0,
+    { 'm', map_flag_names, NULL, &map_flag, 0,
       DEFAULT_VAL | STORE_TRUE, &store_flag, 0,
       "Create a map file of the TFTF header and each TFTF section"
     },
@@ -228,7 +251,7 @@ bool handle_header_size(const int option, const char * optarg,
                         struct optionx * optx) {
     bool success;
 
-    success = get_num(optarg, optx->name, &header_size);
+    success = get_num(optarg, (optx->long_names)[0], &header_size);
 
     /* Make sure the header size is plausible */
      if ((header_size < TFTF_HEADER_SIZE_MIN) ||
@@ -328,7 +351,7 @@ bool handle_section_normal(const int option, const char * optarg,
 
     if (!success) {
         if (known_arg) {
-            fprintf(stderr, "ERROR: --%s %s failed\n", optx->name, optarg);
+            fprintf(stderr, "ERROR: --%s %s failed\n", (optx->long_names)[0], optarg);
         } else {
             fprintf(stderr,
                     "ERROR: unknown section type '%c'\n", option);
@@ -352,7 +375,7 @@ bool handle_section_class(const int option, const char * optarg,
                           struct optionx * optx) {
     uint32_t num;
 
-    return get_num(optarg, optx->name, &num) &&
+    return get_num(optarg, (optx->long_names)[0], &num) &&
            section_cache_entry_set_class(num);
 }
 
@@ -371,7 +394,7 @@ bool handle_section_id(const int option, const char * optarg,
                        struct optionx * optx) {
     uint32_t num;
 
-    return get_num(optarg, optx->name, &num) &&
+    return get_num(optarg, (optx->long_names)[0], &num) &&
            section_cache_entry_set_id(num);
 }
 
@@ -390,7 +413,7 @@ bool handle_section_load_address(const int option, const char * optarg,
                                  struct optionx * optx) {
     uint32_t num;
 
-    return get_num(optarg, optx->name, &num) &&
+    return get_num(optarg, (optx->long_names)[0], &num) &&
            section_cache_entry_set_load_address(num);
 }
 

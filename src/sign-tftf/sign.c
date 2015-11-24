@@ -332,8 +332,10 @@ bool sign_tftf(const char * filename,
     tftf_hdr = (tftf_header *)alloc_load_file(filename, &tftf_size);
     if (tftf_hdr) {
         EVP_MD_CTX *    mdctx;
-        uint8_t *       signable_start = NULL;
-        size_t          signable_length = 0;
+        uint8_t *       hdr_signable_start = NULL;
+        size_t          hdr_signable_length = 0;
+        uint8_t *       scn_signable_start = NULL;
+        size_t          scn_signable_length = 0;
         tftf_signature  signature_block;
         uint8_t         md_value[EVP_MAX_MD_SIZE];
         unsigned int    md_len;
@@ -342,7 +344,7 @@ bool sign_tftf(const char * filename,
         /* Initialize the signature block */
         signature_block.length = sizeof(signature_block);
         signature_block.type = signature_algorithm;
-        strcpy_s (signature_block.key_name,
+        safer_strcpy (signature_block.key_name,
                   sizeof(signature_block.key_name),
                   format_key_name(signature_format,
                                   package_type,
@@ -352,8 +354,10 @@ bool sign_tftf(const char * filename,
 
         /* Extract the signable blob from the TFTF and sign it */
         success = tftf_get_signable_region(tftf_hdr,
-                                           &signable_start,
-                                           &signable_length);
+                                           &hdr_signable_start,
+                                           &hdr_signable_length,
+                                           &scn_signable_start,
+                                           &scn_signable_length);
         mdctx = EVP_MD_CTX_create();
         if (mdctx) {
             status = EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
@@ -361,9 +365,16 @@ bool sign_tftf(const char * filename,
                 fprintf(stderr, "ERROR: EVP_DigestInit_ex failed\n");
                 goto signing_err;
             }
-            status = EVP_DigestUpdate(mdctx, signable_start, signable_length);
+            status = EVP_DigestUpdate(mdctx, hdr_signable_start,
+                                      hdr_signable_length);
             if (status < 1) {
-                fprintf(stderr, "ERROR: EVP_DigestUpdate failed\n");
+                fprintf(stderr, "ERROR: EVP_DigestUpdate (hdr) failed\n");
+                goto signing_err;
+            }
+            status = EVP_DigestUpdate(mdctx, scn_signable_start,
+                                      scn_signable_length);
+            if (status < 1) {
+                fprintf(stderr, "ERROR: EVP_DigestUpdate (scn) failed\n");
                 goto signing_err;
             }
             status = EVP_DigestFinal_ex(mdctx, md_value, &md_len);

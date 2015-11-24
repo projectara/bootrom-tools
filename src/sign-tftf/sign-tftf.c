@@ -117,32 +117,29 @@ bool handle_format(const int option, const char * optarg,
 
 /* Parsing table */
 static struct optionx parse_table[] = {
-    { 'p', "passin",                &passin_mode,           PASSIN_PROMPT,  DEFAULT_VAL,    &handle_passin, 0 },
-    { 't', "type",                  &package_type,          0,              REQUIRED,       &handle_package_type, 0 },
-    { 's', "suffix",                &suffix,                0,              0,              &store_str, 0 },
-    { 'a', "signature-algorithm",   &signature_algorithm,   0,              REQUIRED,       &handle_algorithm, 0 },
-    { 'f', "format",                &signature_format,      0,              REQUIRED,       &handle_format, 0 },
-    { 'k', "key",                   &key_filename,          0,              REQUIRED,       &store_str, 0 },
-    { 'r', "retry",                 &retry_flag,            0,              DEFAULT_VAL | STORE_TRUE,     NULL, false },
-    { 'c', "check",                 &check_flag,            0,              DEFAULT_VAL | STORE_TRUE,     NULL, false },
-    { 'v', "verbose",               &verbose_flag,          0,              DEFAULT_VAL | STORE_TRUE,     NULL, false },
-    { 0, NULL, NULL, 0, 0, NULL, 0 }
+    { 'p', "passin", "[pass:<passphrase> | stdin | (prompt)]",
+            &passin_mode, PASSIN_PROMPT,  DEFAULT_VAL, &handle_passin, 0 },
+    { 't', "type", "[s2fsk | s3fsk]",
+            &package_type, 0, REQUIRED, &handle_package_type, 0 },
+    { 's', "suffix", "<string>",
+            &suffix, 0, 0, &store_str, 0 },
+    { 'a', "signature-algorithm", "rsa2048-sha256",
+            &signature_algorithm, 0, REQUIRED, &handle_algorithm, 0 },
+    { 'f', "format", "[standard | es3]",
+            &signature_format, 0, REQUIRED, &handle_format, 0 },
+    { 'k', "key", "<pemfile>",
+            &key_filename, 0, REQUIRED, &store_str, 0 },
+    { 'r', "retry",
+            NULL, &retry_flag, 0, DEFAULT_VAL | STORE_TRUE, NULL, false },
+    { 'c', "check",
+            NULL, &check_flag, 0, DEFAULT_VAL | STORE_TRUE, NULL, false },
+    { 'v', "verbose",
+            NULL, &verbose_flag, 0, DEFAULT_VAL | STORE_TRUE, NULL, false },
+    { 0, NULL, NULL, NULL, 0, 0, NULL, 0, NULL }
 };
 
-static char all_args[] = "p:t:s:a:f:k:";
+static char all_args[] = "p:t:s:a:f:k:rcv";
 
-static char * usage_strings[] =
-{
-    "Usage: sign-tftf --type [s2fsk | s3fsk] --key pemfile \\",
-    "                 --signature-algorithm [rsa2048-sha256] \\"
-    "                 --format [standard | es3]\\"
-    "                 --passin [pass:<passphrase> | stdin | prompt]\\",
-    "                 {--suffix <string>} {--verbose} <file>...",
-    "Where:",
-    "    -v, --verbose",
-    "        Display the TFTF header and a synopsis of each TFTF section",
-    "    <file> is a tftf file",
-};
 
 /**
  * @brief Callback to validate and store the signing key passphrase.
@@ -242,22 +239,6 @@ bool handle_format(const int option, const char * optarg,
 
 
 /**
- * @brief Print out the usage message
- *
- * @param None
- *
- * @returns Nothing
- */
-void usage(void) {
-    int i;
-
-    for (i = 0; i < _countof(usage_strings); i++) {
-        fprintf(stderr, "%s\n", usage_strings[i]);
-    }
-}
-
-
-/**
  * @brief Get the passphrase from the user
  *
  * @param key_filename The name of the private key file.
@@ -313,7 +294,7 @@ int main(int argc, char * argv[]) {
     int program_status = PROGRAM_SUCCESS;
 
     /* Parse the command line arguments */
-    parse_tbl = new_argparse(parse_table, NULL);
+    parse_tbl = new_argparse(parse_table, argv[0], NULL, NULL, "<file>...", NULL);
     if (parse_tbl) {
         success =  parse_args(argc, argv, all_args, parse_tbl);
         parse_tbl = free_argparse(parse_tbl);
@@ -323,7 +304,6 @@ int main(int argc, char * argv[]) {
 
 
     /* Perform any argument validation/post-processing */
-    printf("passin_mode %u\n", passin_mode);
     passphrase = get_passphrase(passin_mode);
     if (!passphrase) {
         fprintf(stderr, "ERROR: Missing passphrase for private key %s\n",

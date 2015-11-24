@@ -181,15 +181,20 @@ int  tftf_section_collisions(const tftf_header * tftf_hdr,
  * @brief Determine the signable region of a TFTF
  *
  * @param tftf_hdr Pointer to the TFTF header to examine
- * @param pstart Pointer to a ptr variable that will be set to the start of
- *               the signable region.
- * @param length Pointer to a variable which will be set to the length of
- *               the signable region.
+ * @param hdr_pstart Pointer to a ptr variable that will be set to the start
+ *                   of the signable region in the TFTF header.
+ * @param hdr_length Pointer to a variable which will be set to the length
+ *                   of the signable region in the TFTF header.
+ * @param scn_pstart Pointer to a ptr variable that will be set to the start
+ *                   of the signable region in the TFTF sections.
+ * @param scn_length Pointer to a variable which will be set to the length
+ *                   ofthe signable region in the TFTF sections.
  *
  * @returns True on success, false on failure
  */
-bool tftf_get_signable_region(tftf_header * tftf_hdr, uint8_t ** pstart,
-                              size_t * length);
+bool tftf_get_signable_region(tftf_header * tftf_hdr,
+                              uint8_t ** hdr_pstart, size_t * hdr_length,
+                              uint8_t ** scn_pstart, size_t * scn_length);
 
 
 /**

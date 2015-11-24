@@ -251,26 +251,37 @@ int tftf_section_collisions(const tftf_header * tftf_hdr,
 /**
  * @brief Determine the signable region of a TFTF
  *
- * @param tftf_hdr Pointer to the TFTF blob to examine
- * @param pstart Pointer to a ptr variable that will be set to the start of
- *               the signable region.
- * @param length Pointer to a variable which will be set to the length of
- *               the signable region.
+ * @param tftf_hdr Pointer to the TFTF header to examine
+ * @param hdr_pstart Pointer to a ptr variable that will be set to the start
+ *                   of the signable region in the TFTF header.
+ * @param hdr_length Pointer to a variable which will be set to the length
+ *                   of the signable region in the TFTF header.
+ * @param scn_pstart Pointer to a ptr variable that will be set to the start
+ *                   of the signable region in the TFTF sections.
+ * @param scn_length Pointer to a variable which will be set to the length
+ *                   ofthe signable region in the TFTF sections.
  *
  * @returns True on success, false on failure
  */
-bool tftf_get_signable_region(tftf_header * tftf_hdr, uint8_t ** pstart,
-                              size_t * length) {
+bool tftf_get_signable_region(tftf_header * tftf_hdr,
+                              uint8_t ** hdr_pstart, size_t * hdr_length,
+                              uint8_t ** scn_pstart, size_t * scn_length) {
     tftf_section_descriptor * section;
-    if (!tftf_hdr || !pstart || !length) {
+    if (!tftf_hdr || !hdr_pstart || !hdr_length ||
+        !scn_pstart || !scn_length) {
         return false;
     }
 
-    *pstart = SECTION_PAYLOAD_START(tftf_hdr);
-    for (section = tftf_hdr->sections, *length = 0;
+    /* Find the signable region of the header & section payload */
+    *hdr_pstart = (uint8_t*)tftf_hdr;
+    *hdr_length = 0;
+    *scn_pstart = SECTION_PAYLOAD_START(tftf_hdr);
+    *scn_length = 0;
+    for (section = tftf_hdr->sections;
          section->section_type < TFTF_SECTION_SIGNATURE;
          section++) {
-        *length += section->section_length;
+        *hdr_length = (uint8_t*)section + sizeof(*section) - (uint8_t *)tftf_hdr;
+        *scn_length += section->section_length;
     }
 
     return true;

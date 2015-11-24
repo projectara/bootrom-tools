@@ -46,7 +46,7 @@ FT_STATUS uart_read(FT_HANDLE ftHandle, unsigned char *buf, unsigned int *bytesR
                 continue;
             }
             buf[j++] = byInputBuffer[i];
-        }  
+        }
         *bytesRead = j;
         break;
     }
@@ -58,7 +58,7 @@ FT_STATUS uart_read(FT_HANDLE ftHandle, unsigned char *buf, unsigned int *bytesR
 /* Obtain the current time (seconds+milliseconds+microseconds) in milliseconds */
 long get_current_time_in_ms (void)
 {
-    struct timeval te; 
+    struct timeval te;
     gettimeofday(&te, NULL); // get current time
     long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // caculate milliseconds
     // printf("milliseconds: %lld\n", milliseconds);
@@ -76,7 +76,7 @@ FT_STATUS uart_print(FT_HANDLE ftHandle) {
         ftStatus = FT_GetQueueStatus(ftHandle, &dwNumBytesToRead);
         if (ftStatus != FT_OK || dwNumBytesToRead == 0) continue;
         FT_Read(ftHandle, &byInputBuffer, dwNumBytesToRead, &dwNumBytesRead);
-       
+
         //printf("read %d bytes %d\n", dwNumBytesRead, dwNumBytesToRead);
 
         int i;
@@ -124,7 +124,7 @@ FT_STATUS uart_dump(FT_HANDLE ftHandle, FILE *fp, long timeout) {
         ftStatus = FT_GetQueueStatus(ftHandle, &dwNumBytesToRead);
         if (ftStatus != FT_OK || dwNumBytesToRead == 0) continue;
         FT_Read(ftHandle, &byInputBuffer, dwNumBytesToRead, &dwNumBytesRead);
-       
+
 
         int i;
         for (i = 0; i < dwNumBytesRead; i++) {
@@ -143,7 +143,7 @@ FT_STATUS uart_dump(FT_HANDLE ftHandle, FILE *fp, long timeout) {
 
             ch = byInputBuffer[i];
             /* Strip out all control characters except newline and tab */
-            if ((ch == '\n') || (ch == '\t') || 
+            if ((ch == '\n') || (ch == '\t') ||
                 ((ch >= ' ') && (ch <= '~'))) {
                 printf("%c", ch);
                 fprintf(fp, "%c", ch);
@@ -163,9 +163,6 @@ FT_STATUS uart_write(FT_HANDLE ftHandle, unsigned char *buf, unsigned int bytesT
     memcpy(byOutputBuffer, buf, bytesToWrite);
     dwNumBytesToSend = bytesToWrite;
     ftStatus = FT_Write(ftHandle, byOutputBuffer, dwNumBytesToSend, &dwNumBytesSent);        // Send off the command
-    dwNumBytesToSend = 0; 
+    dwNumBytesToSend = 0;
     return ftStatus;
 }
-
-
-

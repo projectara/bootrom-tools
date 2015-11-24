@@ -190,7 +190,7 @@ int main(int argc, char * argv[]) {
          */
         chmod(log_file, 0666);
     }
-   
+
     ftStatus = mpsse_init(BRIDGE_DBGSER_ID, &ftHandleUartBridge);
     if (ftStatus != FT_OK) {
         fprintf(stderr, "Can't open bridge debug serial (ftStatus %d)\n",

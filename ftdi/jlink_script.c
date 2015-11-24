@@ -83,7 +83,7 @@ static int prepare_efuse(FILE *fp, char * efuse) {
     fscanf(fe, "SCR[7:0] = %x\n", &buf[0]);
     printf("SCR[7:0] = %x\n", buf[0]);
     //fprintf(fp, "w4 0x40084308 0x%08X\n", buf[0]);
-    
+
     fscanf(fe, "IMS[279:0] = %x_%x_%x_%x_%x_%x_%x_%x_%x\n",
            &buf[8], &buf[7], &buf[6], &buf[5], &buf[4],
            &buf[3], &buf[2], &buf[1], &buf[0]);
@@ -151,7 +151,7 @@ int jlink_prepare_test(char *test_folder, char *efuse,
     fprintf(fp, "halt\n");
     fprintf(fp, "loadbin %s 0x00000000\n", bridge_bin);
     fprintf(fp, "w4 0xE000EDFC 0x01000000\n");
-    
+
     if (prepare_efuse(fp, efuse) != 0) {
         fclose(fp);
         return -1;

@@ -45,7 +45,7 @@ all: $(binaries)
 #	gcc -g -I. $^ LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux/libMPSSE.a -o $@  -ldl
 
 spirom_write: spirom_write.o spirom_common.o
-	gcc $(CFLAGS) $^ $(LIBMPSSE) -o $@ -ldl 
+	gcc $(CFLAGS) $^ $(LIBMPSSE) -o $@ -ldl
 
 haps_test: haps_test.o gpio.o common.o jlink_script.o uart.o reset.o settings.h
 	gcc $(CFLAGS) $^ -o $@ -ldl -lftd2xx

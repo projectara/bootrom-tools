@@ -119,7 +119,7 @@ FT_STATUS spi_init(int channelA) {
 		{
 			status = SPI_GetChannelInfo(i,&devList);
 			APP_CHECK_STATUS(status);
-#if 0            
+#if 0
 			printf("Information on channel number %d:\n",i);
 			printf("		Flags=0x%x\n",devList.Flags);
 			printf("		Type=0x%x\n",devList.Type);
@@ -127,7 +127,7 @@ FT_STATUS spi_init(int channelA) {
 			printf("		LocId=0x%x\n",devList.LocId);
 			printf("		SerialNumber=%s\n",devList.SerialNumber);
 			printf("		Description=%s\n",devList.Description);
-#endif            
+#endif
 			if (channelA) {
 				if (!strcmp(devList.Description, "USB <-> Serial Converter A A")) {
 					channelToOpen = i;

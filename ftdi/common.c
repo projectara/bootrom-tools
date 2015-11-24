@@ -38,14 +38,14 @@
 
 #include "settings.h"
 
-BYTE byOutputBuffer[1024 * 1024];  // Buffer to hold MPSSE commands and data  
+BYTE byOutputBuffer[1024 * 1024];  // Buffer to hold MPSSE commands and data
                          //     to be sent to the FT2232H
-BYTE byInputBuffer[1024 * 1024];   // Buffer to hold data read from the FT2232H  
+BYTE byInputBuffer[1024 * 1024];   // Buffer to hold data read from the FT2232H
 DWORD dwNumBytesToSend = 0;  // Index to the output buffer
 DWORD dwNumBytesSent = 0;  // Count of actual bytes sent - used with FT_Write
-DWORD dwNumBytesToRead = 0;  // Number of bytes available to read  
+DWORD dwNumBytesToRead = 0;  // Number of bytes available to read
                             //     in the driver's input buffer
-DWORD dwNumBytesRead = 0;  // Count of actual bytes read - used with FT_Read 
+DWORD dwNumBytesRead = 0;  // Count of actual bytes read - used with FT_Read
 
 
 /**
@@ -65,21 +65,21 @@ static FT_STATUS getDeviceHandle(char *id_string, FT_HANDLE *pftHandle) {
 
 
     // create the device information list
-    ftStatus = FT_CreateDeviceInfoList(&numDevs); 
-    if (ftStatus == FT_OK) { 
-        printf("Number of devices is %d\n",numDevs); 
-    } 
+    ftStatus = FT_CreateDeviceInfoList(&numDevs);
+    if (ftStatus == FT_OK) {
+        printf("Number of devices is %d\n",numDevs);
+    }
 
-    // 
-    // allocate storage for list based on numDevs 
-    // 
-    devInfo = (FT_DEVICE_LIST_INFO_NODE*)malloc(sizeof(FT_DEVICE_LIST_INFO_NODE)*numDevs); 
+    //
+    // allocate storage for list based on numDevs
+    //
+    devInfo = (FT_DEVICE_LIST_INFO_NODE*)malloc(sizeof(FT_DEVICE_LIST_INFO_NODE)*numDevs);
 
-    // 
-    // get the device information list 
-    // 
-    ftStatus = FT_GetDeviceInfoList(devInfo,&numDevs); 
-    if (ftStatus == FT_OK) { 
+    //
+    // get the device information list
+    //
+    ftStatus = FT_GetDeviceInfoList(devInfo,&numDevs);
+    if (ftStatus == FT_OK) {
 #if 0
   #ifdef FTDI_USE_DESCRIPTION
             printf("Looking for device id '%s'\n", id_string);
@@ -141,14 +141,14 @@ FT_STATUS mpsse_init(char *id_string, FT_HANDLE *pftHandle) {
         return ftStatus;
     }
     // Configure port parameters
-    printf("\nConfiguring port for MPSSE use...\n");  
+    printf("\nConfiguring port for MPSSE use...\n");
     ftStatus |= FT_ResetDevice(ftHandle);        //Reset USB device
     //Purge USB receive buffer first by reading out all old data from FT2232H receive buffer
     ftStatus |= FT_GetQueueStatus(ftHandle, &dwNumBytesToRead);
-                                                // Get the number of bytes in the FT2232H  
+                                                // Get the number of bytes in the FT2232H
                                                 // receive buffer
     if ((ftStatus == FT_OK) && (dwNumBytesToRead > 0))
-        FT_Read(ftHandle, &byInputBuffer, dwNumBytesToRead, &dwNumBytesRead);        //Read out the data from FT2232H receive buffer  
+        FT_Read(ftHandle, &byInputBuffer, dwNumBytesToRead, &dwNumBytesRead);        //Read out the data from FT2232H receive buffer
     ftStatus |= FT_SetUSBParameters(ftHandle, 65536, 65535);        //Set USB request transfer sizes to 64K
     ftStatus |= FT_SetChars(ftHandle, false, 0, false, 0);        //Disable event and error characters
     ftStatus |= FT_SetTimeouts(ftHandle, 0, 5000);        //Sets the read and write timeouts in milliseconds
@@ -160,10 +160,10 @@ FT_STATUS mpsse_init(char *id_string, FT_HANDLE *pftHandle) {
         printf("Error in initializing the MPSSE %d\n", ftStatus);
         FT_Close(ftHandle);
         return 1;   // Exit with error
-    }   
+    }
     usleep(50 * 1000); // Wait for all the USB stuff to complete and work
     *pftHandle = ftHandle;
     return FT_OK;
 }
 
-#endif // _COMMON_CODE       
+#endif // _COMMON_CODE

@@ -35,15 +35,15 @@ FT_STATUS gpio_control(FT_HANDLE ftHandle, unsigned int dir, unsigned int set, u
     byOutputBuffer[dwNumBytesToSend++] = 0x81;       // Get data bits - returns state of pins,
                                                      // either input or output
                                                      // on low byte of MPSSE
-    ftStatus = FT_Write(ftHandle, byOutputBuffer, dwNumBytesToSend, &dwNumBytesSent);        // Read the low GPIO byte  
+    ftStatus = FT_Write(ftHandle, byOutputBuffer, dwNumBytesToSend, &dwNumBytesSent);        // Read the low GPIO byte
     dwNumBytesToSend = 0;   // Reset output buffer pointer
     usleep(200 * 1000);    // Wait for data to be transmitted and status
                   // to be returned by the device driver
-                  // - see latency timer above  
-    // Check the receive buffer - there should be one byte  
+                  // - see latency timer above
+    // Check the receive buffer - there should be one byte
     ftStatus = FT_GetQueueStatus(ftHandle, &dwNumBytesToRead);        // Get the number of bytes in the
-                                                                      // FT2232H receive buffer  
-    ftStatus |= FT_Read(ftHandle, &byInputBuffer, dwNumBytesToRead, &dwNumBytesRead);   
+                                                                      // FT2232H receive buffer
+    ftStatus |= FT_Read(ftHandle, &byInputBuffer, dwNumBytesToRead, &dwNumBytesRead);
     if ((ftStatus != FT_OK) & (dwNumBytesToRead != 1))  {
         printf("Error - GPIO cannot be read %d\n", ftStatus);
         FT_SetBitMode(ftHandle, 0x0, 0x00);       // Reset the port to disable MPSSE
@@ -51,14 +51,14 @@ FT_STATUS gpio_control(FT_HANDLE ftHandle, unsigned int dir, unsigned int set, u
                              // Exit with error
         return ftStatus;
     }
-                                                                  // valid byte at location 0  
-    // Modify the GPIO data and write it back 
+                                                                  // valid byte at location 0
+    // Modify the GPIO data and write it back
     byOutputBuffer[dwNumBytesToSend++] = 0x80;       // Set data bits low-byte of MPSSE port
     printf("0x%x 0x%x 0x%x 0x%x\r\n", byInputBuffer[0], clr, set, (byInputBuffer[0] & ~clr) | set);
     byOutputBuffer[dwNumBytesToSend++] = (byInputBuffer[0] & ~clr) | set;
     byOutputBuffer[dwNumBytesToSend++] = dir;       // Direction config is still needed for each GPIO write
-    ftStatus = FT_Write(ftHandle, byOutputBuffer, dwNumBytesToSend, &dwNumBytesSent);        // Send off the low GPIO config commands  
-    dwNumBytesToSend = 0;   // Reset output buffer pointer  
+    ftStatus = FT_Write(ftHandle, byOutputBuffer, dwNumBytesToSend, &dwNumBytesSent);        // Send off the low GPIO config commands
+    dwNumBytesToSend = 0;   // Reset output buffer pointer
     usleep(200 * 1000);    // Wait for data to be transmitted and status
                          // to be returned by the device driver
                          // - see latency timer above

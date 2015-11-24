@@ -60,4 +60,4 @@ extern DWORD dwNumBytesRead;
  */
 FT_STATUS mpsse_init(char *id_string, FT_HANDLE *pftHandle);
 
-#endif // _COMMON_CODE       
+#endif // _COMMON_CODE

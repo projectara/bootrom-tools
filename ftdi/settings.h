@@ -60,7 +60,7 @@
     /* Morgan's settings */
     #define BRIDGE_JLINK_SN  "504302259"
     #define SERVER_JLINK_SN  "504302001"
-    #define MONITOR_SN       "A500DAKQ"   /* HAPS ChipIT monitor UART */   
+    #define MONITOR_SN       "A500DAKQ"   /* HAPS ChipIT monitor UART */
     #define SERVER_GPIO_SN   "FTZ0Q9FM"   /* Daughterboard A Adafruit */
     #define BRIDGE_GPIO_SN   "FTZ0SHAE"   /* Daughterboard B Adafruit */
     #define SERVER_SPIROM_SN "FTZ0Q6DXA"  /* Daughterboard A SPIROM */

@@ -715,6 +715,18 @@ class Tftf:
             out_filename += TFTF_FILE_EXTENSION
 
         try:
+            # create the directory path leading to the output file
+            out_dirname = os.path.dirname(out_filename)
+            if out_dirname:
+                try:
+                    os.makedirs(out_dirname)
+                except OSError as exception:
+                    if exception.errno != errno.EEXIST:
+                        error("Can't create directory", out_dirname)
+                        raise
+                    else:
+                        pass
+
             with open(out_filename, 'wb') as wf:
                 # Write the TFTF header
                 wf.write(self.tftf_buf)

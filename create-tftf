@@ -29,6 +29,7 @@
 #
 
 from __future__ import print_function
+import os.path
 import sys
 import argparse
 import errno
@@ -170,6 +171,10 @@ def validate_args(args, sections):
         args.out = 'ara:{:08x}:{:08x}:{:08x}:{:08x}:{:02x}.tftf'.format(
                    args.unipro_mfg, args.unipro_pid, args.ara_vid,
                    args.ara_pid, args.ara_stage)
+
+    if args.outdir:
+        args.out = os.path.join(args.outdir, args.out)
+
     # TODO: Other checks TBD
     return success
 
@@ -189,6 +194,8 @@ def main():
             The memory location of the package entry point.
         --out
             Specifies the output file
+        --outdir
+            Specifies the output dir
         --header-size
             The size of the generated TFTF header, in bytes (512)
         --name
@@ -279,6 +286,8 @@ def main():
     parser.add_argument("--out",
                         help="The TFTF output filename")
 
+    parser.add_argument("--outdir",
+                        help="The TFTF output directory")
     # Numeric args
     parser.add_argument("--start",
                         type=auto_int,

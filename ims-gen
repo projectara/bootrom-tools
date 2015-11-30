@@ -81,10 +81,14 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--count",
+    parser.add_argument("--count", "-c",
                         type=int,
                         required=True,
                         help="How many IMS values to generate")
+
+    parser.add_argument("--toshiba", "-t",
+                        action='store_true',
+                        help="Generates the IMS values in Toshiba '.efz' format")
 
     args = parser.parse_args()
     print_to_error("Generate", args.count, "IMS values:")
@@ -93,10 +97,16 @@ def main():
     while num_generated < args.count:
         if permute_ims():
             num_generated += 1
-            print("{0:06x} {1:08x} {2:08x} {3:08x} {4:08x} "
-                  "{5:08x} {6:08x} {7:08x} {8:08x}".
-                  format(ims[8], ims[7], ims[6], ims[5], ims[4],
-                         ims[3], ims[2], ims[1], ims[0]))
+            if args.toshiba:
+                print("IMS[279:0] = {0:06x}_{1:08x}_{2:08x}_{3:08x}_{4:08x}_"
+                      "{5:08x}_{6:08x}_{7:08x}_{8:08x}".
+                      format(ims[8], ims[7], ims[6], ims[5], ims[4],
+                             ims[3], ims[2], ims[1], ims[0]))
+            else:
+                print("{0:06x} {1:08x} {2:08x} {3:08x} {4:08x} "
+                      "{5:08x} {6:08x} {7:08x} {8:08x}".
+                      format(ims[8], ims[7], ims[6], ims[5], ims[4],
+                             ims[3], ims[2], ims[1], ims[0]))
 
 
 ## Launch main

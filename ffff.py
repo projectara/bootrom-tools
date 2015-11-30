@@ -44,9 +44,9 @@ from ffff_element import FFFF_HDR_VALID, \
     FFFF_HDR_OFF_HEADER_GENERATION_NUM, FFFF_HDR_OFF_RESERVED, \
     FFFF_ELT_OFF_TYPE, FFFF_ELT_OFF_CLASS, FFFF_ELT_OFF_ID, \
     FFFF_ELT_OFF_GENERATION, FFFF_ELT_OFF_LOCATION, \
-    FFFF_ELT_OFF_LENGTH, FFFF_HDR_NUM_RESERVED, FFFF_HDR_LEN_FIXED_PART, \
-    FFFF_HEADER_SIZE_MIN, FFFF_HEADER_SIZE_MAX, FFFF_HEADER_SIZE_DEFAULT, \
-    FFFF_HDR_LEN_MIN_RESERVED
+    FFFF_ELT_OFF_LENGTH, FFFF_HDR_NUM_RESERVED, FFFF_HDR_LEN_RESERVED, \
+    FFFF_HDR_LEN_FIXED_PART, FFFF_HDR_LEN_TAIL_SENTINEL, \
+    FFFF_HEADER_SIZE_MIN, FFFF_HEADER_SIZE_MAX, FFFF_HEADER_SIZE_DEFAULT
 import sys
 from util import error, is_power_of_2, next_boundary, is_constant_fill, \
     PROGRAM_ERRORS
@@ -142,26 +142,19 @@ class Ffff:
         """
         global FFFF_HDR_NUM_ELEMENTS, FFFF_HDR_LEN_ELEMENT_TBL, \
             FFFF_HDR_NUM_RESERVED, FFFF_HDR_LEN_RESERVED, \
-            FFFF_HDR_OFF_RESERVED, FFFF_HDR_OFF_TAIL_SENTINEL, \
-            FFFF_HDR_LEN_MIN_RESERVED
+            FFFF_HDR_OFF_RESERVED, FFFF_HDR_OFF_TAIL_SENTINEL
         # TFTF section table and derived lengths
         FFFF_HDR_NUM_ELEMENTS = \
-            ((self.header_size -
-             (FFFF_HDR_LEN_FIXED_PART + FFFF_HDR_LEN_MIN_RESERVED)) //
-             FFFF_ELT_LENGTH)
+            ((self.header_size - FFFF_HDR_LEN_FIXED_PART) // FFFF_ELT_LENGTH)
         FFFF_HDR_LEN_ELEMENT_TBL = (FFFF_HDR_NUM_ELEMENTS * FFFF_ELT_LENGTH)
 
-        FFFF_HDR_LEN_RESERVED = (self.header_size -
-                                (FFFF_HDR_LEN_FIXED_PART +
-                                 FFFF_HDR_LEN_ELEMENT_TBL))
-        FFFF_HDR_NUM_RESERVED = FFFF_HDR_LEN_RESERVED / FFFF_RSVD_SIZE
         self.reserved = [0] * FFFF_HDR_NUM_RESERVED
 
         # Offsets to fields following the section table
         FFFF_HDR_OFF_ELEMENT_TBL = (FFFF_HDR_OFF_RESERVED +
                                     FFFF_HDR_LEN_RESERVED)
-        FFFF_HDR_OFF_TAIL_SENTINEL = (FFFF_HDR_OFF_ELEMENT_TBL +
-                                      FFFF_HDR_LEN_ELEMENT_TBL)
+        FFFF_HDR_OFF_TAIL_SENTINEL = (self.header_size -
+                                      FFFF_HDR_LEN_TAIL_SENTINEL)
 
     def get_header_block_size(self):
         return get_header_block_size(self.erase_block_size, self.header_size)

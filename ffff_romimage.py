@@ -32,11 +32,12 @@ from __future__ import print_function
 from string import rfind
 from struct import unpack_from
 from ffff_element import FFFF_MAX_HEADER_BLOCK_OFFSET, FFFF_SENTINEL, \
-    FFFF_HDR_OFF_TAIL_SENTINEL, \
+    FFFF_HDR_OFF_TAIL_SENTINEL, FFFF_HDR_LEN_TAIL_SENTINEL, \
     FFFF_FILE_EXTENSION, FFFF_HDR_VALID, \
     FFFF_HEADER_SIZE_MIN, FFFF_HEADER_SIZE_MAX, FFFF_HEADER_SIZE_DEFAULT, \
     FFFF_HDR_LEN_FIXED_PART, FFFF_ELT_LENGTH, \
-    FFFF_RSVD_SIZE, FFFF_HDR_OFF_RESERVED
+    FFFF_RSVD_SIZE, FFFF_HDR_NUM_RESERVED, FFFF_HDR_OFF_RESERVED, \
+    FFFF_HDR_LEN_RESERVED
 from ffff import Ffff, get_header_block_size
 from util import is_power_of_2
 import io
@@ -220,17 +221,13 @@ class FfffRomimage:
             ((self.header_size - FFFF_HDR_LEN_FIXED_PART) // FFFF_ELT_LENGTH)
         FFFF_HDR_LEN_ELEMENT_TBL = (FFFF_HDR_NUM_ELEMENTS * FFFF_ELT_LENGTH)
 
-        FFFF_HDR_LEN_RESERVED = (self.header_size -
-                                (FFFF_HDR_LEN_FIXED_PART +
-                                 FFFF_HDR_LEN_ELEMENT_TBL))
-        FFFF_HDR_NUM_RESERVED = FFFF_HDR_LEN_RESERVED / FFFF_RSVD_SIZE
         self.reserved = [0] * FFFF_HDR_NUM_RESERVED
 
         # Offsets to fields following the section table
         FFFF_HDR_OFF_ELEMENT_TBL = (FFFF_HDR_OFF_RESERVED +
                                     FFFF_HDR_LEN_RESERVED)
-        FFFF_HDR_OFF_TAIL_SENTINEL = (FFFF_HDR_OFF_ELEMENT_TBL +
-                                      FFFF_HDR_LEN_ELEMENT_TBL)
+        FFFF_HDR_OFF_TAIL_SENTINEL = (self.header_size -
+                                      FFFF_HDR_LEN_TAIL_SENTINEL)
 
     def get_romimage_characteristics(self):
         # Extract the ROMimage size and characteritics from the first FFFF
@@ -246,6 +243,9 @@ class FfffRomimage:
         self.header_size = ffff_hdr[5]
         self.flash_image_length = ffff_hdr[6]
         self.header_generation_number = ffff_hdr[7]
+        FFFF_HDR_OFF_TAIL_SENTINEL = (self.header_size -
+                                      FFFF_HDR_LEN_TAIL_SENTINEL)
+
 
         # Because we have variable-size FFFF headers, we need to recalculate
         # the number of entries in the section table, and the offsets to all
@@ -258,8 +258,10 @@ class FfffRomimage:
         tail_sentinel = ffff_hdr[0]
 
         # Verify the sentinels
-        if sentinel != FFFF_SENTINEL or tail_sentinel != FFFF_SENTINEL:
+        if sentinel != FFFF_SENTINEL:
             raise ValueError("invalid sentinel")
+        if sentinel != tail_sentinel != FFFF_SENTINEL:
+            raise ValueError("invalid tail sentinel '{0:16s}'".format(tail_sentinel))
 
         # Validate the block size and image length
         if not is_power_of_2(self.erase_block_size):

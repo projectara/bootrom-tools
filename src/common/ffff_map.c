@@ -70,7 +70,7 @@ static void write_ffff_element_table_map(const ffff_header * ffff_hdr,
     const ffff_element_descriptor * element = ffff_hdr->elements;
 
     offset += offsetof(ffff_header, elements);
-    fprintf(map_file,"%s.element_table  %08x\n", prefix, (uint32_t)offset);
+    fprintf(map_file,"%selement_table  %08x\n", prefix, (uint32_t)offset);
 
     /* Print out the occupied entries in the element table */
     for (index = 0;

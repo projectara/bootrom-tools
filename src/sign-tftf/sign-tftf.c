@@ -104,6 +104,18 @@ static uint32_t passin_mode;
 static char     passphrase_buffer[256];
 char *          passphrase;
 
+static char *   verbose_flag_names[] = { "verbose", NULL };
+static char *   retry_flag_names[] = { "retry", NULL };
+static char *   check_flag_names[] = { "check", NULL };
+static char *   key_filename_names[] = { "key", NULL };
+static char *   suffix_names[] = { "suffix", NULL };
+static char *   package_type_names[] = { "type", "package-type", NULL };
+static char *   signature_algorithm_names[] =
+    { "algorithm", "signature-algorithm", NULL };
+static char *   signature_format_names[] =
+    { "format", "signature-format", NULL };
+static char *   passin_mode_names[] = { "passin", NULL };
+
 
 /* TFTF parsing callbacks */
 bool handle_passin(const int option, const char * optarg,
@@ -117,24 +129,36 @@ bool handle_format(const int option, const char * optarg,
 
 /* Parsing table */
 static struct optionx parse_table[] = {
-    { 'p', "passin", "[pass:<passphrase> | stdin | (prompt)]",
-            &passin_mode, PASSIN_PROMPT,  DEFAULT_VAL, &handle_passin, 0 },
-    { 't', "type", "[s2fsk | s3fsk]",
-            &package_type, 0, REQUIRED, &handle_package_type, 0 },
-    { 's', "suffix", "<string>",
-            &suffix, 0, 0, &store_str, 0 },
-    { 'a', "signature-algorithm", "rsa2048-sha256",
-            &signature_algorithm, 0, REQUIRED, &handle_algorithm, 0 },
-    { 'f', "format", "[standard | es3]",
-            &signature_format, 0, REQUIRED, &handle_format, 0 },
-    { 'k', "key", "<pemfile>",
-            &key_filename, 0, REQUIRED, &store_str, 0 },
-    { 'r', "retry",
-            NULL, &retry_flag, 0, DEFAULT_VAL | STORE_TRUE, NULL, false },
-    { 'c', "check",
-            NULL, &check_flag, 0, DEFAULT_VAL | STORE_TRUE, NULL, false },
-    { 'v', "verbose",
-            NULL, &verbose_flag, 0, DEFAULT_VAL | STORE_TRUE, NULL, false },
+    { 'p', passin_mode_names, "[pass:<passphrase> | stdin | (prompt)]",
+      &passin_mode, PASSIN_PROMPT,  DEFAULT_VAL, &handle_passin, 0,
+      "Display the signed TFTF header when done"},
+    { 't', package_type_names, "[s2fsk | s3fsk]",
+      &package_type, 0, REQUIRED, &handle_package_type, 0,
+      "The type of the key file" },
+    { 's', suffix_names, "<string>",
+      &suffix, 0, 0, &store_str, 0,
+      "The suffix to append to the name (optional)" },
+    { 'a', signature_algorithm_names, "rsa2048-sha256",
+      &signature_algorithm, 0, REQUIRED, &handle_algorithm, 0,
+      "Specifies the cryptographic signature algorithm used in the PEM file" },
+    { 'f', signature_format_names, "[standard | es3]",
+      &signature_format, 0, REQUIRED, &handle_format, 0,
+      "Defines how the signature is formatted" },
+    { 'k', key_filename_names, "<pemfile>",
+      &key_filename, 0, REQUIRED, &store_str, 0 ,
+      "The name of an input PEM file"},
+    { 'r', retry_flag_names, NULL,
+      &retry_flag, 0, DEFAULT_VAL | STORE_TRUE, NULL, false,
+      "If -passin prompt is specified, exit with an error status if\n"
+      "the password is invalid." },
+    { 'c', check_flag_names, NULL,
+      &check_flag, 0, DEFAULT_VAL | STORE_TRUE, NULL, false,
+      "Check that the parameters are sound, that the specified TFTF file\n"
+      "exists, and that the password is correct, but do not modify the\n"
+      "TFTF file. (Optional)" },
+    { 'v', verbose_flag_names, NULL,
+      &verbose_flag, 0, DEFAULT_VAL | STORE_TRUE, NULL, false,
+      "Display the signed TFTF header when done" },
     { 0, NULL, NULL, NULL, 0, 0, NULL, 0, NULL }
 };
 
@@ -157,7 +181,8 @@ bool handle_passin(const int option, const char * optarg,
     if (*(uint32_t*)optx->var_ptr == TOKEN_NOT_FOUND) {
         /* Check if it is "pass:<string>" */
         if (strncmp(optarg, "pass:", 5) != 0) {
-            fprintf(stderr, "ERROR: Invalid --%s: %s\n", optx->name, optarg);
+            fprintf(stderr, "ERROR: Invalid --%s: %s\n",
+                    (optx->long_names)[0], optarg);
             return false;
         } else {
             optarg += 5;    /* step over the "pass:" */
@@ -189,7 +214,8 @@ bool handle_package_type(const int option, const char * optarg,
                      struct optionx * optx) {
     *(uint32_t*)optx->var_ptr = kw_to_token(optarg, package_types);
     if (*(uint32_t*)optx->var_ptr == TOKEN_NOT_FOUND) {
-        fprintf(stderr, "ERROR: Invalid --%s: %s\n", optx->name, optarg);
+        fprintf(stderr, "ERROR: Invalid --%s: %s\n",
+                (optx->long_names)[0], optarg);
         return false;
     }
     return true;
@@ -210,7 +236,8 @@ bool handle_algorithm(const int option, const char * optarg,
                       struct optionx * optx) {
     *(uint32_t*)optx->var_ptr = kw_to_token(optarg, signature_algorithms);
     if (*(uint32_t*)optx->var_ptr == TOKEN_NOT_FOUND) {
-        fprintf(stderr, "ERROR: Invalid --%s: %s\n", optx->name, optarg);
+        fprintf(stderr, "ERROR: Invalid --%s: %s\n",
+                (optx->long_names)[0], optarg);
         return false;
     }
     return true;
@@ -231,7 +258,8 @@ bool handle_format(const int option, const char * optarg,
                    struct optionx * optx) {
     *(uint32_t*)optx->var_ptr = kw_to_token(optarg, signature_formats);
     if (*(uint32_t*)optx->var_ptr == TOKEN_NOT_FOUND) {
-        fprintf(stderr, "ERROR: Invalid --%s: %s\n", optx->name , optarg);
+        fprintf(stderr, "ERROR: Invalid --%s: %s\n",
+                (optx->long_names)[0] , optarg);
         return false;
     }
     return true;

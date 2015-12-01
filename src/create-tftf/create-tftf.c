@@ -49,6 +49,7 @@
 #include <getopt.h>
 #include "util.h"
 #include "parse_support.h"
+#include "ffff.h"
 #include "tftf.h"
 #include "tftf_common.h"
 #include "tftf_in.h"
@@ -67,15 +68,16 @@
 const char * output_filename = NULL;
 uint32_t    header_size = TFTF_HEADER_SIZE;
 const char *fw_pkg_name = NULL;
-uint32_t    package_type;
+uint32_t    package_type = FFFF_ELEMENT_STAGE_3_FW;
 uint32_t    start_location;
 uint32_t    unipro_mfg;
 uint32_t    unipro_pid;
 uint32_t    ara_vid;
 uint32_t    ara_pid;
-uint32_t    ara_stage;
 int         verbose_flag = false;
 int         map_flag = false;
+
+char outfile_path[MAXPATH];
 
 
 /**
@@ -160,10 +162,6 @@ static struct optionx parse_table[] = {
       DEFAULT_VAL, &store_hex, 0,
       "Ara Product ID"
     },
-    { 'S', ara_stage_names, "1 | 2 | 3", &ara_stage, DFLT_ARA_BOOT_STAGE,
-      DEFAULT_VAL, &store_hex, 0,
-      "Ara boot stage (deprecate?)"
-    }, /* deprecate? */
 
     /* Section args */
     { 'E', section_elf_names, NULL, NULL, 0,
@@ -221,7 +219,7 @@ static struct optionx parse_table[] = {
 
 
 /* The 1-char tags for all args */
-static char * all_args = "z:n:t:s:u:U:a:A:S:E:C:D:M:G:R:c:i:l:o:vm";
+static char * all_args = "z:n:t:s:u:U:a:A:E:C:D:M:G:R:c:i:l:o:vm";
 
 /**
  * The 1-char tags for each of the section-related args
@@ -254,14 +252,18 @@ bool handle_header_size(const int option, const char * optarg,
     success = get_num(optarg, (optx->long_names)[0], &header_size);
 
     /* Make sure the header size is plausible */
-     if ((header_size < TFTF_HEADER_SIZE_MIN) ||
-         (header_size > TFTF_HEADER_SIZE_MAX) ||
-         !is_power_of_2(header_size)) {
-         fprintf(stderr, "ERROR: Invalid TFTF header size 0x%x\n",
-                 header_size);
-         success = false;
-     }
-     return success;
+    if ((header_size < TFTF_HEADER_SIZE_MIN) ||
+        (header_size > TFTF_HEADER_SIZE_MAX) ||
+        !is_power_of_2(header_size)) {
+        fprintf(stderr, "ERROR: Header size is out of range (0x%x-0x%x)\n",
+                TFTF_HEADER_SIZE_MIN, TFTF_HEADER_SIZE_MAX);
+        success = false;
+    } else if ((header_size % 4) != 0) {
+        fprintf(stderr, "ERROR: Header size must be a multiple of 4\n");
+        success = false;
+    }
+
+    return success;
 }
 
 
@@ -434,6 +436,69 @@ void close_section_if_needed(const int option) {
 
 
 /**
+ * @brief Convert a package_type into a "boot stage" integer
+ *
+ * @param package_type
+ *
+ * @returns A corresponding boot stage, -1 if invalid
+ */
+uint32_t boot_stage(const uint32_t package_type) {
+    int boot_stage;
+
+    switch (package_type) {
+    case FFFF_ELEMENT_STAGE_1_FW:
+        boot_stage = 1;
+        break;
+    case FFFF_ELEMENT_STAGE_2_FW:
+        boot_stage = 2;
+        break;
+    case FFFF_ELEMENT_STAGE_3_FW:
+        boot_stage = 3;
+        break;
+    default:
+        boot_stage = (uint32_t)(-1);
+        break;
+    }
+    return boot_stage;
+}
+
+
+/**
+ * @brief Sanity-check the command line args and return a "valid" flag
+ *
+ * @returns Returns true if the parsed args pass muster, false otherwise.
+ */
+bool validate_args(void) {
+    bool success = true;
+    uint32_t num_sections;
+
+    num_sections = section_cache_entry_count();
+    if (num_sections == 0) {
+        fprintf(stderr,
+                "ERROR: You need at least one --code, --data, "
+                "--manifest, --certificate or --elf\n");
+                success = false;
+
+    } else if (num_sections > CALC_MAX_TFTF_SECTIONS(header_size)) {
+        fprintf(stderr, "ERROR Too many sections (%u max.\n",
+                (unsigned int)CALC_MAX_TFTF_SECTIONS(header_size));
+        success = false;
+    }
+
+    /* Invent a default filename if needed */
+    if (!output_filename) {
+        snprintf(outfile_path, sizeof(outfile_path),
+                 "ara:%08x:%08x:%08x:%08x:%02x.tftf",
+                   unipro_mfg, unipro_pid, ara_vid,
+                   ara_pid, boot_stage(package_type));
+        output_filename = outfile_path;
+    }
+    /* TODO: Other checks TBD */
+    return success;
+}
+
+
+/**
  * @brief Entry point for the create-tftf application
  *
  * @param argc The number of elements in argv or parsed_argv (std. unix argc)
@@ -461,15 +526,7 @@ int main(int argc, char * argv[]) {
         section_cache_entry_close();
 
         /* Validate that we have the needed args */
-        if (!output_filename) {
-            fprintf(stderr, "Error: no output file specified\n");
-        }
-        else if (section_cache_entry_count() == 0) {
-            fprintf(stderr,
-                    "%s: missing input (code, data, manifest) section(s)\n",
-                    argv[0]);
-            success = false;
-        }
+        success = validate_args();
     }
 
     if (!success) {
@@ -490,7 +547,7 @@ int main(int argc, char * argv[]) {
                             unipro_pid,
                             ara_vid,
                             ara_pid);
-#if 0
+
         if (success) {
             /* ...write it out and... */
             success = write_tftf_file(tftf_hdr, output_filename);
@@ -503,7 +560,7 @@ int main(int argc, char * argv[]) {
         if (success && verbose_flag) {
             print_tftf_file(tftf_hdr, output_filename);
         }
-#endif // 0/1
+
         free_tftf_header(tftf_hdr);
     }
 

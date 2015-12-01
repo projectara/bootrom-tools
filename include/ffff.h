@@ -50,6 +50,7 @@ typedef char ___ffff_sentinel_test[((sizeof(FFFF_SENTINEL_VALUE) -1) ==
 #define FFFF_PADDING                      1
 
 /* Element types */
+#define FFFF_ELEMENT_STAGE_1_FW           0x00
 #define FFFF_ELEMENT_STAGE_2_FW           0x01
 #define FFFF_ELEMENT_STAGE_3_FW           0x02
 #define FFFF_ELEMENT_IMS_CERT             0x03

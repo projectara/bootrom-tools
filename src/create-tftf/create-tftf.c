@@ -446,9 +446,6 @@ uint32_t boot_stage(const uint32_t package_type) {
     int boot_stage;
 
     switch (package_type) {
-    case FFFF_ELEMENT_STAGE_1_FW:
-        boot_stage = 1;
-        break;
     case FFFF_ELEMENT_STAGE_2_FW:
         boot_stage = 2;
         break;

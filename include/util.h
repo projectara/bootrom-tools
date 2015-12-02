@@ -307,5 +307,30 @@ char * hexlify(const uint8_t * buf, const size_t buflen,
 void display_binary_data(const uint8_t * blob, const size_t length,
                          const bool show_all, const char * indent);
 
-#endif /* !_COMMON_UTIL_H */
 
+/**
+ * @brief Join a path and a filename to create a pathname.
+ *
+ * This is a simplified adaptation of os.path.join
+ *
+ * @param outbuf Where to store the assembled pathname
+ * @param outbuf_size The size of outbuf
+ * @param path The path
+ * @param filename The name of the file
+ *
+ * @returns A pointer to outbuf if successful, NULL otherwise.
+ */
+char * join(char * outbuf, size_t outbuf_size, const char * path,
+          const char * filename);
+
+
+/**
+ * @brief Canonicalize a path and create any missing directories
+ *
+ * @param path The path
+ *
+ * @returns Nothing
+ */
+int mkdir_recursive(char *path);
+
+#endif /* !_COMMON_UTIL_H */

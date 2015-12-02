@@ -66,6 +66,7 @@
 
 /* TFTF parsing args */
 const char * output_filename = NULL;
+const char * output_dir = NULL;
 uint32_t    header_size = TFTF_HEADER_SIZE;
 const char *fw_pkg_name = NULL;
 uint32_t    package_type = FFFF_ELEMENT_STAGE_3_FW;
@@ -77,7 +78,8 @@ uint32_t    ara_pid;
 int         verbose_flag = false;
 int         map_flag = false;
 
-char outfile_path[MAXPATH];
+char outfile_name[MAXPATH];
+char outfile_pathname[MAXPATH];
 
 /**
  * Flag (effective only when allow_section_parameters is True) indicating that
@@ -142,6 +144,7 @@ static char * section_class_names[] = { "class", NULL };
 static char * section_id_names[] = { "id", NULL };
 static char * section_load_address_names[] = { "load", "load-address", NULL };
 static char * output_filename_names[] = { "out", NULL };
+static char * output_dir_names[] = { "outdir", NULL };
 static char * verbose_flag_names[] = { "verbose", NULL };
 static char * map_flag_names[] = { "map", NULL };
 
@@ -223,8 +226,12 @@ static struct optionx parse_table[] = {
 
     /* Misc args */
     { 'o', output_filename_names, "file", &output_filename, 0,
-      REQUIRED, &store_str, 0,
-      "Specifies the output file"
+      OPTIONAL, &store_str, 0,
+      "The TFTF output filename"
+    },
+    { 'O', output_dir_names, "path", &output_dir, 0,
+      OPTIONAL, &store_str, 0,
+      "The TFTF output directory"
     },
     { 'v', verbose_flag_names, NULL, &verbose_flag, 0,
       DEFAULT_VAL | STORE_TRUE, &store_flag, 0,
@@ -514,7 +521,7 @@ uint32_t boot_stage(const uint32_t package_type) {
 
 
 /**
- * @brief Sanity-check the command line args and return a "valid" flag
+ * @brief Validate and pos-process the command line args
  *
  * @returns Returns true if the parsed args pass muster, false otherwise.
  */
@@ -535,15 +542,25 @@ bool validate_args(void) {
         success = false;
     }
 
-    /* Invent a default filename if needed */
-    if (!output_filename) {
-        snprintf(outfile_path, sizeof(outfile_path),
-                 "ara:%08x:%08x:%08x:%08x:%02x.tftf",
-                   unipro_mfg, unipro_pid, ara_vid,
-                   ara_pid, boot_stage(package_type));
-        output_filename = outfile_path;
-    }
     /* TODO: Other checks TBD */
+
+    if (success) {
+        /* Invent a default filename if needed */
+        if (!output_filename) {
+            snprintf(outfile_name, sizeof(outfile_name),
+                     "ara:%08x:%08x:%08x:%08x:%02x.tftf",
+                       unipro_mfg, unipro_pid, ara_vid,
+                       ara_pid, boot_stage(package_type));
+            output_filename = outfile_name;
+        }
+
+        /* Create a full pathname if --outdir is specified */
+        if (output_dir) {
+            join(outfile_pathname, sizeof(outfile_pathname), output_dir, output_filename);
+            output_filename = outfile_pathname;
+        }
+    }
+
     return success;
 }
 

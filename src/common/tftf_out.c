@@ -59,7 +59,7 @@
  */
 bool write_tftf_file(const tftf_header * tftf_hdr,
                      const char * output_filename) {
-    bool success = false;
+    bool success = true;
     int tftf_fd = -1;
     const tftf_section_descriptor * section;
     size_t bytes_written;
@@ -69,6 +69,23 @@ bool write_tftf_file(const tftf_header * tftf_hdr,
         fprintf(stderr, "ERROR (write_tftf_file): Invalid args\n");
         errno = EINVAL;
     } else {
+        char *path;
+        char *scratchpath;
+
+        scratchpath = strdup(output_filename);
+        if (!scratchpath) {
+            errno = ENOMEM;
+            success = false;
+        } else {
+            path = dirname(scratchpath);
+            if (strlen(path) > 1) {
+                success = (mkdir_recursive(path) == 0);
+            }
+            free(scratchpath);
+        }
+    }
+
+    if (success) {
         /* Determine the length of the blob */
         length = tftf_hdr->header_size + tftf_payload_size(tftf_hdr);
 
@@ -78,12 +95,14 @@ bool write_tftf_file(const tftf_header * tftf_hdr,
             fprintf(stderr, "Error: unable to create '%s' (err %d)\n",
                     output_filename,
                     tftf_fd);
+            success = false;
         } else {
             bytes_written = write(tftf_fd, tftf_hdr, length);
             if (bytes_written != length) {
                 fprintf(stderr, "Error: unable to write all of '%s' (err %d)\n",
                         output_filename,
                         tftf_fd);
+                success = false;
             } else {
                 fprintf(stderr, "Wrote %u bytes to '%s'\n",
                         (uint32_t)length, output_filename);

@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <libgen.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -368,14 +369,14 @@ bool safer_strcpy(char * dest, size_t destsz, const char * src) {
 
 
 /**
- * @brief Mostly-safe string catenate (bounded)
+ * @brief Mostly-safe string concatenation (bounded)
  *
  * Lightweight safer_strncat, does not check for unterminated or overlapped
  * strings.
  *
  * @param dst The buffer to append to
  * @param dstsz The size of the destination buffer
- * @param src The string to catenate
+ * @param src The string to concatenation
  * @param count The maximum number of bytes to copy
  *
  * @returns True if the string was fully copied, false otherwise
@@ -415,14 +416,14 @@ bool safer_strncat(char * dest, size_t destsz, const char * src, size_t count) {
 
 
 /**
- * @brief Mostly-safe string catnenation
+ * @brief Mostly-safe string concatenation
  *
  * Lightweight strcat_s, does not check for unterminated or overlapped
  * strings.
  *
  * @param dst The buffer to append to
  * @param dstsz The size of the destination buffer
- * @param src The string to catenate
+ * @param src The string to concatenation
  *
  * @returns True if the string was fully copied, false otherwise
  */
@@ -561,3 +562,91 @@ void display_binary_data(const uint8_t * blob, const size_t length,
     }
 }
 
+
+/**
+ * @brief Join a path and a filename to create a pathname.
+ *
+ * This is a simplified adaptation of os.path.join
+ *
+ * @param outbuf Where to store the assembled pathname
+ * @param outbuf_size The size of outbuf
+ * @param path The path
+ * @param filename The name of the file
+ *
+ * @returns A pointer to outbuf if successful, NULL otherwise.
+ */
+char * join(char * outbuf, size_t outbuf_size, const char * path,
+          const char * filename) {
+    if (outbuf && (outbuf_size > 0) && path && filename) {
+        size_t len_path = strlen(path);
+        size_t len_name = strlen(filename);
+
+        /*
+         * Canonicalize the components
+         * - Strip trailing '/' off the path
+         * - Strip leading '/' off the filename
+         */
+        if (path[len_path - 1] == '/') {
+            len_path--;
+        }
+        if (filename[0] == '/') {
+            filename++;
+            len_name--;
+        }
+        if ((len_path + len_name + 1) < outbuf_size) {
+            /*
+             * (This could be more efficient by strcpy's with offsets, but
+             * this is more clear)
+             */
+            strncpy (outbuf, path, len_path);
+            strcat (outbuf, "/");
+            strncat (outbuf, filename, len_name);
+        } else {
+            /* Resulting pathname too long */
+            errno = ENAMETOOLONG;
+            outbuf = NULL;
+        }
+    } else {
+        errno = EINVAL;
+        outbuf = NULL;
+    }
+
+    return outbuf;
+}
+
+
+/**
+ * @brief Canonicalize a path and create any missing directories
+ *
+ * @param path The path
+ *
+ * @returns Nothing
+ */
+int mkdir_recursive(char *path)
+{
+    char *subpath;
+    char *scratchpath;
+    struct stat st = {0};
+    int rvalue = 0;
+
+    if (!((stat(path, &st) == 0) && S_ISDIR(st.st_mode))) {
+        /* Lop off the last folder and try again */
+        scratchpath = strdup(path);
+        if (!scratchpath) {
+            errno = ENOMEM;
+            rvalue = -1;
+        } else {
+            subpath = dirname(scratchpath);
+            if (strlen(subpath) > 1) {
+                rvalue = mkdir_recursive(subpath);
+            }
+            if (rvalue == 0) {
+                /* Having found/created all the upper path, add this folder */
+               mkdir(path, 0777);
+            }
+            free(scratchpath);
+        }
+    }
+
+    return rvalue;
+}

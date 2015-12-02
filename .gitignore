@@ -49,6 +49,7 @@ git-commit-template
 .project
 .settings
 .gitignore
+.pydevproject
 *~
 
 # Debug files

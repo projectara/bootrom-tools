@@ -35,9 +35,10 @@ import argparse
 import errno
 from tftf import Tftf, TFTF_SECTION_TYPE_RAW_CODE, \
     TFTF_SECTION_TYPE_RAW_DATA, TFTF_SECTION_TYPE_MANIFEST, \
-    TFTF_HDR_NUM_SECTIONS, \
+    TFTF_SECTION_TYPE_SIGNATURE, TFTF_SECTION_TYPE_CERTIFICATE, \
+    DATA_ADDRESS_TO_BE_IGNORED, TFTF_HDR_NUM_SECTIONS, \
     TFTF_HEADER_SIZE_MIN, TFTF_HEADER_SIZE_MAX, TFTF_HEADER_SIZE_DEFAULT
-from util import error
+from util import error, warning
 import io
 from elftools.elf.elffile import ELFFile
 
@@ -46,8 +47,20 @@ DEFAULT_ARA_VID = 0
 DEFAULT_ARA_PID = 0
 
 # Flag to indicate that the last arg parsed was a section type, which
-# means that an optional section parameters are now legal
+# means that an optional section parameters are now legal.
 allow_section_parameters = False
+
+# Flag (effective only when allow_section_parameters is True) indicating that
+# the --load option is disallowed for that section type.
+restricted_address = False
+
+# Flag indicating that a restricted section (i.e., signature or certificate)
+# has been parsed. No data or code sections are allowed to follow them.
+code_data_blocked = False
+
+# Flag indicating that the user specified a code or data section after a
+# restricted section.
+code_data_while_blocked = False
 
 
 # the list of sections
@@ -64,13 +77,18 @@ class SectionAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         global allow_section_parameters, sections
+        global restricted_address, code_data_blocked, code_data_while_blocked
         if option_string in "--load --class --id":
             if not allow_section_parameters:
                 error(option_string,
                       "can only follow --code, --data or --manifest")
             else:
                 if option_string == "--load":
-                    sections[-1]['load'] = values
+                    if restricted_address:
+                        warning(option_string,
+                                "is ignored for --signature and --certificate")
+                    else:
+                        sections[-1]['load'] = values
                 elif option_string == "--class":
                     sections[-1]['class'] = values
                 elif option_string == "--id":
@@ -78,22 +96,47 @@ class SectionAction(argparse.Action):
         else:
             # Close the window on section load addresses
             allow_section_parameters = False
+            restricted_address = False
 
             # Handle the specific file type. In all cases, we stage the
             # section in a temporary holding variable to allow the
             # optional "--load_address" to be added to it.
             if option_string == "--code":
-                sections.append({'type': TFTF_SECTION_TYPE_RAW_CODE,
-                                 'file': values})
+                if code_data_blocked:
+                    error(option_string,
+                          "cannot follow --signature or --certificate")
+                    code_data_while_blocked = True
+                else:
+                    sections.append({'type': TFTF_SECTION_TYPE_RAW_CODE,
+                                     'file': values})
                 allow_section_parameters = True
             elif option_string == "--data":
-                sections.append({'type': TFTF_SECTION_TYPE_RAW_DATA,
-                                 'file': values})
+                if code_data_blocked:
+                    error(option_string,
+                          "cannot follow --signature or --certificate")
+                    code_data_while_blocked = True
+                else:
+                    sections.append({'type': TFTF_SECTION_TYPE_RAW_DATA,
+                                     'file': values})
                 allow_section_parameters = True
             elif option_string == "--manifest":
                 sections.append({'type': TFTF_SECTION_TYPE_MANIFEST,
                                  'file': values})
                 allow_section_parameters = True
+            elif option_string == "--signature":
+                sections.append({'type': TFTF_SECTION_TYPE_SIGNATURE,
+                                 'file': values,
+                                 'load': DATA_ADDRESS_TO_BE_IGNORED})
+                allow_section_parameters = True
+                restricted_address = True
+                code_data_blocked = True
+            elif option_string == "--certificate":
+                sections.append({'type': TFTF_SECTION_TYPE_CERTIFICATE,
+                                 'file': values,
+                                 'load': DATA_ADDRESS_TO_BE_IGNORED})
+                allow_section_parameters = True
+                restricted_address = True
+                code_data_blocked = True
             else:
                 print("Unknown option '", option_string, "'")
 
@@ -246,6 +289,14 @@ def main():
     parser.add_argument("--manifest",
                         action=SectionAction,
                         help="The name of an input manifest file")
+
+    parser.add_argument("--signature",
+                        action=SectionAction,
+                        help="The name of an input signature file")
+
+    parser.add_argument("--certificate",
+                        action=SectionAction,
+                        help="The name of an input certificate file")
 
     parser.add_argument("--elf",
                         action=ElfFileAction,

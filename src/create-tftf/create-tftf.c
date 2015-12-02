@@ -79,6 +79,26 @@ int         map_flag = false;
 
 char outfile_path[MAXPATH];
 
+/**
+ * Flag (effective only when allow_section_parameters is True) indicating that
+ * the --load option is disallowed for that section type.
+ */
+bool        restricted_address = false;
+
+/**
+ * Flag indicating that a restricted section (i.e., signature or certificate)
+ * has been parsed. No data or code sections are allowed to follow them.
+ */
+bool        code_data_blocked = false;
+
+/**
+ * Flag indicating that the user specified a code or data section after a
+ * restricted section.
+ */
+bool        code_data_while_blocked = false;
+
+static char * warn_load_ignored =
+    "Warning: --load is ignored for --signature, --certificate";
 
 /**
  * If compress is true, compress the data while copying; if false, just
@@ -229,10 +249,13 @@ static char * section_args = "ECDMGRcil";
 
 
 static char * epilog =
-    "NOTE: sections are specified as [<section_type> <section_option>]...\n"
-    "   <section_type> ::= [--code | --data | --manifest | --certificate |\n"
+    "NOTES:\n"
+    "  1. sections are specified as [<section_type> <section_option>]...\n"
+    "     <section_type> ::= [--code | --data | --manifest | --certificate |\n"
     "                       --signature]\n"
-    "   <section_option> ::= {--load} {--class} {--id}";
+    "     <section_option> ::= {--load} {--class} {--id}\n"
+    "  2. --code and --data cannot follow --signature or --certificate\n"
+    "  3. --load ignored for --signature or --certificate";
 
 
 /**
@@ -320,25 +343,44 @@ bool handle_section_normal(const int option, const char * optarg,
     bool success;
     bool known_arg = true;
 
+    restricted_address = false;
+
     switch (option) {
     case 'C':   /* code */
-        success = section_cache_entry_open(TFTF_SECTION_RAW_CODE, optarg) == 0;
+        if (code_data_blocked) {
+            code_data_while_blocked = true;
+            success = false;
+        } else {
+            success = section_cache_entry_open(TFTF_SECTION_RAW_CODE, optarg) == 0;
+        }
         break;
 
     case 'D':   /* data */
-        success = section_cache_entry_open(TFTF_SECTION_RAW_DATA, optarg) == 0;
+        if (code_data_blocked) {
+            code_data_while_blocked = true;
+            success = false;
+        } else {
+            success = section_cache_entry_open(TFTF_SECTION_RAW_DATA, optarg) == 0;
+        }
         break;
 
     case 'G':   /* siGnature */
         /* TODO: We may want to validate the signature we fetch */
         success =
-            section_cache_entry_open(TFTF_SECTION_SIGNATURE, optarg) == 0;
-        break;
+            ((section_cache_entry_open(TFTF_SECTION_SIGNATURE, optarg) == 0) &&
+            section_cache_entry_set_load_address(DATA_ADDRESS_TO_BE_IGNORED));
+            restricted_address = true;
+            code_data_blocked = true;
+       break;
 
     case 'R':   /* ceRtificate */
         /* TODO: We may want to validate the certificate we fetch */
         success =
-            section_cache_entry_open(TFTF_SECTION_CERTIFICATE, optarg) == 0;
+            ((section_cache_entry_open(TFTF_SECTION_CERTIFICATE,
+                                      optarg) == 0) &&
+            section_cache_entry_set_load_address(DATA_ADDRESS_TO_BE_IGNORED));
+            restricted_address = true;
+            code_data_blocked = true;
         break;
 
     case 'M':   /* manifest */
@@ -352,7 +394,12 @@ bool handle_section_normal(const int option, const char * optarg,
     }
 
     if (!success) {
-        if (known_arg) {
+        if (code_data_while_blocked) {
+            fprintf(stderr,
+                    "ERROR: --%s cannot follow --signature, --certificate\n",
+                    (optx->long_names)[0]);
+        } else if (known_arg) {
+            /* We failed on a known arg. Bad filename? */
             fprintf(stderr, "ERROR: --%s %s failed\n", (optx->long_names)[0], optarg);
         } else {
             fprintf(stderr,
@@ -415,8 +462,13 @@ bool handle_section_load_address(const int option, const char * optarg,
                                  struct optionx * optx) {
     uint32_t num;
 
-    return get_num(optarg, (optx->long_names)[0], &num) &&
-           section_cache_entry_set_load_address(num);
+    if (restricted_address) {
+        fprintf(stderr, "%s\n", warn_load_ignored);
+        return false;
+    } else {
+        return get_num(optarg, (optx->long_names)[0], &num) &&
+               section_cache_entry_set_load_address(num);
+    }
 }
 
 
@@ -429,7 +481,8 @@ bool handle_section_load_address(const int option, const char * optarg,
  * @returns Returns nothing
  */
 void close_section_if_needed(const int option) {
-    if (index(section_args, option) == 0) {
+    if (index(section_args, option) == NULL) {
+        restricted_address = false;
         section_cache_entry_close();
     }
 }

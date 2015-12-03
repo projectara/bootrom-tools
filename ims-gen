@@ -33,80 +33,287 @@
 
 from __future__ import print_function
 from array import array
+from struct import pack_into, unpack_from
+import binascii
+import hashlib
 import random
 import argparse
 from util import print_to_error
+
+# Program return values
+PROGRAM_SUCCESS = 0
+PROGRAM_WARNINGS = 1
+PROGRAM_ERROR = 2
 
 IMS_BITS = 280
 IMS_BYTES = (IMS_BITS + 7)//8
 IMS_DWORDS = (IMS_BYTES + 3)//4
 
+# IMS is 35 bytes long, but boot ROM only cares about the first 32 bytes
+IMS_MEANINGFUL_LENGTH = 32
+IMS_MEANINGFUL_BITS = IMS_MEANINGFUL_LENGTH * 8
+
+HASH_DIGEST_SIZE = 32
+
+
+CMS_BITS = 192
+CMS_BYTES = (CMS_BITS + 7)//8
+CMS_DWORDS = (CMS_BYTES + 3)//4
+
 # Array for the IMS value
 ims = array('L', [0, 0, 0, 0, 0, 0, 0, 0, 0])
 
-# Array for the per-word Hamming weights
+# Array for the CMS value
+cms = array('L', [0, 0, 0, 0, 0, 0])
+
+# Array for the per-word Hamming weights (must be as long as the longest array)
 hammings = array('i', [0, 0, 0, 0, 0, 0, 0, 0, 0])
 
-# Hamming weight of IMS
-ims_hamming = 0
+binary_buf = bytearray(max(IMS_DWORDS, CMS_DWORDS) * 4)
 
 
-def permute_ims():
-    """ Permute the IMS and print it if it is valid
+def permute_cms():
+    """ Permute the CMS and return whether or not it has a valid hamming weight
 
     Returns true if valid, false otherwise
     """
-    global ims, hammings, ims_hamming
+    global cms, hammings
 
-    # Permute the IMS, one 32-bit word at a time
-    for i in range(0, IMS_DWORDS):
+    # Initialize the hamming weights
+    hamming_wt = 0
+    for i in range(0, CMS_DWORDS):
+        hammings[i] = 0;
+
+    # Permute the CMS, one 32-bit word at a time
+    for i in range(0, CMS_DWORDS):
         # Replace 1 32-bit word at a time with randomness
-        ims[i] = random.getrandbits(32)
-        # Mask off the unused bits in the last word
-        if i == (IMS_DWORDS - 1):
-            ims[i] &= 0x00ffffff
+        cms[i] = random.getrandbits(32)
 
-        ims_hamming -= hammings[i]
+        hamming_wt -= hammings[i]
         # Calculate the Hamming weight of this element
-        hammings[i] = bin(ims[i]).count("1")
-        ims_hamming += hammings[i]
+        hammings[i] = bin(cms[i]).count("1")
+        hamming_wt += hammings[i]
 
     # If the hamming weight is correct, issue this IMS
-    return ims_hamming == (IMS_BITS / 2)
+    return hamming_wt == (CMS_BITS / 2)
+
+
+def pack_cms(buf, offset):
+    # Pack a section header into a TFTF header buffer at the specified
+    # offset, returning the offset of the next section.
+    pack_into("<LLLLLL", buf, offset,
+              cms[0], cms[1], cms[2], cms[3], cms[4], cms[5])
+
+
+
+def print_cms(cms, toshiba_format):
+    """ Print the CMS """
+    if toshiba_format:
+        # Print the CMS in toshiba .efz form
+        print("CMS[191:0] = {0:08x}_{1:08x}_{2:08x}_{3:08x}_{4:08x}_{5:08x}".
+              format(cms[5], cms[4], cms[3], cms[2], cms[1], cms[0]))
+    else:
+        # Print the CMS in human-friendly form
+        print("CMS {0:08x} {1:08x} {2:08x} {3:08x} {4:08x} {5:08x}".
+              format(cms[5], cms[4],cms[3], cms[2], cms[1], cms[0]))
+
+
+def permute_ims(ims_buf):
+    """ Permute the IMS until it reaches a Hamming weight of 128
+
+    Complicating matters is the fact that while the IMS is 280 bits (37 bytes),
+    the bootloader only cares about the LSB 256 bits (32 bytes), so the hamming
+    weight for those 32 bytes must equal 128. The high-order bits are random,
+    but don't contribute to the hamming weight.
+
+    ims_buf: a bytearray(IMS_BYTES)
+    """
+    temp = bytearray(4)
+    
+    # Permute the IMS, one 32-bit word at a time
+    while True:
+        for i in range(0, IMS_DWORDS):
+            # Replace 1 32-bit word at a time with randomness
+            offset = i * 4
+            length = min(4, IMS_BYTES - offset)
+            pack_into("<L", temp, 0, random.getrandbits(32))
+
+            ims_buf[offset:(offset+length)] = temp[:length]
+
+            # Calculate the Hamming weight
+            hamming_wt = 0
+            for j in range(0, IMS_MEANINGFUL_LENGTH):
+                x = ims_buf[j]
+                hamming_wt += bin(x).count('1')
+
+            # If the hamming weight is correct, use this IMS
+            if hamming_wt == (IMS_MEANINGFUL_BITS / 2):
+                return
+
+
+def print_ims(ims_buf, ep_uid, ep_uid_es3, toshiba_format):
+    """ Print the IMS """
+    ims = unpack_from("<LLLLLLLLL", ims_buf)
+    if toshiba_format:
+        # Print the IMS in toshiba .efz form
+        print("IMS[279:0] = {0:06x}_{1:08x}_{2:08x}_{3:08x}_{4:08x}_"
+              "{5:08x}_{6:08x}_{7:08x}_{8:08x}".
+              format(ims[8], ims[7], ims[6], ims[5], ims[4],
+                     ims[3], ims[2], ims[1], ims[0]))
+
+    else:
+        # Print the IMS in human-friendly form
+        print("IMS        {0:06x} {1:08x} {2:08x} {3:08x} {4:08x} "
+              "{5:08x} {6:08x} {7:08x} {8:08x}".
+              format(ims[8], ims[7], ims[6], ims[5], ims[4],
+                     ims[3], ims[2], ims[1], ims[0]))
+        epuid = unpack_from("<LL", ep_uid)
+        print("EP_UID     {0:08x} {1:08x}".format(epuid[1], epuid[0]))
+        epuid = unpack_from("<LL", ep_uid_es3)
+        print("EP_UID_ES3 {0:08x} {1:08x}".format(epuid[1], epuid[0]))
+        m = hashlib.sha256()
+        m.update(ims_buf[0:IMS_BYTES])
+        print("IMS_SHA256", binascii.hexlify(m.digest()))
+
+
+def endpoint_unique_id(ims_buf):
+    """ Calculate the Endpoint Unique ID from the IMS value
+
+    ims_buf is the packed binary buffer containing the 280-bit IMS value
+    """
+    # Establish the default (i.e., no endpoint ID)
+    have_endpoint_id = False
+    endpoint_id = 0L
+
+    # Compute Endpoint Unique ID from the IMS
+    #
+    # The algorithm used to calculate Endpoint Unique ID is:
+    # Y1 = sha256(IMS[0:15] xor copy(0x3d, 16))
+    # Z0 = sha256(Y1 || copy(0x01, 32))
+    # EP_UID[0:7] = sha256(Z0)[0:7]
+    #
+    temp = bytearray(4)
+
+    # grab IMS 4bytes at a time and feed that to hash_update
+    m = hashlib.sha256()
+    ims32 = unpack_from("<LLLL", ims_buf)
+    for i in range(0, 4):
+        up32 = unpack_from("<L", ims_buf, i * 4)
+        pack_into("<L", temp, 0, up32[0] ^ 0x3d3d3d3d)
+        m.update(temp)
+    y1 = m.digest()
+
+    m2 = hashlib.sha256()
+    m2.update(y1)
+    pack_into("<L", temp, 0, 0x01010101)
+    for i in range(0, 8):
+        m2.update(temp)
+    z0 = m2.digest()
+
+    m3 = hashlib.sha256()
+    m3.update(z0)
+    ep_uid = m3.digest()
+
+    endpoint_id = bytearray(8)
+    endpoint_id = ep_uid[0:8]
+    return endpoint_id
+
+
+def endpoint_unique_id_es3(ims_buf):
+    """ Calculate the ES3-compatible Endpoint Unique ID from the IMS value
+
+    ims_buf is the packed binary buffer containing the 280-bit IMS value
+    """
+    # Establish the default (i.e., no endpoint ID)
+    have_endpoint_id = False
+    endpoint_id = 0L
+
+    # Generating EP_UID for ES3 compatible
+    #
+    # There is a bug in ES3 boot ROM, so the EP_UID is calculated by using less IMS bytes: 
+    # 	Y1 = sha256((IMS[0] xor 0x3d) || (IMS[4] xor 0x3d) ||
+    #       (IMS[8] xor 0x3d) || (IMS[12] xor 0x3d))
+    # Z0 = sha256(Y1 || copy(0x01, 8))
+    # EP_UID[0:7] = sha256(Z0)[0:7]
+    # 
+    # Only 4 bytes of the IMS are used for this derivation to ensure, in an
+    # information-theoretic sense, that no information about the rest of the
+    # IMS is exposed through the publicly-exposed EP_UID value or its
+    # derivation process.
+    #
+    temp = bytearray(1)
+
+    # grab IMS 4bytes at a time and feed that to hash_update
+    m = hashlib.sha256()
+    for i in range(0, 4):
+        #up32 = unpack_from("<B", ims_buf, i * 4)
+        #pack_into("<B", temp, 0, up32[0] ^ 0x3d)
+        temp[0] = ims_buf[i * 4] ^ 0x3d
+        m.update(temp)
+    y1 = m.digest()
+
+    m2 = hashlib.sha256()
+    m2.update(y1)
+    #pack_into("<L", temp, 0, 0x01)
+    temp[0] = 0x01
+    for i in range(0, 8):
+        m2.update(temp)
+    z0 = m2.digest()
+
+    m3 = hashlib.sha256()
+    m3.update(z0)
+    ep_uid = m3.digest()
+
+    endpoint_id = bytearray(8)
+    endpoint_id = ep_uid[0:8]
+    return endpoint_id
 
 
 def main():
     """ Application for creating plausible stand-in IMS values """
-    global ims
+    global ims, cms
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--count", "-c",
+    parser.add_argument("--ims", "-i",
                         type=int,
-                        required=True,
                         help="How many IMS values to generate")
+
+    parser.add_argument("--cms", "-c",
+                        type=int,
+                        help="How many CMS values to generate")
 
     parser.add_argument("--toshiba", "-t",
                         action='store_true',
-                        help="Generates the IMS values in Toshiba '.efz' format")
+                        help="Generates the IMS/CMS values in Toshiba "
+                             "'.efz' format")
 
     args = parser.parse_args()
-    print_to_error("Generate", args.count, "IMS values:")
+    if (args.ims == 0 ) and (args.cms == 0):
+        error("You must specify --ims or --cms")
+        sys.exit(PROGRAM_ERROR)
+    elif (args.ims > 0 ) and (args.cms > 0):
+        error("You can specify --ims or --cms, but not both")
+        sys.exit(PROGRAM_ERROR)
 
     num_generated = 0
-    while num_generated < args.count:
-        if permute_ims():
+    if args.ims:
+        ims_buf = bytearray(IMS_DWORDS * 4)
+        endpoint_id = bytearray(8)
+        print_to_error("Generate", args.ims, "IMS values:")
+        while num_generated < args.ims:
+            permute_ims(ims_buf)
             num_generated += 1
-            if args.toshiba:
-                print("IMS[279:0] = {0:06x}_{1:08x}_{2:08x}_{3:08x}_{4:08x}_"
-                      "{5:08x}_{6:08x}_{7:08x}_{8:08x}".
-                      format(ims[8], ims[7], ims[6], ims[5], ims[4],
-                             ims[3], ims[2], ims[1], ims[0]))
-            else:
-                print("{0:06x} {1:08x} {2:08x} {3:08x} {4:08x} "
-                      "{5:08x} {6:08x} {7:08x} {8:08x}".
-                      format(ims[8], ims[7], ims[6], ims[5], ims[4],
-                             ims[3], ims[2], ims[1], ims[0]))
+            ep_uid = endpoint_unique_id(ims_buf)
+            print_ims(ims_buf, endpoint_unique_id(ims_buf),
+                      endpoint_unique_id_es3(ims_buf), args.toshiba)
+
+    if args.cms:
+        print_to_error("Generate", args.cms, "CMS values:")
+        while num_generated < args.cms:
+            if permute_cms():
+                num_generated += 1
+                print_cms(cms, args.toshiba)
 
 
 ## Launch main

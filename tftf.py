@@ -29,6 +29,7 @@
 #
 
 from __future__ import print_function
+from errno import EEXIST
 import os
 from struct import pack_into, unpack_from
 from string import rfind
@@ -721,7 +722,7 @@ class Tftf:
                 try:
                     os.makedirs(out_dirname)
                 except OSError as exception:
-                    if exception.errno != errno.EEXIST:
+                    if exception.errno != EEXIST:
                         error("Can't create directory", out_dirname)
                         raise
                     else:

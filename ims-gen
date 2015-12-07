@@ -29,93 +29,80 @@
 #
 
 # Generate <count> legal IMS values (i.e. 280-bit random numbers having a
-# Hamming weight of 140)
+# Hamming weight of 128 over the LSB 32 bytes)
 
 from __future__ import print_function
-from array import array
 from struct import pack_into, unpack_from
+import sys
 import binascii
 import hashlib
 import random
 import argparse
-from util import print_to_error
+from util import error, print_to_error
 
 # Program return values
 PROGRAM_SUCCESS = 0
 PROGRAM_WARNINGS = 1
 PROGRAM_ERROR = 2
 
+# IMS is 35 bytes long, but boot ROM only cares about the first 32 bytes
 IMS_BITS = 280
 IMS_BYTES = (IMS_BITS + 7)//8
 IMS_DWORDS = (IMS_BYTES + 3)//4
-
-# IMS is 35 bytes long, but boot ROM only cares about the first 32 bytes
 IMS_MEANINGFUL_LENGTH = 32
 IMS_MEANINGFUL_BITS = IMS_MEANINGFUL_LENGTH * 8
-
-HASH_DIGEST_SIZE = 32
-
 
 CMS_BITS = 192
 CMS_BYTES = (CMS_BITS + 7)//8
 CMS_DWORDS = (CMS_BYTES + 3)//4
 
-# Array for the IMS value
-ims = array('L', [0, 0, 0, 0, 0, 0, 0, 0, 0])
-
-# Array for the CMS value
-cms = array('L', [0, 0, 0, 0, 0, 0])
-
-# Array for the per-word Hamming weights (must be as long as the longest array)
-hammings = array('i', [0, 0, 0, 0, 0, 0, 0, 0, 0])
-
-binary_buf = bytearray(max(IMS_DWORDS, CMS_DWORDS) * 4)
+HASH_DIGEST_SIZE = 32
 
 
-def permute_cms():
+def permute_cms(cms_buf):
     """ Permute the CMS and return whether or not it has a valid hamming weight
 
     Returns true if valid, false otherwise
     """
-    global cms, hammings
-
-    # Initialize the hamming weights
-    hamming_wt = 0
-    for i in range(0, CMS_DWORDS):
-        hammings[i] = 0;
+    temp = bytearray(4)
 
     # Permute the CMS, one 32-bit word at a time
-    for i in range(0, CMS_DWORDS):
-        # Replace 1 32-bit word at a time with randomness
-        cms[i] = random.getrandbits(32)
+    while True:
+        for i in range(0, CMS_DWORDS):
+            # Replace 1 32-bit word at a time with randomness
+            offset = i * 4
+            length = min(4, IMS_BYTES - offset)
+            pack_into("<L", temp, 0, random.getrandbits(32))
 
-        hamming_wt -= hammings[i]
-        # Calculate the Hamming weight of this element
-        hammings[i] = bin(cms[i]).count("1")
-        hamming_wt += hammings[i]
+            cms_buf[offset:(offset+length)] = temp[:length]
 
-    # If the hamming weight is correct, issue this IMS
-    return hamming_wt == (CMS_BITS / 2)
+            # Calculate the Hamming weight
+            hamming_wt = 0
+            for j in range(0, CMS_BYTES):
+                x = cms_buf[j]
+                hamming_wt += bin(x).count('1')
 
-
-def pack_cms(buf, offset):
-    # Pack a section header into a TFTF header buffer at the specified
-    # offset, returning the offset of the next section.
-    pack_into("<LLLLLL", buf, offset,
-              cms[0], cms[1], cms[2], cms[3], cms[4], cms[5])
+            # If the hamming weight is correct, use this IMS
+            if hamming_wt == (CMS_BITS / 2):
+                return
 
 
-
-def print_cms(cms, toshiba_format):
+def print_cms(cms_buf, toshiba_format):
     """ Print the CMS """
     if toshiba_format:
         # Print the CMS in toshiba .efz form
+        cms = unpack_from("<LLLLLL", cms_buf)
         print("CMS[191:0] = {0:08x}_{1:08x}_{2:08x}_{3:08x}_{4:08x}_{5:08x}".
               format(cms[5], cms[4], cms[3], cms[2], cms[1], cms[0]))
     else:
         # Print the CMS in human-friendly form
-        print("CMS {0:08x} {1:08x} {2:08x} {3:08x} {4:08x} {5:08x}".
-              format(cms[5], cms[4],cms[3], cms[2], cms[1], cms[0]))
+        print("CMS {0:s}.{1:s}.{2:s}.{3:s}.{4:s}.{5:s}".
+              format(binascii.hexlify(cms_buf[0:4]),
+                     binascii.hexlify(cms_buf[4:8]),
+                     binascii.hexlify(cms_buf[8:11]),
+                     binascii.hexlify(cms_buf[12:16]),
+                     binascii.hexlify(cms_buf[16:20]),
+                     binascii.hexlify(cms_buf[20:24])))
 
 
 def permute_ims(ims_buf):
@@ -129,7 +116,7 @@ def permute_ims(ims_buf):
     ims_buf: a bytearray(IMS_BYTES)
     """
     temp = bytearray(4)
-    
+
     # Permute the IMS, one 32-bit word at a time
     while True:
         for i in range(0, IMS_DWORDS):
@@ -153,9 +140,9 @@ def permute_ims(ims_buf):
 
 def print_ims(ims_buf, ep_uid, ep_uid_es3, toshiba_format):
     """ Print the IMS """
-    ims = unpack_from("<LLLLLLLLL", ims_buf)
     if toshiba_format:
         # Print the IMS in toshiba .efz form
+        ims = unpack_from("<LLLLLLLLL", ims_buf)
         print("IMS[279:0] = {0:06x}_{1:08x}_{2:08x}_{3:08x}_{4:08x}_"
               "{5:08x}_{6:08x}_{7:08x}_{8:08x}".
               format(ims[8], ims[7], ims[6], ims[5], ims[4],
@@ -163,17 +150,36 @@ def print_ims(ims_buf, ep_uid, ep_uid_es3, toshiba_format):
 
     else:
         # Print the IMS in human-friendly form
-        print("IMS        {0:06x} {1:08x} {2:08x} {3:08x} {4:08x} "
-              "{5:08x} {6:08x} {7:08x} {8:08x}".
-              format(ims[8], ims[7], ims[6], ims[5], ims[4],
-                     ims[3], ims[2], ims[1], ims[0]))
-        epuid = unpack_from("<LL", ep_uid)
-        print("EP_UID     {0:08x} {1:08x}".format(epuid[1], epuid[0]))
-        epuid = unpack_from("<LL", ep_uid_es3)
-        print("EP_UID_ES3 {0:08x} {1:08x}".format(epuid[1], epuid[0]))
+        print("IMS        {0:s}.{1:s}.{2:s}.{3:s}.{4:s}.{5:s}."
+              "{6:s}.{7:s}.{8:s}".
+              format(binascii.hexlify(ims_buf[0:4]),
+                     binascii.hexlify(ims_buf[4:8]),
+                     binascii.hexlify(ims_buf[8:11]),
+                     binascii.hexlify(ims_buf[12:16]),
+                     binascii.hexlify(ims_buf[16:20]),
+                     binascii.hexlify(ims_buf[20:24]),
+                     binascii.hexlify(ims_buf[24:28]),
+                     binascii.hexlify(ims_buf[28:32]),
+                     binascii.hexlify(ims_buf[32:35])))
+        print("EP_UID     {0:s}.{1:s}".
+              format(binascii.hexlify(ep_uid[0:4]),
+                     binascii.hexlify(ep_uid[4:8])))
+        print("EP_UID_ES3 {0:s}.{1:s}".
+              format(binascii.hexlify(ep_uid_es3[0:4]),
+                     binascii.hexlify(ep_uid_es3[4:8])))
         m = hashlib.sha256()
         m.update(ims_buf[0:IMS_BYTES])
-        print("IMS_SHA256", binascii.hexlify(m.digest()))
+        sha256 = m.digest()
+        print("IMS        {0:s}.{1:s}.{2:s}.{3:s}.{4:s}.{5:s}."
+              "{6:s}.{7:s}".
+              format(binascii.hexlify(sha256[0:4]),
+                     binascii.hexlify(sha256[4:8]),
+                     binascii.hexlify(sha256[8:11]),
+                     binascii.hexlify(sha256[12:16]),
+                     binascii.hexlify(sha256[16:20]),
+                     binascii.hexlify(sha256[20:24]),
+                     binascii.hexlify(sha256[24:28]),
+                     binascii.hexlify(sha256[28:32])))
 
 
 def endpoint_unique_id(ims_buf):
@@ -182,7 +188,6 @@ def endpoint_unique_id(ims_buf):
     ims_buf is the packed binary buffer containing the 280-bit IMS value
     """
     # Establish the default (i.e., no endpoint ID)
-    have_endpoint_id = False
     endpoint_id = 0L
 
     # Compute Endpoint Unique ID from the IMS
@@ -194,9 +199,8 @@ def endpoint_unique_id(ims_buf):
     #
     temp = bytearray(4)
 
-    # grab IMS 4bytes at a time and feed that to hash_update
+    # grab IMS 4 bytes at a time and feed that to hash_update
     m = hashlib.sha256()
-    ims32 = unpack_from("<LLLL", ims_buf)
     for i in range(0, 4):
         up32 = unpack_from("<L", ims_buf, i * 4)
         pack_into("<L", temp, 0, up32[0] ^ 0x3d3d3d3d)
@@ -225,17 +229,17 @@ def endpoint_unique_id_es3(ims_buf):
     ims_buf is the packed binary buffer containing the 280-bit IMS value
     """
     # Establish the default (i.e., no endpoint ID)
-    have_endpoint_id = False
     endpoint_id = 0L
 
     # Generating EP_UID for ES3 compatible
     #
-    # There is a bug in ES3 boot ROM, so the EP_UID is calculated by using less IMS bytes: 
+    # There is a bug in ES3 boot ROM, so the EP_UID is calculated by using
+    # fewer IMS bytes:
     # 	Y1 = sha256((IMS[0] xor 0x3d) || (IMS[4] xor 0x3d) ||
     #       (IMS[8] xor 0x3d) || (IMS[12] xor 0x3d))
     # Z0 = sha256(Y1 || copy(0x01, 8))
     # EP_UID[0:7] = sha256(Z0)[0:7]
-    # 
+    #
     # Only 4 bytes of the IMS are used for this derivation to ensure, in an
     # information-theoretic sense, that no information about the rest of the
     # IMS is exposed through the publicly-exposed EP_UID value or its
@@ -243,18 +247,15 @@ def endpoint_unique_id_es3(ims_buf):
     #
     temp = bytearray(1)
 
-    # grab IMS 4bytes at a time and feed that to hash_update
+    # grab IMS 4 bytes at a time and feed that to hash_update
     m = hashlib.sha256()
     for i in range(0, 4):
-        #up32 = unpack_from("<B", ims_buf, i * 4)
-        #pack_into("<B", temp, 0, up32[0] ^ 0x3d)
         temp[0] = ims_buf[i * 4] ^ 0x3d
         m.update(temp)
     y1 = m.digest()
 
     m2 = hashlib.sha256()
     m2.update(y1)
-    #pack_into("<L", temp, 0, 0x01)
     temp[0] = 0x01
     for i in range(0, 8):
         m2.update(temp)
@@ -289,31 +290,30 @@ def main():
                              "'.efz' format")
 
     args = parser.parse_args()
-    if (args.ims == 0 ) and (args.cms == 0):
+    if (args.ims == 0) and (args.cms == 0):
         error("You must specify --ims or --cms")
         sys.exit(PROGRAM_ERROR)
-    elif (args.ims > 0 ) and (args.cms > 0):
+    elif (args.ims > 0) and (args.cms > 0):
         error("You can specify --ims or --cms, but not both")
         sys.exit(PROGRAM_ERROR)
 
     num_generated = 0
     if args.ims:
         ims_buf = bytearray(IMS_DWORDS * 4)
-        endpoint_id = bytearray(8)
         print_to_error("Generate", args.ims, "IMS values:")
         while num_generated < args.ims:
             permute_ims(ims_buf)
             num_generated += 1
-            ep_uid = endpoint_unique_id(ims_buf)
             print_ims(ims_buf, endpoint_unique_id(ims_buf),
                       endpoint_unique_id_es3(ims_buf), args.toshiba)
 
     if args.cms:
+        cms_buf = bytearray(CMS_DWORDS * 4)
         print_to_error("Generate", args.cms, "CMS values:")
         while num_generated < args.cms:
-            if permute_cms():
-                num_generated += 1
-                print_cms(cms, args.toshiba)
+            permute_cms(cms_buf)
+            num_generated += 1
+            print_cms(cms_buf, args.toshiba)
 
 
 ## Launch main

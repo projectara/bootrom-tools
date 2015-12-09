@@ -200,7 +200,7 @@ void write_ffff_header_map(const ffff_header * ffff_hdr,
            prefix, (uint32_t)(offset + offsetof(ffff_header, flash_image_length)));
     fprintf(map_file, "%sgeneration  %08x\n",
             prefix, (uint32_t)(offset + offsetof(ffff_header, header_generation)));
-    for (index = 0; index < FFFF_RESERVED; index++) {
+    for (index = 0; index < FFFF_NUM_RESERVED; index++) {
         fprintf(map_file, "%sreserved[%d]  %08x\n",
                 prefix, index,
                 (uint32_t)(offset + offsetof(ffff_header, reserved[index])));
@@ -212,8 +212,7 @@ void write_ffff_header_map(const ffff_header * ffff_hdr,
     /* Print out the tail sentinel */
     fprintf(map_file, "%stail_sentinel  %08x\n",
             prefix,
-            (uint32_t)(offset + (ffff_hdr->header_size -
-                                 sizeof(ffff_hdr->trailing_sentinel_value))));
+            (uint32_t)(offset + (ffff_hdr->header_size - FFFF_SENTINEL_SIZE)));
 
 }
 

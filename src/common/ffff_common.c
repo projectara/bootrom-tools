@@ -49,7 +49,8 @@
  * value based on the header_size (which is unavailable until either command
  * line args have been parsed or an FFFF file read in).
  */
-uint32_t ffff_max_elements = FFFF_MAX_ELEMENTS;
+uint32_t ffff_max_elements =
+        CALC_MAX_FFFF_ELEMENTS(FFFF_HEADER_SIZE_DEFAULT);
 
 
 /**

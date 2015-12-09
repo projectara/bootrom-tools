@@ -43,8 +43,16 @@
 #include "tftf_common.h"
 #include "tftf_print.h"
 
-/* This contains the maximum number of sections in the header. */
-uint32_t tftf_max_sections = TFTF_MAX_SECTIONS;
+/**
+ * This contains the maximum number of sections in the header.
+ * NOTE: The initial value is a valid number for the minimum TFTF header
+ * size, but it is also a placeholder - main() in any app that uses
+ * tftf_max_sections is responsible for recalculating it as soon as it has
+ * determined the header size (either from a parameter or parsing a TFTF
+ * file/blob).
+ */
+uint32_t tftf_max_sections =
+        CALC_MAX_TFTF_SECTIONS(TFTF_HEADER_SIZE_DEFAULT);
 
 
 /**
@@ -327,7 +335,7 @@ bool tftf_add_section(tftf_header ** ptftf_hdr, uint32_t type, uint32_t class,
      *  that would restrict which types of sections we can append.
      */
     for (i = 0;
-         ((i < TFTF_MAX_SECTIONS) &&
+         ((i < tftf_max_sections) &&
           (tftf_hdr->sections[i].section_type != TFTF_SECTION_END));
          i++) {
         if (tftf_hdr->sections[i].section_type >= TFTF_SECTION_SIGNATURE) {
@@ -335,7 +343,7 @@ bool tftf_add_section(tftf_header ** ptftf_hdr, uint32_t type, uint32_t class,
         }
     }
     /* Check to see if we can add the section */
-    if (i >= (TFTF_MAX_SECTIONS - 2)) {
+    if (i >= (tftf_max_sections - 2)) {
         fprintf(stderr, "ERROR: TFTF section table is full\n");
         success = false;
     } else if (restricted && (type < TFTF_SECTION_SIGNATURE)) {

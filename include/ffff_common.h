@@ -47,9 +47,6 @@ struct ffff {
 };
 
 
-static const char ffff_sentinel[] = FFFF_SENTINEL_VALUE;
-
-
 /**
  * @brief Debugging routine to display an element.
  *
@@ -75,17 +72,8 @@ void print_element(char * title, ffff_element_descriptor * element);
 		(((header_size) - \
 		 (offsetof(ffff_header, elements) + FFFF_SENTINEL_SIZE)) / \
 		 sizeof(ffff_element_descriptor))
-#ifndef FFFF_HEADER_SIZE_MIN
-    #define FFFF_HEADER_SIZE_MIN            512
-#endif
 
-#ifndef FFFF_HEADER_SIZE_MAX
-    #define FFFF_HEADER_SIZE_MAX            32768
-#endif
-
-#ifndef MAX_FFFF_HEADER_SIZE_SUPPORTED
-    #define MAX_FFFF_HEADER_SIZE_SUPPORTED  FFFF_HEADER_SIZE_MAX
-#endif
+#define FFFF_HEADER_SIZE_DEFAULT    FFFF_HEADER_SIZE_MAX
 
 
 /* This contains the maximum number of elements in the header. */

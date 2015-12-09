@@ -755,7 +755,8 @@ bool valid_tftf_header(tftf_header * header) {
         }
     }
 
-    if (header->header_size != TFTF_HEADER_SIZE) {
+    if ((header->header_size < TFTF_HEADER_SIZE_MIN) ||
+        (header->header_size > TFTF_HEADER_SIZE_MAX)) {
         set_last_error(BRE_TFTF_HEADER_SIZE);
         return false;
     }

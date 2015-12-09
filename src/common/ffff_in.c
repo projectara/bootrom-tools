@@ -368,7 +368,7 @@ bool element_cache_validate_locations(uint32_t header_size,
                    (element_location >= image_length)) {
             fprintf(stderr,
                     "ERROR: Element location %08x is out of bounds (%08x..%08x) (%s)\n",
-                    element_location, lower_limit, image_length,
+                    element_location, lower_limit, lower_limit + image_length,
                     element_cache[index].filename);
             valid = false;
         }
@@ -417,7 +417,7 @@ struct ffff * new_ffff_romimage(const char *   name,
         ffff_hdr = romimage->ffff_hdrs[0];
         element = &ffff_hdr->elements[0];
         last_element = &ffff_hdr->elements[ffff_max_elements];
-        memcpy(ffff_hdr->sentinel_value, ffff_sentinel, FFFF_SENTINEL_SIZE);
+        memcpy(ffff_hdr->sentinel_value, ffff_sentinel_value, FFFF_SENTINEL_SIZE);
         ffff_set_timestamp(ffff_hdr);
         safer_strcpy(ffff_hdr->flash_image_name,
                      sizeof(ffff_hdr->flash_image_name),
@@ -453,7 +453,7 @@ struct ffff * new_ffff_romimage(const char *   name,
         }
 
         /* Add the tail sentinel at the end of the header */
-        memcpy(&romimage->blob[tail_sentinel_offset], ffff_sentinel,
+        memcpy(&romimage->blob[tail_sentinel_offset], ffff_sentinel_value,
                FFFF_SENTINEL_SIZE);
 
         /**
@@ -648,7 +648,7 @@ bool valid_ffff_element(ffff_element_descriptor * element,
      * they don't duplicate or collide with us.
      */
     for (other_element = element + 1;
-         ((other_element < &header->elements[FFFF_MAX_ELEMENTS]) &&
+         ((other_element < &header->elements[ffff_max_elements]) &&
           (other_element->element_type != FFFF_ELEMENT_END));
          other_element++) {
         /* (a) check for collision */
@@ -698,13 +698,13 @@ int validate_ffff_header(ffff_header *header, uint32_t address) {
 
     /* Check for leading and trailing sentinels */
     for (i = 0; i < FFFF_SENTINEL_SIZE; i++) {
-        if (header->sentinel_value[i] != ffff_sentinel[i]) {
+        if (header->sentinel_value[i] != ffff_sentinel_value[i]) {
             set_last_error(BRE_FFFF_SENTINEL);
             return -1;
         }
     }
     for (i = 0; i < FFFF_SENTINEL_SIZE; i++) {
-        if (tail_sentinel[i] != ffff_sentinel[i]) {
+        if (tail_sentinel[i] != ffff_sentinel_value[i]) {
             set_last_error(BRE_FFFF_SENTINEL);
             return -1;
         }
@@ -725,14 +725,15 @@ int validate_ffff_header(ffff_header *header, uint32_t address) {
         return -1;
     }
 
-    if (header->header_size != FFFF_HEADER_SIZE) {
+    if ((header->header_size < FFFF_HEADER_SIZE_MIN) ||
+        (header->header_size > FFFF_HEADER_SIZE_MAX)) {
         set_last_error(BRE_FFFF_HEADER_SIZE);
        return -1;
     }
 
     /* Validate the FFFF elements */
     for (element = &header->elements[0];
-         (element < &header->elements[FFFF_MAX_ELEMENTS]) && !end_of_elements;
+         (element < &header->elements[ffff_max_elements]) && !end_of_elements;
          element++) {
         if (!valid_ffff_element(element, header, address, &end_of_elements)) {
             /* (valid_ffff_element took care of error reporting) */

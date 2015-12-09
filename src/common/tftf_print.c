@@ -359,7 +359,7 @@ static void print_tftf_header(const tftf_header * tftf_hdr,
                indent, tftf_hdr->ara_vid);
         printf("%s  Ara product ID:    %08x\n",
                indent, tftf_hdr->ara_pid);
-        for (index = 0; index < TFTF_RESERVED; index++) {
+        for (index = 0; index < TFTF_NUM_RESERVED; index++) {
             printf("%s    Reserved [%d]:    %08x\n",
                    indent, index, tftf_hdr->reserved[index]);
         }

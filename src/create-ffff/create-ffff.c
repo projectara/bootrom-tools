@@ -169,7 +169,7 @@ static struct optionx parse_table[] = {
       DEFAULT_VAL,    &store_hex, 0, generation_help },
     { 'o', output_filename_names, "file",  &output_filename, 0,
       0, &store_str, 0, output_filename_help },
-    { 'h', header_size_names, "num", &header_size, FFFF_HEADER_SIZE,
+    { 'h', header_size_names, "num", &header_size, FFFF_HEADER_SIZE_DEFAULT,
       DEFAULT_VAL,    &store_hex, 0, header_size_help },
     { 'n', name_names, "text", &name, 0,
        0, &store_str, 0, name_help },

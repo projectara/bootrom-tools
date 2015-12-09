@@ -158,7 +158,7 @@ void write_tftf_map(const tftf_header * tftf_hdr,
             prefix, (uint32_t)(offset + offsetof(tftf_header, ara_vid)));
     fprintf(map_file, "%sara_product_id  %08x\n",
             prefix, (uint32_t)(offset + offsetof(tftf_header, ara_pid)));
-    for (index = 0; index < TFTF_RESERVED; index++) {
+    for (index = 0; index < TFTF_NUM_RESERVED; index++) {
         fprintf(map_file, "%sreserved[%d]  %08x\n",
                 prefix, index,
                 (uint32_t)(offset + offsetof(tftf_header, reserved[index])));

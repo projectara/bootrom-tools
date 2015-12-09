@@ -38,7 +38,6 @@
 #include "tftf.h"
 #include <stddef.h>
 
-static const char tftf_sentinel[] = TFTF_SENTINEL_VALUE;
 
 /* TFTF Parser defaults */
 #define DFLT_START          0
@@ -73,17 +72,8 @@ static const char tftf_sentinel[] = TFTF_SENTINEL_VALUE;
 #define CALC_MAX_TFTF_SECTIONS(header_size) \
 		(((header_size) - offsetof(tftf_header, sections)) / \
 		 sizeof(tftf_section_descriptor))
-#ifndef TFTF_HEADER_SIZE_MIN
-    #define TFTF_HEADER_SIZE_MIN            512
-#endif
 
-#ifndef TFTF_HEADER_SIZE_MAX
-    #define TFTF_HEADER_SIZE_MAX            32768
-#endif
-
-#ifndef MAX_TFTF_HEADER_SIZE_SUPPORTED
-    #define MAX_TFTF_HEADER_SIZE_SUPPORTED  TFTF_HEADER_SIZE_MAX
-#endif
+#define TFTF_HEADER_SIZE_DEFAULT    TFTF_HEADER_SIZE_MIN
 
 
 /* This contains the maximum number of sections in the header. */

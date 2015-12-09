@@ -67,7 +67,7 @@
 /* TFTF parsing args */
 const char * output_filename = NULL;
 const char * output_dir = NULL;
-uint32_t    header_size = TFTF_HEADER_SIZE;
+uint32_t    header_size = TFTF_HEADER_SIZE_DEFAULT;
 const char *fw_pkg_name = NULL;
 uint32_t    package_type = FFFF_ELEMENT_STAGE_3_FW;
 uint32_t    start_location;
@@ -153,7 +153,7 @@ char ** foo = header_size_names;
 /* Parsing table */
 static struct optionx parse_table[] = {
     /* Header args */
-    { 'z', header_size_names, "num", &header_size, TFTF_HEADER_SIZE,
+    { 'z', header_size_names, "num", &header_size, TFTF_HEADER_SIZE_DEFAULT,
       DEFAULT_VAL, &handle_header_size, 0,
       "The size of the generated TFTF header, in bytes (512)"
     },

@@ -326,7 +326,7 @@ static void print_ffff_header(const ffff_header * ffff_hdr,
                indent, ffff_hdr->header_size);
         printf("%s  flash_image_length:   %08x\n",
                indent, ffff_hdr->flash_image_length);
-        for (index = 0; index < FFFF_RESERVED; index++) {
+        for (index = 0; index < FFFF_NUM_RESERVED; index++) {
             printf("%s    Reserved [%d]:       %08x\n",
                    indent, index, ffff_hdr->reserved[index]);
         }
@@ -336,7 +336,8 @@ static void print_ffff_header(const ffff_header * ffff_hdr,
 
         /* Print out the tail sentinel */
         safer_strncpy(sentinel_buf, sizeof(sentinel_buf),
-                      ffff_hdr->trailing_sentinel_value, FFFF_SENTINEL_SIZE);
+                      get_trailing_sentinel_addr(ffff_hdr),
+                      FFFF_SENTINEL_SIZE);
         printf("%s  Sentinel:             '%s'\n", indent, sentinel_buf);
         printf("\n");
     }

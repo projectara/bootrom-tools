@@ -11,7 +11,6 @@ ffff[0].reserved[0]  00000064
 ffff[0].reserved[1]  00000068
 ffff[0].reserved[2]  0000006c
 ffff[0].reserved[3]  00000070
-ffff[0].reserved[4]  00000074
 ffff[0].element_table  00000074
 ffff[0].element[0].type  00000074
 ffff[0].element[0].class  00000075
@@ -1215,7 +1214,6 @@ ffff[1].reserved[0]  00001064
 ffff[1].reserved[1]  00001068
 ffff[1].reserved[2]  0000106c
 ffff[1].reserved[3]  00001070
-ffff[1].reserved[4]  00001074
 ffff[1].element_table  00001074
 ffff[1].element[0].type  00001074
 ffff[1].element[0].class  00001075
@@ -2542,7 +2540,7 @@ ffff.element[0].2fw.section[19].section_length  000021f4
 ffff.element[0].2fw.section[19].load_address  000021f8
 ffff.element[0].2fw.section[19].expanded_length  000021fc
 ffff.element[0].2fw.section[0].code  00002200
-ffff.element[0].2fw.section[1].data  00003744
+ffff.element[0].2fw.section[1].data  000043b4
 ffff.element[1].3fw 00006000
 ffff.element[1].3fw.sentinel  00006000
 ffff.element[1].3fw.header_size  00006004
@@ -2679,3 +2677,4 @@ ffff.element[1].3fw.section[19].section_length  000061f4
 ffff.element[1].3fw.section[19].load_address  000061f8
 ffff.element[1].3fw.section[19].expanded_length  000061fc
 ffff.element[1].3fw.section[0].code  00006200
+ffff.element[1].3fw.section[1].data  00006779

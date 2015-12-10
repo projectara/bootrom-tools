@@ -35,6 +35,7 @@ bin/create-ffff
 bin/display-ffff
 ftdi/haps_test
 ftdi/spirom_write
+es3-test/s1fw
 bin
 obj
 
@@ -42,6 +43,7 @@ obj
 *.bin
 *.ffff
 *.tftf
+*.map
 
 # Misc files
 git-commit-template

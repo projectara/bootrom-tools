@@ -58,10 +58,13 @@ for arg in "$@" ; do    # arg will be each positional parameter
         CONFIG_CHIP="es3tsb"
     elif [[ ${arg} == "-fpgatsb" ]]; then # select target configuration
         CONFIG_CHIP="fpgatsb"
+    elif [[ ${arg} == "-debugmsg" || ${arg} == "-dme" ||
+            ${arg} == "-v" ]]; then    # ignore
+        i=1
     elif [[ ${arg} == "-prod" ]]; then    # _PRODUCTION version
         Production=true
     else
-        echo "unknown arg $arg"
+        echo "makeserver: unknown arg $arg"
         exit 1
     fi
 done

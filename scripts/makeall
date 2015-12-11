@@ -217,7 +217,7 @@ if ! $JustBootrom; then
     echo "--"
     echo "Building the GBBOOT server"
     echo "--"
-    makeserver -$StdArgs
+    makeserver $StdArgs
     if [[ $? == 0 ]]; then
         mv $BuildDir/gbboot_server.bin $AssyDir/s1fw/gbboot_server$Ornamentation.bin
         if [ -f $BuildDir/gbboot_server.hex ]; then
@@ -263,7 +263,7 @@ if ! $JustBootrom; then
     echo "--"
     echo "Building the Untrusted (non-signed) image for standby test"
     echo "--"
-    makef4 $F4Args -stby -stby-wait-svr -stby-gbboot
+    makef4 $F4Args
     if [[ $? == 0 ]]; then
         mv $BinDir/ffff.bin $AssyDir/ffff/ffff.standby.bin
         mv $BinDir/ffff.map $AssyDir/ffff/ffff.standby.map
@@ -277,7 +277,7 @@ if ! $JustBootrom; then
     echo "--"
     echo "Building the Trusted (signed) image for standby test"
     echo "--"
-    makef4 $F4Args -sign -stby -stby-wait-svr -stby-gbboot
+    makef4 $F4Args -sign
     if [[ $? == 0 ]]; then
         mv $BinDir/ffff-sgn.bin $AssyDir/ffff/ffff-sgn.standby.bin
         mv $BinDir/ffff-sgn.map $AssyDir/ffff/ffff-sng.standby.map

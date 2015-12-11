@@ -204,12 +204,19 @@ if [[ $? == 0 ]]; then
     # so pretty safe to use
     create-tftf --elf $BuildDir/bootrom \
                 --data $BuildDir/bootrom.bin --load 0x10010000 \
-                --name third --out $BinDir/third.bin --ara-pid 0 --ara-vid 0 $Verbose
+                --name third --out $BinDir/third.bin \
+                --type s3fw \
+                --ara-pid 0 --ara-vid 0 $Verbose
     if [[ $? == 0 ]]; then
         # Sign s3fw
         if $Sign; then
             echo "Sign 3rd stage"
-            sign-tftf --key $KeyDir/key1.pem --type rsa2048-sha256 binary/third.bin
+            sign-tftf --key $KeyDir/key1.private.pem \
+                      --signature-algorithm "rsa2048-sha256" \
+                      --type s3fsk \
+                      --format es3 \
+                      --passin pass:test \
+                      $BinDir/third.bin
         fi
     fi
 fi
@@ -233,12 +240,18 @@ else
     if [[ $? == 0 ]]; then
         # 2ndFW tftf
         create-tftf --elf $BuildDir/bootrom --name second \
+                    --type s2fw \
                     --out $BinDir/second.bin --ara-pid 0 --ara-vid 0 $Verbose
         if [[ $? == 0 ]]; then
             # Sign 2nsFW
             if $Sign; then
                 echo "Sign 2nd stage"
-                sign-tftf --key $KeyDir/key1.pem --type rsa2048-sha256 binary/second.bin
+                ~/bootrom-tools/bin/sign-tftf --key $KeyDir/key1.private.pem \
+                      --signature-algorithm "rsa2048-sha256" \
+                      --type s3fsk \
+                      --format es3 \
+                      --passin pass:test \
+                      $BinDir/second.bin
             fi
         fi
     fi

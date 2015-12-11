@@ -510,7 +510,6 @@ struct ffff * new_ffff_romimage(const char *   name,
         element->element_type = FFFF_ELEMENT_END;
 
 
-
         /* Add the elements */
         element_cache_init_iterator();
         do {

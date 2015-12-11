@@ -31,7 +31,7 @@
 #------------------------------------------------------------------------------
 #
 # Usage:
-#    nuttx2ffff {-v} {--build name}
+#    nuttx2ffff {-v} {--build=name} {-outdir=<dir>}
 #
 #    -v        Verbose mode on TFTF creation
 #    --build   Which nuttx image to use:
@@ -48,81 +48,88 @@ nuttx_build=
 for arg in "$@" ; do    # arg will be each positional parameter
     if [[ ${arg} == "-v" ]]; then
         verbose=${arg}
-    elif [[ ${arg} == "--build" ]]; then
-        nuttx_build=${arg}
+    elif [[ ${arg} == --build=* ]]; then
+        nuttx_build="${arg#*=}"
     fi
 done
 
-if [ !{} ]; then
-    nuttx_build=ara-svc-db3
-    echo "Assuming --build $nuttx_build"
-fi
-
-# Select the correct executables
-ScriptRootC=~/bootrom-tools/bin
-ScriptRoot=~/bootrom-tools
-if [ -f $ScriptRootC/create-tftf ]; then
-    create_tftf=$ScriptRootC/create-tftf
+if [ ${nuttx_build} ]; then
+    # Construct a canonical the path from the supplied build path or fragment
+    # (e.g., "ara-bridge-es2-debug-generic" or
+    # "~/nuttx/build/ara-bridge-es2-debug-generic").
+    nuttx_build=`basename ${nuttx_build}`
+    NuttX_build=`readlink -f $NUTTXROOT/../build`
+    NUTTX_IMAGE=$NuttX_build/$nuttx_build/image
 else
-    echo "Falling back to Python create-tftf"
-    create_tftf=$ScriptRoot/create-tftf
+    NUTTX_IMAGE=$NUTTXROOT
 fi
-if [ -f $ScriptRootC/create-ffff ]; then
-    create_ffff=$ScriptRootC/create-ffff
-else
-    echo "Falling back to Python create-ffff"
-    create_ffff= $ScriptRoot/create-ffff
-fi
+echo "Packaging ${NUTTX_IMAGE}/nuttx"
 
-NuttX_build=$NUTTXROOT/../build
-NuttX_image=$NuttX_build/ara-bridge-es2-debug-generic/image
-if [ ! -f $NuttX_image/nuttx.bin ]; then
-    echo "Error: Can't find $NuttX_image/nuttx.bin"
+
+if [ ! -f ${NUTTX_IMAGE}/nuttx ]; then
+    echo "Error: Can't find ${NUTTX_IMAGE}/nuttx"
     exit 1
 fi
-if [ ! -f $NuttX_image/System.map ]; then
-    echo "Error: Can't find $NuttX_image/System.map"
+if [ ! -f ${NUTTX_IMAGE}/System.map ]; then
+    echo "Error: Can't find ${NUTTX_IMAGE}/System.map"
     exit 1
 fi
 
 
 # Extract the start address by hunting for the "Reset_Handler" symbol in
 # the System.map file
-start=`grep Reset_Handler $NuttX_image/System.map | head -c 8`
+start=`grep Reset_Handler ${NUTTX_IMAGE}/System.map | head -c 8`
 if [ ! ${start} ]; then
     echo "Couldn't find Reset_Handler"
+    start=`hexdump -n 4 -e '1/4 "%08x"' ${NUTTX_IMAGE}/System.map`
+    echo "Extracted start address from reset vector"
+fi
+
+#echo
+#echo "Package ${NUTTX_IMAGE}/nuttx into nuttx.tftf:"
+echo "start address: 0x$start"
+
+create-tftf \
+  $verbose \
+  --header-size 0x200 \
+  --type s2fw \
+  --name "NuttX S3FW-as-S2FW" \
+  --elf ${NUTTX_IMAGE}/nuttx \
+  --start 0x$start \
+  --out ${NUTTX_IMAGE}/nuttx.tftf
+
+if [[ $? != 0 ]]; then
+    echo "There were problems creating the TFTF"
     exit 1
 fi
 
-echo
-echo "Package the nuttx into a tftf:"
-echo "start address: 0x$start"
+#echo
+#echo "Package nuttx.tftf into nuttx.ffff:"
 
-$create_tftf \
-  $verbose \
-  --header-size 0x200 \
-  --map \
-  --type s2fw \
-  --name "NuttX S3FW-as-S2FW" \
-  --code $NuttX_image/nuttx.bin \
-  --start 0x$start \
-  --out nuttx.tftf
-
-
-echo "-----------------------------------------"
-echo "Package the tftf(s) into an ffff:"
-
-$create_ffff \
+create-ffff \
   $verbose \
   --header-size 0x1000 \
-  --map \
   --generation 1  \
-  --flash-capacity 0x200000 \
-  --image-length 0x100000 \
-  --erase-size 0x1000 \
+  --flash-capacity 0x40000 \
+  --image-length 0x40000 \
+  --erase-size 0x800 \
   --name "Nuttx test build" \
-  --s2f nuttx.tftf --eloc 0x2000 --eid 17 \
-  --out nuttx.ffff
+  --s2f ${NUTTX_IMAGE}/nuttx.tftf --eloc 0x2000 --egen 1 \
+  --out ${NUTTX_IMAGE}/nuttx.ffff
+
+
+if [[ $? != 0 ]]; then
+    echo "There were problems creating the FFFF"
+    # Cleanup intermediate files
+    rm ${NUTTX_IMAGE}/nuttx.tftf
+    exit 1
+fi
+
+# Resize the FFFF to the Flash
+truncate -s 2M ${NUTTX_IMAGE}/nuttx.ffff
+
+# Cleanup intermediate files
+rm ${NUTTX_IMAGE}/nuttx.tftf
 
 echo "Done"
 

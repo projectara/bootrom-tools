@@ -24,7 +24,14 @@ in which one would use them.
 * **sign-tftf** Cryptographically sign the contents of a TFTF file with the specified private key.
 * **create-ffff** Assemble one or more TFTF blobs into an FFFF file
 * **display-ffff** Display the contents of an FFFF file
-* **nuttx2ffff** Package the nuttx.bin into an FFFF file
+
+In addition to the above basic tools, there are some wrappers and extensions for
+common tasks:
+
+* **nuttx2ffff** Package a nuttx binary into an FFFF file
+* **Scripts for Building and Packaging Drops to Toshiba** below,
+which describes a variety of wrappers and extensions written for the ES3
+bootrom development. (**NOTE** *makeall*, makes and packages a minimal S2FW loader and a minimal S3FW "app" into an ffff. This is useful for es3 bootloader development and es3 bringup because it is a canonical 3-stage bootloader equivalent of "hello world").
 
 ### create-tftf
 **create-tftf**
@@ -179,6 +186,7 @@ Each element (`[<element_type> <file>] {<element_option>}`)is described with an 
 
 Generates *nuttx.ffff* in the same directory as the source *nuttx* file.
 
+
 ## Libraries you must load before use
 
 ### Python
@@ -329,6 +337,10 @@ image names being ornamented with the build mode.
   tar.
 * **makeall** (called from makedrop) compiles the server, FFFF and bootrom for
   a specific configuration.
+  *The minimal command line to create an ES3 bringup sample is:*
+  
+> `makeall -es3tsb --rev==HEAD`
+
 * **makef4** (called from makeall) compiles the L2FW and L3FW with the desired
   configuration and creates the FFFF.bin. It has an option to compile only
   L3FW and load it as L2FW to speed simulation.
@@ -378,27 +390,31 @@ unnecessary recompilation.
 * **-gearchange"** Test for changing UniPro gear change* **
 * **-debugmsg** Allow debug serial output
 * **-handshake** GPIO handshake with simulation/test controller
-* **-stby** Enable standby-mode tesing
-* **-stby-wait-svr** Will wait for the server in standby mode
-* **-stby-gbboot** Enable GBBoot server standby mode
-* **-spec `<num>`** Compile special test number `<num>`.
-(This appears to the code as the _SPECIAL_TEST define, the value
 * **-342** Substitute the L3FW for L2FW to speed simulation.
+* **--spec=`<num>`** Compile special test number `<num>`.
+(This appears to the code as the _SPECIAL_TEST define with the value of `<num>`.)
+
+#### Special Test values
+* **1** Spec_StandbyTest - Allow 3rd stage FW to try to put the chip
+into standby. 
+* **2** Spec_GBBootSrvStandbyTest - STANDBY_TEST plus S3FW waits for the
+server to put UniPro to hibern8 mode before suspend
+* **3** Spec_GearChangeTest - Run the SpiRom at different gear speeds
 
 ### Parameter Sets by Tool
 * **makedrop** {-v} {-342}
 * **makeall** {-es2tsb | -es3tsb | -fpgatsb } {-v} {-justboot} {-zip}
 {-nocrypto} {-gearchange} {-debugmsg} {-handshake}
-{-stby} {-stby-wait-svr} {-stby-gbboot} {-spec `<num>`} {-342}
+{-spec `<num>`} {-342}
 {-justboot}
 * **makeboot** {-es2tsb | -es3tsb | -fpgatsb } {-v} {-dbg} {-prod}
 {-nocrypto} {-gearchange} {-debugmsg} {-handshake}
-{-stby} {-stby-wait-svr} {-stby-gbboot} {-spec `<num>`} {-342}
+{-spec `<num>`} {-342}
 * **makef4** {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-v} {-dbg} {-prod}
 {-nocrypto} {-gearchange} {-debugmsg} {-handshake}
-{-stby} {-stby-wait-svr} {-stby-gbboot} {-spec `<num>`} {-342}
+{-spec `<num>`} {-342}
 * **makef4norm** {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-v}
-{-handshake} {-stby} {-stby-wait-svr} {-stby-gbboot} {-spec `<num>`} {-342}
+{-handshake} {-spec `<num>`} {-342}
 * **make3sim** {-es2tsb | -es3tsb | -fpgatsb } {-sign} {-dbg} {-v} {-prod}
 {-spec `<num>`} {-342}
 

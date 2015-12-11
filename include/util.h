@@ -344,4 +344,20 @@ int mkdir_recursive(char *path);
  */
 uint32_t hamming_weight(uint8_t *buf, int len);
 
+/**
+ * @brief Bit-balance MID/PID, VID/PID
+ *
+ * Vendors have been told to use 15-bit MIDs, VIDs and PIDs, but the bootrom
+ * requires Hamming-balanced values. The workaround is to copy the 1s
+ * compliment of the lower 16 bits into the upper 16 bits.
+ *
+ * @param vidpid The candidate MID/PID, VID/PID
+ *
+ * @returns If the original value is <= 0x7fff, it returns a value with the
+ *          the original value OR'd with the 1's compliment of the LSB 16 bits
+ *          shifted into the MSB 16 bits. If the original value is < 0x7fff,
+ *          it returns the original value
+ */
+bool balance_vidpid(uint32_t * vidpid, char* name);
+
 #endif /* !_COMMON_UTIL_H */

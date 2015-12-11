@@ -25,71 +25,35 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #------------------------------------------------------------------------------
-# ...bootrom-tools/src/commom/Makefile
+# ...bootorm_tools/src/create-tftf/Makefile
 
 include $(TOPDIR)/Makefile.inc
 
-_COMMONOBJ = \
-  parse_support.o \
-  util.o
+EXE_NAME = s2config
+EXE      = $(BINDIR)/$(EXE_NAME)
 
-_TFTFOBJ = \
-  tftf_common.o \
-  tftf_in.o \
-  tftf_out.o \
-  tftf_map.o \
-  tftf_print.o
+INC_DIRS := -I. -I$(IDIR)
+EXTRA_LIBS := -lelf
 
-_FFFFOBJ = \
-  ffff_common.o \
-  ffff_in.o \
-  ffff_out.o \
-  ffff_map.o \
-  ffff_print.o
+OBJ = $(ODIR)/s2config.o
 
-_S2CFGOBJ = s2cfgcore.o
-
-_OBJ = $(_COMMONOBJ) $(_TFTFOBJ) $(_FFFFOBJ) $(_S2CFGOBJ)
-
-COMMONOBJ = $(patsubst %,$(ODIR)/%,$(_COMMONOBJ))
-TFTFOBJ = $(patsubst %,$(ODIR)/%,$(_TFTFOBJ))
-FFFFOBJ = $(patsubst %,$(ODIR)/%,$(_FFFFOBJ))
-S2CFGOBJ = $(patsubst %,$(ODIR)/%,$(_S2CFGOBJ))
-OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
-
-_LIBS = libcommon.a libtftf.a libffff.a libs2cfg.a
-LIBS = $(patsubst %,$(LIBDIR)/%,$(_LIBS))
+_LIBS = -lcommon -ls2cfg
+_LIBDEPS = libcommon.a libs2cfg.a
+LIBDEPS = $(patsubst %,$(LIBDIR)/%,$(_LIBDEPS))
 
 INC_DIRS := -I. $(COMMON_INCDIRS)
 
-all: $(OBJ) $(LIBS)
+.PHONY: all clean exe
 
+all: $(EXE)
 
-$(LIBDIR)/libcommon.a: $(COMMONOBJ)
-	mkdir -p $(dir $@)
-	ar rcs $@ $^
-	ranlib $@
-
-$(LIBDIR)/libtftf.a: $(TFTFOBJ)
-	mkdir -p $(dir $@)
-	ar rcs $@ $^
-	ranlib $@
-
-$(LIBDIR)/libffff.a: $(FFFFOBJ)
-	mkdir -p $(dir $@)
-	ar rcs $@ $^
-	ranlib $@
-
-$(LIBDIR)/libs2cfg.a: $(S2CFGOBJ)
-	mkdir -p $(dir $@)
-	ar rcs $@ $^
-	ranlib $@
+$(EXE): $(OBJ) $(LIBDEPS)
+	mkdir -p $(ODIR) $(BINDIR)
+	@ echo Compiling exe: $<
+	$(CC) $^ $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -lssl -lcrypto -o $@
 
 -include $(OBJ:.o=.d)
 
-.PHONY: all clean
-
 clean:
-	rm -f $(ODIR)/*.o $(LIBDIR)/*.a *~ core $(INCDIR)/*~
-
+	rm -f $(OBJ) $(EXE)
 

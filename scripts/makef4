@@ -186,12 +186,6 @@ pushd $BuildRoot
 echo "Building for $CONFIG_CHIP"
 ./configure ${CONFIG_CHIP}
 
-# Make our target folder
-if [ ! -d ./binary ]
-then
-    mkdir ./binary
-fi
-
 
 #-----
 # Make the s3FW

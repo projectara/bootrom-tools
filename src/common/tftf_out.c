@@ -90,6 +90,7 @@ bool write_tftf_file(const tftf_header * tftf_hdr,
     if (success) {
         /* Determine the length of the blob */
         length = tftf_hdr->header_size + tftf_payload_size(tftf_hdr);
+        /*****/printf("tftf length = %x + %x = %x\n", tftf_hdr->header_size, tftf_payload_size(tftf_hdr), length);
 
         /* Write the blob to the file */
         tftf_fd = open(output_filename, O_RDWR | O_CREAT | O_TRUNC, 0666);

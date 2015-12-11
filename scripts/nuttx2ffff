@@ -1,0 +1,129 @@
+#!/bin/bash
+#
+# Copyright (c) 2015 Google Inc.
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its
+# contributors may be used to endorse or promote products derived from this
+# software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+#------------------------------------------------------------------------------
+# Package a nuttx image into an ffff
+#------------------------------------------------------------------------------
+#
+# Usage:
+#    nuttx2ffff {-v} {--build name}
+#
+#    -v        Verbose mode on TFTF creation
+#    --build   Which nuttx image to use:
+#               ara-bridge-es2-debug-apbridgea | ara-bridge-es2-debug-generic |
+#               (ara-svc-db3) | ara-bridge-es2-debug-bringup | ara-svc-bdb2a |
+#               ara-svc-sdb
+#------------------------------------------------------------------------------
+
+# Get our build folders from environment variables
+source getbuildenv
+
+verbose=
+nuttx_build=
+for arg in "$@" ; do    # arg will be each positional parameter
+    if [[ ${arg} == "-v" ]]; then
+        verbose=${arg}
+    elif [[ ${arg} == "--build" ]]; then
+        nuttx_build=${arg}
+    fi
+done
+
+if [ !{} ]; then
+    nuttx_build=ara-svc-db3
+    echo "Assuming --build $nuttx_build"
+fi
+
+# Select the correct executables
+ScriptRootC=~/bootrom-tools/bin
+ScriptRoot=~/bootrom-tools
+if [ -f $ScriptRootC/create-tftf ]; then
+    create_tftf=$ScriptRootC/create-tftf
+else
+    echo "Falling back to Python create-tftf"
+    create_tftf=$ScriptRoot/create-tftf
+fi
+if [ -f $ScriptRootC/create-ffff ]; then
+    create_ffff=$ScriptRootC/create-ffff
+else
+    echo "Falling back to Python create-ffff"
+    create_ffff= $ScriptRoot/create-ffff
+fi
+
+NuttX_build=$NUTTXROOT/../build
+NuttX_image=$NuttX_build/ara-bridge-es2-debug-generic/image
+if [ ! -f $NuttX_image/nuttx.bin ]; then
+    echo "Error: Can't find $NuttX_image/nuttx.bin"
+    exit 1
+fi
+if [ ! -f $NuttX_image/System.map ]; then
+    echo "Error: Can't find $NuttX_image/System.map"
+    exit 1
+fi
+
+
+# Extract the start address by hunting for the "Reset_Handler" symbol in
+# the System.map file
+start=`grep Reset_Handler $NuttX_image/System.map | head -c 8`
+if [ ! ${start} ]; then
+    echo "Couldn't find Reset_Handler"
+    exit 1
+fi
+
+echo
+echo "Package the nuttx into a tftf:"
+echo "start address: 0x$start"
+
+$create_tftf \
+  $verbose \
+  --header-size 0x200 \
+  --map \
+  --type s2fw \
+  --name "NuttX S3FW-as-S2FW" \
+  --code $NuttX_image/nuttx.bin \
+  --start 0x$start \
+  --out nuttx.tftf
+
+
+echo "-----------------------------------------"
+echo "Package the tftf(s) into an ffff:"
+
+$create_ffff \
+  $verbose \
+  --header-size 0x1000 \
+  --map \
+  --generation 1  \
+  --flash-capacity 0x200000 \
+  --image-length 0x100000 \
+  --erase-size 0x1000 \
+  --name "Nuttx test build" \
+  --s2f nuttx.tftf --eloc 0x2000 --eid 17 \
+  --out nuttx.ffff
+
+echo "Done"
+
+

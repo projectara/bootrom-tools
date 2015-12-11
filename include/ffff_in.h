@@ -175,6 +175,22 @@ bool element_cache_validate_locations(uint32_t header_size,
                                       uint32_t erase_block_length,
                                       uint32_t image_length);
 
+
+/**
+ * @brief Determine if the content will fit in the FFFF romimage
+ *
+ * @param flash_capacity The capacity of the Flash, in bytes
+ * @param image_length The length of the FFFF
+ * @param header_size The size in bytes of the header
+ *
+ * @returns True if the content will fit in the image_length, false
+ *          otherwise
+ */
+bool check_ffff_romimage_size(const uint32_t flash_capacity,
+                              const uint32_t image_length,
+                              const uint32_t header_size);
+
+
 /**
  * @brief Allocate and initialize a FFFF romimage, including elements
  *

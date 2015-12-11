@@ -447,20 +447,26 @@ int main(int argc, char * argv[]) {
         /* TODO: Use macro (TBD) in tftf.h to calculate max_sections */
         ffff_max_elements = CALC_MAX_FFFF_ELEMENTS(header_size);
 
-        /* Create and initialize the TFTF blob... */
-        romimage = new_ffff_romimage(name,
+        success = check_ffff_romimage_size(flash_capacity, image_length,
+                                           header_size);
+        if (success) {
+            /* Create and initialize the TFTF blob... */
+            romimage = new_ffff_romimage(name,
                                      flash_capacity,
                                      erase_block_size,
                                      image_length,
                                      generation,
                                      header_size);
-        if (success) {
-            /* ...write it out and... */
-            success = write_ffff_file(romimage, output_filename);
-            if (success && map_flag) {
-                /* ...and write out the map file */
-                success = write_ffff_map_file(romimage, output_filename);
-            }
+             if (romimage) {
+                 /* ...write it out and... */
+                 success = write_ffff_file(romimage, output_filename);
+                 if (success && map_flag) {
+                     /* ...and write out the map file */
+                     success = write_ffff_map_file(romimage, output_filename);
+                 }
+             } else {
+                 success = false;
+             }
         }
 
         if (success && verbose_flag) {

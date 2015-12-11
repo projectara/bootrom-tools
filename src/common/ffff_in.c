@@ -258,6 +258,78 @@ void element_cache_init_iterator(void) {
 
 
 /**
+ * @brief Advance the iterator and size the data
+ *
+ * @param element_descriptor Where to store the element descriptor
+ * @param total_size A pointer to a variable to which we add the sizes of
+ *        the various elements.
+ *
+ * @returns 1 if successful, 0 if we reached the end of the list, or -1 if
+ *          there was an error.
+ */
+int element_cache_get_next_entry_size(ffff_element_descriptor * element_descriptor,
+                                 size_t * total_size) {
+    int status = -1;  /* assume failure */
+    bool success;
+    uint8_t *payload_end;
+
+    /* Next entry */
+    element_iterator++;
+
+    if ((element_iterator >= 0) &&
+        (element_iterator < current_element)) {
+        element_cache_entry * element = &element_cache[element_iterator];
+
+        *total_size += element->element.element_length;
+    }
+
+    return status;
+}
+
+
+/**
+ * @brief Determine if the content will fit in the FFFF romimage
+ *
+ * @param flash_capacity The capacity of the Flash, in bytes
+ * @param image_length The length of the FFFF
+ * @param header_size The size in bytes of the header
+ *
+ * @returns True if the content will fit in the image_length, false
+ *          otherwise
+ */
+bool check_ffff_romimage_size(const uint32_t flash_capacity,
+                              const uint32_t image_length,
+                              const uint32_t header_size) {
+    size_t  total_size = 2 * header_size;
+    ffff_element_descriptor * element;
+    int status;
+    int i = 0;
+    bool content_will_fit = false;
+
+    /* Determine the total header and payload length */
+    element_cache_init_iterator();
+    do {
+        status = element_cache_get_next_entry_size(element, &total_size);
+        i++;
+    } while ((status > 0) &&
+             (element->element_type != FFFF_ELEMENT_END) &&
+             (i < ffff_max_elements));
+
+    if (total_size > flash_capacity) {
+        fprintf(stderr, "ERROR: %x-byte content exceeds %x-byte flash capacity\n",
+                (uint32_t)total_size, flash_capacity);
+    } else if (total_size > image_length) {
+        fprintf(stderr, "ERROR: %x-byte content exceeds %x-byte FFFF image length\n",
+                    (uint32_t)total_size, image_length);
+    } else {
+        content_will_fit = true;
+    }
+
+    return content_will_fit;
+}
+
+
+/**
  * @brief Advance the iterator and extract the data
  *
  * @param element_descriptor Where to store the element descriptor
@@ -286,7 +358,11 @@ int element_cache_get_next_entry(ffff_element_descriptor * element_descriptor,
         payload_end = buffer +
                       element->element.element_length;
         if (payload_end > bufend) {
-            fprintf(stderr, "ERROR: element payload will overrun buffer\n");
+            fprintf(stderr,
+                    "ERROR: element [%d]: 0x%x-byte payload will overrun remaining buffer (0x%x0bytes)\n",
+                    element_iterator,
+                    element->element.element_length,
+                    (uint32_t)(bufend - buffer));
         } else {
             /* Copy the element descriptor */
             *element_descriptor = element->element; /* struct copy */
@@ -434,6 +510,7 @@ struct ffff * new_ffff_romimage(const char *   name,
         element->element_type = FFFF_ELEMENT_END;
 
 
+
         /* Add the elements */
         element_cache_init_iterator();
         do {
@@ -457,8 +534,8 @@ struct ffff * new_ffff_romimage(const char *   name,
                FFFF_SENTINEL_SIZE);
 
         /**
-         * Now that the first FFFF header has been initialized, replicate it
-         * into the 2nd FFFF header
+         * Now that the first FFFF header has been initialized, replicate
+         * it into the 2nd FFFF header
          */
         memcpy(romimage->ffff_hdrs[1], romimage->ffff_hdrs[0],
                header_blob_length);

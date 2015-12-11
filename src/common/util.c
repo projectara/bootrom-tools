@@ -50,7 +50,7 @@
  *
  * @param filename The name of the file to check
  *
- * @returns Returns On success, returns the length of the file in bytes;
+ * @returns On success, returns the length of the file in bytes;
  *          -1 on failure
  */
 ssize_t size_file(const char * filename) {

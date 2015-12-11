@@ -593,7 +593,7 @@ int main(int argc, char * argv[]) {
         section_cache_entry_close();
 
         /* Validate that we have the needed args */
-        success = validate_args();
+       success = validate_args();
     }
 
     if (!success) {
@@ -614,13 +614,14 @@ int main(int argc, char * argv[]) {
                             unipro_pid,
                             ara_vid,
                             ara_pid);
+        success = (tftf_hdr != NULL);
 
         if (success) {
             /* ...write it out and... */
-            success = write_tftf_file(tftf_hdr, output_filename);
+           success = write_tftf_file(tftf_hdr, output_filename);
             if (success && map_flag) {
                 /* ...and write out the map file */
-                success = write_tftf_map_file(tftf_hdr, output_filename);
+               success = write_tftf_map_file(tftf_hdr, output_filename);
             }
         }
 

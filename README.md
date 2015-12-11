@@ -24,6 +24,7 @@ in which one would use them.
 * **sign-tftf** Cryptographically sign the contents of a TFTF file with the specified private key.
 * **create-ffff** Assemble one or more TFTF blobs into an FFFF file
 * **display-ffff** Display the contents of an FFFF file
+* **nuttx2ffff** Package the nuttx.bin into an FFFF file
 
 ### create-tftf
 **create-tftf**
@@ -167,6 +168,14 @@ Each element (`[<element_type> <file>] {<element_option>}`)is described with an 
 * `--map`: Generate a .map file of the FFFF field offsets
 * `--explode`: (Deprecated) Saves FFFF elements in separate files with the same root name
 * `<FFFF-file>...`: One or more FFFF files to display
+
+### nuttx2ffff
+**nuttx2ffff**
+{-v}
+{--build=name}
+
+* `-v`: Verbose mode, in which the script will dump the contents of the FFFF headers, contained TFTF headers and TFTF sections in greater detail
+* `--build`: Which nuttx image to use: ara-bridge-es2-debug-apbridgea | ara-bridge-es2-debug-generic | (ara-svc-db3) | ara-bridge-es2-debug-bringup | ara-svc-bdb2a | ara-svc-sdb
 
 ## Libraries you must load before use
 

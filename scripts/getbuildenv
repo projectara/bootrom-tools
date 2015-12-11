@@ -37,6 +37,14 @@ if [ ! ${BOOTROM_ROOT} ]; then
     MissingEnv=true
 fi
 
+if [ ! ${BOOTROM_TOOLS} ]; then
+    echo "BOOTROM_TOOLS not defined, (typ. ~/work/bootrom-tools)"
+    echo "Your PATH should search for these tools in the following order:"
+    echo "  \$BOOTROM_TOOLS/bin \$BOOTROM_TOOLS/ftdi"
+    echo "  \$BOOTROM_TOOLS/scripts \$BOOTROM_TOOLS"
+    MissingEnv=true
+fi
+
 if [ ! ${KEY_DIR} ]; then
     echo "KEY_DIR not defined, (typ. ~/bin)"
     MissingEnv=true
@@ -63,7 +71,7 @@ if [ ! ${DELIVERY_ROOT} ]; then
 fi
 
 # Bail if we're missing any of our environment variables
-if [ ! $MissingEnv ]; then
+if [ $MissingEnv == true ]; then
     echo "Please add the above to your environment and try again"
     exit 1
 fi

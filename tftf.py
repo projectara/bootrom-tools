@@ -34,7 +34,7 @@ import os
 from struct import pack_into, unpack_from
 from string import rfind
 from time import gmtime, strftime
-from util import display_binary_data, error
+from util import display_binary_data, error, print_to_error
 from signature_block import signature_block_write_map
 from signature_common import TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256
 
@@ -692,9 +692,12 @@ class Tftf:
             self.timestamp = strftime("%Y%m%d %H%M%S", gmtime())
 
         # Trim the name to length
-        if self.firmware_package_name:
+        if len(self.firmware_package_name) >= TFTF_FW_PKG_NAME_LENGTH:
             self.firmware_package_name = \
-                self.firmware_package_name[0:TFTF_FW_PKG_NAME_LENGTH]
+                self.firmware_package_name[0:TFTF_FW_PKG_NAME_LENGTH-1]
+            print_to_error("firmware package name has been truncated to "
+                           "'{0:s}'".format(self.firmware_package_name))
+                  
 
         # Determine the validity
         self.sniff_test()
@@ -972,8 +975,8 @@ class Tftf:
             if section.section_type == TFTF_SECTION_TYPE_END_OF_DESCRIPTORS:
                 break
             elif section.section_type == TFTF_SECTION_TYPE_SIGNATURE:
-                signature_block_write_map(wf, base_offset, sn_name)
+                signature_block_write_map(wf, section.load_address, sn_name)
             else:
             # Otherwise, just describe it generically
-                wf.write("{0:s}  {1:08x}\n".format(sn_name, base_offset))
+                wf.write("{0:s}  {1:08x}\n".format(sn_name, section.load_address))
             base_offset += section.section_length

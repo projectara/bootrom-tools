@@ -38,6 +38,9 @@ from tftf import Tftf, TFTF_SECTION_TYPE_RAW_CODE, \
     TFTF_SECTION_TYPE_SIGNATURE, TFTF_SECTION_TYPE_CERTIFICATE, \
     DATA_ADDRESS_TO_BE_IGNORED, TFTF_HDR_NUM_SECTIONS, \
     TFTF_HEADER_SIZE_MIN, TFTF_HEADER_SIZE_MAX, TFTF_HEADER_SIZE_DEFAULT
+from ffff_element import FFFF_ELEMENT_STAGE2_FIRMWARE_PACKAGE, \
+    FFFF_ELEMENT_STAGE3_FIRMWARE_PACKAGE, FFFF_ELEMENT_IMS_CERTIFICATE, \
+    FFFF_ELEMENT_CMS_CERTIFICATE, FFFF_ELEMENT_DATA
 from util import error, warning
 import io
 from elftools.elf.elffile import ELFFile
@@ -63,9 +66,40 @@ code_data_blocked = False
 code_data_while_blocked = False
 
 
+package_types = {
+    "s2fw": FFFF_ELEMENT_STAGE2_FIRMWARE_PACKAGE,
+    "s3fw": FFFF_ELEMENT_STAGE3_FIRMWARE_PACKAGE,
+    "icert": FFFF_ELEMENT_IMS_CERTIFICATE,
+    "ccert": FFFF_ELEMENT_CMS_CERTIFICATE,
+    "data": FFFF_ELEMENT_DATA,
+}
+
+package_names = {
+    FFFF_ELEMENT_STAGE2_FIRMWARE_PACKAGE: "s2fw",
+    FFFF_ELEMENT_STAGE3_FIRMWARE_PACKAGE: "s3fw",
+    FFFF_ELEMENT_IMS_CERTIFICATE: "icert",
+    FFFF_ELEMENT_CMS_CERTIFICATE: "ccert",
+    FFFF_ELEMENT_DATA: "data",
+}
+
+
+
 # the list of sections
 sections = []
 
+def package_name(package_type):
+    # Convert package type into textual form
+    if package_type in package_names:
+        return package_names[element_type]
+    else:
+        return "?"
+
+def package_type(package_name):
+    # Convert package name into a package_type
+    if package_name in package_types:
+        return package_types[package_name]
+    else:
+        return "?"
 
 def auto_int(x):
     # Workaround to allow hex numbers to be entered for numeric arguments.
@@ -165,6 +199,7 @@ class ElfFileAction(argparse.Action):
                 sections += elf_sections
                 if namespace.start == 0:
                     namespace.start = image['e_entry']
+                    print("start at {0:08x}".format(namespace.start)) #*****
         except IOError as e:
             error(option_string, " must be followed by an ELF image!")
         except Exception as e:
@@ -302,6 +337,9 @@ def main():
                         action=ElfFileAction,
                         help="The name of an input ELF image file")
 
+    parser.add_argument("--type",
+                        help="Package type")
+
     # Per-section numeric args
     parser.add_argument("--class",
                         action=SectionAction,
@@ -386,11 +424,7 @@ def main():
     # Populate the TFTF header from the command line args
     tftf_header = Tftf(args.header_size)
     tftf_header.firmware_package_name = args.name
-    if args.load != 0:
-        tftf_header.load_base = args.load
-    else:
-        error("No loading address specified.")
-        sys.exit(errno.EINVAL)
+    tftf_header.package_type = package_type(args.type)
     if args.start != 0:
         tftf_header.start_location = args.start
     else:

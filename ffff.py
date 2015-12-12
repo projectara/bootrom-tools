@@ -48,8 +48,8 @@ from ffff_element import FFFF_HDR_VALID, \
     FFFF_HDR_LEN_FIXED_PART, FFFF_HDR_LEN_TAIL_SENTINEL, \
     FFFF_HEADER_SIZE_MIN, FFFF_HEADER_SIZE_MAX, FFFF_HEADER_SIZE_DEFAULT
 import sys
-from util import error, is_power_of_2, next_boundary, is_constant_fill, \
-    PROGRAM_ERRORS
+from util import error, warning, is_power_of_2, next_boundary, \
+    is_constant_fill, PROGRAM_ERRORS
 
 
 def get_header_block_size(erase_block_size, header_size):
@@ -343,9 +343,9 @@ class Ffff:
                     if end_b >= start_a and start_b <= end_a:
                         self.collisions_found = True
                         collision += [j]
-                        error("Element [{0:d}] @ {1:x}-{2:x} collides with "\
+                        error("Element [{0:d}] @ {1:x}-{2:x} collides with "
                               "element [{3:d}] @ {4:x}-{5:x}".
-                              format(i, start_a, end_a, j, start_b, end_b)) 
+                              format(i, start_a, end_a, j, start_b, end_b))
 
                     # check for other duplicate entries
                     # Per the specification: "At most, one element table
@@ -479,9 +479,11 @@ class Ffff:
         self.sentinel = FFFF_SENTINEL
 
         self.timestamp = strftime("%Y%m%d %H%M%S", gmtime())
-        if self.flash_image_name:
+        if len(self.flash_image_name) >= FFFF_FLASH_IMAGE_NAME_LENGTH:
             self.flash_image_name = \
-                self.flash_image_name[0:FFFF_FLASH_IMAGE_NAME_LENGTH]
+                self.flash_image_name[0:FFFF_FLASH_IMAGE_NAME_LENGTH - 1]
+            warning("flash_image_name truncated to '{0:s}'".
+                    format(self.flash_image_name))
         self.tail_sentinel = FFFF_SENTINEL
 
         # Flush the structure elements to the FFFF buffer and do a final

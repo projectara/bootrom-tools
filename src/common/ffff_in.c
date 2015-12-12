@@ -443,7 +443,8 @@ bool element_cache_validate_locations(uint32_t header_size,
         } else if ((element_location < lower_limit) ||
                    (element_location >= image_length)) {
             fprintf(stderr,
-                    "ERROR: Element location %08x is out of bounds (%08x..%08x) (%s)\n",
+                    "ERROR: Element location 0x%08x is out "
+                    "of bounds (0x%08x..0x%08x) (%s)\n",
                     element_location, lower_limit, lower_limit + image_length,
                     element_cache[index].filename);
             valid = false;
@@ -498,6 +499,10 @@ struct ffff * new_ffff_romimage(const char *   name,
         safer_strcpy(ffff_hdr->flash_image_name,
                      sizeof(ffff_hdr->flash_image_name),
                      name);
+        if (strlen(ffff_hdr->flash_image_name) < strlen(name)) {
+            fprintf(stderr, "Warning, flash_image_name truncated to '%s'\n",
+                    ffff_hdr->flash_image_name);
+        }
         ffff_hdr->flash_capacity = flash_capacity;
         ffff_hdr->erase_block_size = erase_block_size;
         ffff_hdr->header_size = header_size;

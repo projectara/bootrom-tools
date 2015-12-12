@@ -48,8 +48,8 @@
 
 
 static parse_entry element_types[] = {
-    {"s3fw", FFFF_ELEMENT_STAGE_2_FW},
-    {"s2fw", FFFF_ELEMENT_STAGE_3_FW},
+    {"s2fw", FFFF_ELEMENT_STAGE_2_FW},
+    {"s3fw", FFFF_ELEMENT_STAGE_3_FW},
     {"icert", FFFF_ELEMENT_IMS_CERT},
     {"ccert", FFFF_ELEMENT_CMS_CERT},
     {"data", FFFF_ELEMENT_DATA},
@@ -255,6 +255,16 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
     total_entries = parse_table->num_entries +
             parse_table->num_secondary_entries;
 
+    /* Pre-parsing, apply defaults */
+    for (optx = parse_table->optx; (optx->long_names) != NULL; optx++) {
+        if (optx->count == 0) {
+            /* Missing arg */
+            if ((optx->flags & DEFAULT_VAL) && optx->var_ptr) {
+                *(uint32_t*)optx->var_ptr = optx->default_val;
+            }
+        }
+    }
+
     /* Parsing loop */
     while (true) {
         option = getopt_long_only (argc,
@@ -274,7 +284,7 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
         }
 
         /**
-         * Perform any global preprocesing before calling the appropriate callback.
+         * Perform any global pre-processing before calling the appropriate callback.
          */
         if (parse_table->preprocess) {
             parse_table->preprocess(option);
@@ -311,7 +321,7 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
             *  zero. The workaround is to check the option char against the
             *  short name, and if they don't match, search for it ourselves.
             */
-           if (/*(option_index == 0) &&*/ (option != optx->short_name)) {
+           if (option != optx->short_name) {
                for (optx = parse_table->optx; (optx->long_names) != NULL; optx++) {
                    if (optx->short_name == option) {
                        break;
@@ -328,18 +338,17 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
         }
     }
 
-    /* Post-parsing, apply defaults or squawk about missing params */
+    /* Post-parsing, squawk about missing params */
     for (optx = parse_table->optx; (optx->long_names) != NULL; optx++) {
         if (optx->count == 0) {
             /* Missing arg */
             if (optx->flags & REQUIRED) {
                 fprintf (stderr, "ERROR: --%s is required\n", (optx->long_names)[0]);
                 success = false;
-            } else if ((optx->flags & DEFAULT_VAL) && optx->var_ptr) {
-                *(uint32_t*)optx->var_ptr = optx->default_val;
             }
         }
     }
+
     return success;
 }
 

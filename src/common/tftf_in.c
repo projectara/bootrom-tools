@@ -508,6 +508,7 @@ bool elf_add_section_cache_entry(Elf_Scn *scn, uint32_t type) {
                (data = elf_getdata(scn, data)) != NULL) {
             success = (section_cache_entry_open(type, NULL) == 0) &&
                       section_cache_entry_set_blob(data->d_buf, data->d_size);
+            section_cache[current_section].section.section_load_address = (uint32_t)shdr.sh_addr;
             section_cache_entry_close();
             break;
         }

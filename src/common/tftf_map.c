@@ -44,8 +44,56 @@
 #include "util.h"
 #include "tftf.h"
 #include "tftf_common.h"
+#include "tftf_print.h"
 #include "tftf_map.h"
 
+
+/**
+ * @brief Write the TFTF section table field offsets to the map file.
+ *
+ * Append the map for this TFTF to the map file.
+ *
+ * @param tftf_hdr The TFTF blob to write
+ * @param prefix Optional prefix for each map entry
+ * @param offset The starting offset of the TFTF (zero for a standalone
+ *        tftf map; non-zero for a TFTF in an FFFF).
+ * @param map_file The open file object for the map file.
+ *
+ * @returns Returns nothing
+ */
+void signature_block_write_map(const tftf_section_descriptor * section,
+                               const char * prefix,
+                               size_t offset,
+                               FILE * map_file) {
+    char prefix_buf[256] = {0};
+
+    prefix_buf[0] = '\0';
+    if (prefix) {
+        /**
+         * If we have a prefix, then issue a marker (without any added ".")
+         * separator) for the start of the tftf.
+         */
+        fprintf(map_file, "%s  %08x\n", prefix, (uint32_t)offset);
+
+        /* Ensure the prefix we use for the signature fields has a separator */
+        if (!endswith(prefix, ".")) {
+            snprintf(prefix_buf, sizeof(prefix_buf), "%s.", prefix);
+        } else {
+            snprintf(prefix_buf, sizeof(prefix_buf), "%s", prefix);
+        }
+    }
+    prefix = prefix_buf;
+
+    /* Add the header fields */
+    fprintf(map_file, "%slength  %08x\n",
+            prefix, (uint32_t)(offset + offsetof(tftf_signature, length)));
+    fprintf(map_file, "%stype  %08x\n",
+            prefix, (uint32_t)(offset + offsetof(tftf_signature, type)));
+    fprintf(map_file, "%skey_name  %08x\n",
+            prefix, (uint32_t)(offset + offsetof(tftf_signature, key_name)));
+    fprintf(map_file, "%skey_signature  %08x\n",
+            prefix, (uint32_t)(offset + offsetof(tftf_signature, signature)));
+}
 
 /**
  * @brief Write the TFTF section table field offsets to the map file.
@@ -65,12 +113,12 @@ void write_tftf_section_table_map(const tftf_header * tftf_hdr,
                                   size_t offset,
                                   FILE * map_file) {
     int index;
-    const tftf_section_descriptor * section = tftf_hdr->sections;
+    const tftf_section_descriptor * section;
 
     offset += offsetof(tftf_header, sections);
 
     /* Print out the occupied entries in the section table */
-    for (index = 0;
+    for (index = 0, section = tftf_hdr->sections;
          index < tftf_max_sections;
          index++, section++, offset += sizeof(*section)) {
         fprintf(map_file, "%ssection[%d].type  %08x\n",
@@ -93,6 +141,32 @@ void write_tftf_section_table_map(const tftf_header * tftf_hdr,
                 prefix, index,
                 (uint32_t)(offset + offsetof(tftf_section_descriptor,
                                              section_expanded_length)));
+    }
+
+    /* Print out the section starts */
+    for (index = 0, section = tftf_hdr->sections;
+         ((index < tftf_max_sections) &&
+          (section->section_type != TFTF_SECTION_END));
+         index++, section++, offset += sizeof(*section)) {
+        char section_prefix[256];
+
+        snprintf(section_prefix, sizeof(section_prefix),
+                "%ssection[%d].%s",
+                prefix, index, tftf_section_type_name(section->section_type));
+
+
+        switch (section->section_type) {
+        case TFTF_SECTION_SIGNATURE:
+            signature_block_write_map(section, section_prefix,
+                                      section->section_load_address, map_file);
+
+            break;
+        default:
+            /* just describe it generically */
+            fprintf(map_file, "%s  %08x\n",
+                    section_prefix, section->section_load_address);
+            break;
+        }
     }
 }
 
@@ -119,7 +193,6 @@ void write_tftf_map(const tftf_header * tftf_hdr,
 
     prefix_buf[0] = '\0';
     if (prefix) {
-
         /**
          * If we have a prefix, then issue a marker (without any added "."
          * separator) for the start of the tftf.
@@ -129,9 +202,11 @@ void write_tftf_map(const tftf_header * tftf_hdr,
         /* Ensure the prefix we use for the TFTF fields has a separator */
         if (!endswith(prefix, ".")) {
             snprintf(prefix_buf, sizeof(prefix_buf), "%s.", prefix);
-            prefix = prefix_buf;
+        } else {
+            snprintf(prefix_buf, sizeof(prefix_buf), "%s", prefix);
         }
     }
+    prefix = prefix_buf;
 
 
     /* Print out the fixed part of the header */
@@ -200,7 +275,7 @@ bool write_tftf_map_file(const tftf_header * tftf_hdr,
                 fprintf(stderr, "ERROR: Can't create map file '%s' (err %d)\n",
                         map_filename, errno);
             } else {
-                write_tftf_map(tftf_hdr, "tftf[3]", 0, map_file);
+                write_tftf_map(tftf_hdr, NULL, 0, map_file);
 
                 /* Done with the TFTF file. */
                 fclose(map_file);
@@ -210,4 +285,3 @@ bool write_tftf_map_file(const tftf_header * tftf_hdr,
 
     return success;
 }
-

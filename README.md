@@ -202,6 +202,13 @@ FTDI libraries
 * **D2xx** drivers/ibraries (see: FTDI [AN 220](http://www.ftdichip.com/Support/Documents/AppNotes/AN_220_FTDI_Drivers_Installation_Guide_for_Linux%20.pdf) for download and install instructions)
 * **LibMPSSE_SPI** There doesn't appear to be a place from which one can install the libraries. So, the current approach is to download the source from the [FTDI site](http://www.ftdichip.com/Support/SoftwareExamples/MPSSE/LibMPSSE-SPI.htm) and rebuild the libs. Follow the link at the bottom of the text "The source code for the LibMPSSE-SPI library is available for download here", and and unzip the dowloaded file to your home directory. Once unzipped, cd ~/LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux and type "make"
 
+Other libraries:
+
+* **libelf** See (https://launchpad.net/ubuntu/+source/libelf)
+* **openssl** From http://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-c-library-on-ubuntu:
+
+sudo apt-get install libssl-dev
+
 # Examples
 
 ## Example 1: packaging a [nuttx](https://github.com/projectara/nuttx) firmware into a TFTF image
@@ -338,7 +345,7 @@ image names being ornamented with the build mode.
 * **makeall** (called from makedrop) compiles the server, FFFF and bootrom for
   a specific configuration.
   *The minimal command line to create an ES3 bringup sample is:*
-  
+
 > `makeall -es3tsb --rev==HEAD`
 
 * **makef4** (called from makeall) compiles the L2FW and L3FW with the desired
@@ -396,7 +403,7 @@ unnecessary recompilation.
 
 #### Special Test values
 * **1** Spec_StandbyTest - Allow 3rd stage FW to try to put the chip
-into standby. 
+into standby.
 * **2** Spec_GBBootSrvStandbyTest - STANDBY_TEST plus S3FW waits for the
 server to put UniPro to hibern8 mode before suspend
 * **3** Spec_GearChangeTest - Run the SpiRom at different gear speeds

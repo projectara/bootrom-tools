@@ -88,9 +88,11 @@ pushd $DeliveryDir
 cp $BuildDir/bromcAP.bin $DeliveryDir
 cp $BuildDir/bromcAP.bitcount $DeliveryDir
 cp $BuildDir/bromcAP.dat $DeliveryDir
+cp $BuildDir/bromcAP.sha256 $DeliveryDir
 cp $BuildDir/bromcGP.bin $DeliveryDir
 cp $BuildDir/bromcGP.bitcount $DeliveryDir
 cp $BuildDir/bromcGP.dat $DeliveryDir
+cp $BuildDir/bromcGP.sha256 $DeliveryDir
 # NB. Awaiting confirmation on whether or not the hex file needs to be included
 #cp $BuildDir/bootrom.hex $DeliveryDir/bootrom$Ornamentation.hex
 

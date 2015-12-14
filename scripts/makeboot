@@ -193,6 +193,8 @@ fi
 echo "Make 1st stage FW (BootRom)..."
 make clean
 make
+sha256sum < build/bromcAP.bin > build/bromcAP.sha256
+sha256sum < build/bromcGP.bin > build/bromcGP.sha256
 
 git checkout master
 

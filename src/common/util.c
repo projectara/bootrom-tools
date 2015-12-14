@@ -45,6 +45,18 @@
 #include "util.h"
 
 
+/* Mask values used by "hamming_weight" */
+#define MASK8_1S    ((uint8_t)0x55) /* binary: 0101... */
+#define MASK8_2S    ((uint8_t)0x33) /* binary: 00110011.. */
+#define MASK8_4S    ((uint8_t)0x0f) /* binary:  4 zeros,  4 ones ... */
+
+#define MASK32_1S   ((uint32_t)0x55555555) /* binary: 0101... */
+#define MASK32_2S   ((uint32_t)0x33333333) /* binary: 00110011.. */
+#define MASK32_4S   ((uint32_t)0x0f0f0f0f) /* binary:  4 zeros,  4 ones ... */
+#define MASK32_8S   ((uint32_t)0x00ff00ff) /* binary:  8 zeros,  8 ones ... */
+#define MASK32_16S  ((uint32_t)0x0000ffff) /* binary:  16 zeros, 16 ones ... */
+
+
 /**
  * @brief Determine the size of a file
  *
@@ -649,4 +661,63 @@ int mkdir_recursive(char *path)
     }
 
     return rvalue;
+}
+
+
+/**
+ * @brief Count the number of "1" bits in an n-byte buffer
+ *
+ * @param buf The buffer to test
+ * @param len The length in bytes of buf
+ *
+ * @returns The number of set bits in x (0 <= n <= 32)
+ */
+uint32_t hamming_weight(uint8_t *buf, int len) {
+    uint8_t     x;
+    uint32_t    x32;
+    uint32_t *  buf32 = (uint32_t *) buf;
+    uint32_t    count = 0;
+
+    /* Process in 4-byte chunks as far as possible */
+    while (len >= 4) {
+        x32 = *buf32++;
+
+        /* put count of each 2 bits into those 2 bits */
+        x32 = (x32 & MASK32_1S) + ((x32 >> 1) & MASK32_1S);
+
+        /* put count of each 4 bits into those 4 bits */
+        x32 = (x32 & MASK32_2S) + ((x32 >> 2) & MASK32_2S);
+
+        /* put count of each 8 bits into those 8 bits */
+        x32 = (x32 & MASK32_4S) + ((x32 >> 4) & MASK32_4S);
+
+        /* put count of each 16 bits into those 16 bits */
+        x32 = (x32 & MASK32_8S) + ((x32 >> 8) & MASK32_8S);
+
+        /* put count of each 16 bits into those 16 bits */
+        x32 = (x32 + (x32 >> 16)) & MASK32_16S;
+
+        count += x32;
+        len -= 4;
+    }
+
+    /* Process any remaining bytes one at a time */
+    buf = (uint8_t *)buf32;
+    while (len > 0) {
+        x = *buf++;
+
+        /* put count of each 2 bits into those 2 bits */
+        x -= (x >> 1) & MASK8_1S;
+
+        /* put count of each 4 bits into those 4 bits */
+        x = (x & MASK8_2S) + ((x >> 2) & MASK8_2S);
+
+        /* put count of each 8 bits into those 8 bits */
+        x = (x + (x >> 4)) & MASK8_4S;
+
+        count += x;
+        len--;
+    }
+
+    return count;
 }

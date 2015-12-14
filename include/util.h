@@ -333,4 +333,15 @@ char * join(char * outbuf, size_t outbuf_size, const char * path,
  */
 int mkdir_recursive(char *path);
 
+
+/**
+ * @brief Count the number of "1" bits in an n-byte buffer
+ *
+ * @param buf The buffer to test
+ * @param len The length in bytes of buf
+ *
+ * @returns The number of set bits in x (0 <= n <= 32)
+ */
+uint32_t hamming_weight(uint8_t *buf, int len);
+
 #endif /* !_COMMON_UTIL_H */

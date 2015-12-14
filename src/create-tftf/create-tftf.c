@@ -521,7 +521,45 @@ uint32_t boot_stage(const uint32_t package_type) {
 
 
 /**
- * @brief Validate and pos-process the command line args
+ * @brief Bit-balance MID/PID, VID/PID
+ *
+ * Vendors have been told to use 15-bit MIDs, VIDs and PIDs, but the bootrom
+ * requires Hamming-balanced values. The workaround is to copy the 1s
+ * compliment of the lower 16 bits into the upper 16 bits.
+ *
+ * @param vidpid The candidate MID/PID, VID/PID
+ *
+ * @returns If the original value is <= 0x7fff, it returns a value with the
+ *          the original value OR'd with the 1's compliment of the LSB 16 bits
+ *          shifted into the MSB 16 bits. If the original value is < 0x7fff,
+ *          it returns the original value
+ */
+bool balance_vidpid(uint32_t * vidpid, char* name) {
+    bool good_vidpid = true;
+
+    if (!name) {
+        name = "unknown";
+    }
+    if (*vidpid != 0) {
+        if (*vidpid <= 0x00007fff) {
+            fprintf(stderr, "Warning: %s upconverted from %x", name, *vidpid);
+            *vidpid |= ~*vidpid << 16;
+            fprintf(stderr, " to %08x\n", *vidpid);
+        } else {
+            /* 32-bit MID/VID/PID: Check for a valid Hamming weight */
+            good_vidpid = (hamming_weight((uint8_t *)vidpid, sizeof(*vidpid)) == 16);
+        }
+
+        if (!good_vidpid) {
+            fprintf(stderr, "ERROR: %s (%08x) has an invalid Hamming weight\n", name, *vidpid);
+        }
+    }
+
+    return good_vidpid;
+}
+
+/**
+ * @brief Validate and post-process the command line args
  *
  * @returns Returns true if the parsed args pass muster, false otherwise.
  */
@@ -559,6 +597,18 @@ bool validate_args(void) {
             join(outfile_pathname, sizeof(outfile_pathname), output_dir, output_filename);
             output_filename = outfile_pathname;
         }
+
+        /**
+         * Workaround for early stages of project distribution:
+         * Vendors have been told to use 15-bit MIDs, VIDs and PIDs, but
+         * the bootrom requires Hamming-balanced values. The workaround is
+         * to copy the 1s compliment of the lower 16 bits into the upper
+         * 16 bits.
+         */
+        success = balance_vidpid(&unipro_mfg, "unipro_mid") &&
+            balance_vidpid(&unipro_pid, "unipro_pid") &&
+            balance_vidpid(&ara_vid, "ara_vid") &&
+            balance_vidpid(&ara_pid, "ara_pid");
     }
 
     return success;

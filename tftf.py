@@ -697,7 +697,6 @@ class Tftf:
                 self.firmware_package_name[0:TFTF_FW_PKG_NAME_LENGTH-1]
             print_to_error("firmware package name has been truncated to "
                            "'{0:s}'".format(self.firmware_package_name))
-                  
 
         # Determine the validity
         self.sniff_test()
@@ -893,7 +892,6 @@ class Tftf:
 
     def create_map_file(self, base_name, base_offset, prefix=""):
         """Create a map file from the base name
-
         Create a map file from the base name substituting or adding ".map"
         as the file extension, and write out the offsets for the TFTF fields.
         """
@@ -978,5 +976,6 @@ class Tftf:
                 signature_block_write_map(wf, section.load_address, sn_name)
             else:
             # Otherwise, just describe it generically
-                wf.write("{0:s}  {1:08x}\n".format(sn_name, section.load_address))
+                wf.write("{0:s}  {1:08x}\n".
+                         format(sn_name, section.load_address))
             base_offset += section.section_length

@@ -77,6 +77,8 @@ $(LIBDIR)/libffff.a: $(FFFFOBJ)
 	ar rcs $@ $^
 	ranlib $@
 
+-include $(OBJ:.o=.d)
+
 .PHONY: all clean
 
 clean:

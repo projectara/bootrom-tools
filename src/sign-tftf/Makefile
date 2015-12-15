@@ -58,6 +58,8 @@ $(EXE): $(OBJ) $(LIBDEPS)
 	@ echo Compiling exe $<
 	$(CC) $^ $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -lelf -o $@
 
+-include $(OBJ:.o=.d)
+
 clean:
 	rm -f $(OBJ) $(EXE)
 

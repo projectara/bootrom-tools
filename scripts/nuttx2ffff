@@ -31,29 +31,51 @@
 #------------------------------------------------------------------------------
 #
 # Usage:
-#    nuttx2ffff {-v} [--in=file} | {--build=name}] {-outdir=<dir>}
+#    nuttx2ffff {-v} [{--in=file} | {--build=name}] {-outdir=<dir>} {--help}
 #
 #    -v        Verbose mode on TFTF creation
+#    --help    Display usage
+#    --in      Arbitrary path to a nuttx file
 #    --build   Which nuttx image to use:
 #               ara-bridge-es2-debug-apbridgea | ara-bridge-es2-debug-generic |
 #               (ara-svc-db3) | ara-bridge-es2-debug-bringup | ara-svc-bdb2a |
 #               ara-svc-sdb
+#    If neither --in or --build are specified, it will use the image in
+#    .../nuttx/nuttx
 #------------------------------------------------------------------------------
-
-# Get our build folders from environment variables
-source getbuildenv
 
 verbose=
 nuttx_build=
+help=false
 for arg in "$@" ; do    # arg will be each positional parameter
     if [[ ${arg} == "-v" ]]; then
         verbose=${arg}
     elif [[ ${arg} == --build=* ]]; then
         nuttx_build="${arg#*=}"
-    elif [[ ${arg} == --build=* ]]; then
+    elif [[ ${arg} == --in=* ]]; then
         NUTTX_IMAGE="${arg#*=}"
-    fi
+    elif [[ ${arg} == "--help" ]]; then   # Issue usage message
+        help=true
+     fi
 done
+
+# Usage?
+if $help; then
+echo "Usage:
+   nuttx2ffff {-v} [{--in=file} | {--build=name}] {-outdir=<dir>} {--help}
+
+   -v        Verbose mode on TFTF creation
+   --help    This message
+   --in      Arbitrary path to a nuttx file
+   --build   Which nuttx image to use:
+              ara-bridge-es2-debug-apbridgea | ara-bridge-es2-debug-generic |
+              (ara-svc-db3) | ara-bridge-es2-debug-bringup | ara-svc-bdb2a |
+              ara-svc-sdb
+   If neither --in or --build are specified, it will use the image in
+   .../nuttx/nuttx
+"
+    exit 1
+fi
 
 if [ ! ${NUTTX_IMAGE} ]; then
     if [ ${nuttx_build} ]; then
@@ -63,8 +85,10 @@ if [ ! ${NUTTX_IMAGE} ]; then
         nuttx_build=`basename ${nuttx_build}`
         NuttX_build=`readlink -f $NUTTXROOT/../build`
         NUTTX_IMAGE=$NuttX_build/$nuttx_build/image/nuttx
+        echo "nuttx image from --build"
     else
         NUTTX_IMAGE=$NUTTXROOT/nuttx
+        echo "nuttx image from default"
     fi
 fi
 echo "Packaging ${NUTTX_IMAGE}"
@@ -75,19 +99,9 @@ if [ ! -f ${NUTTX_IMAGE} ]; then
     exit 1
 fi
 
-
-## Extract the start address by hunting for the "Reset_Handler" symbol in
-## the System.map file
-#start=`grep Reset_Handler ${NUTTX_IMAGE}/System.map | head -c 8`
-#if [ ! ${start} ]; then
-#    echo "Couldn't find Reset_Handler"
-#    start=`hexdump -n 4 -e '1/4 "%08x"' ${NUTTX_IMAGE}/System.map`
-#    echo "Extracted start address from reset vector"
-#fi
-
 #echo
 #echo "Package ${NUTTX_IMAGE}/nuttx into nuttx.tftf:"
-echo "start address: 0x$start"
+#echo "start address: 0x$start"
 
 create-tftf \
   $verbose \
@@ -102,9 +116,6 @@ if [[ $? != 0 ]]; then
     exit 1
 fi
 
-#echo
-#echo "Package nuttx.tftf into nuttx.ffff:"
-
 create-ffff \
   $verbose \
   --header-size 0x1000 \
@@ -113,22 +124,22 @@ create-ffff \
   --image-length 0x40000 \
   --erase-size 0x800 \
   --name "Nuttx test build" \
-  --s2f ${NUTTX_IMAGE}/nuttx.tftf --eloc 0x2000 --egen 1 \
-  --out ${NUTTX_IMAGE}/nuttx.ffff
+  --s2f ${NUTTX_IMAGE}.tftf --eloc 0x2000 --egen 1 \
+  --out ${NUTTX_IMAGE}.ffff
 
 
 if [[ $? != 0 ]]; then
     echo "There were problems creating the FFFF"
     # Cleanup intermediate files
-    rm ${NUTTX_IMAGE}/nuttx.tftf
+    rm ${NUTTX_IMAGE}.tftf
     exit 1
 fi
 
 # Resize the FFFF to the Flash
-truncate -s 2M ${NUTTX_IMAGE}/nuttx.ffff
+truncate -s 2M ${NUTTX_IMAGE}.ffff
 
 # Cleanup intermediate files
-rm ${NUTTX_IMAGE}/nuttx.tftf
+rm ${NUTTX_IMAGE}.tftf
 
 echo "Done"
 

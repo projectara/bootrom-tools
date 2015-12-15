@@ -38,5 +38,23 @@ RANLIB	= ranlib
 RM	= rm
 ECHO	= echo
 
-INCDIRS = -I. -I$(TOPDIR)/include
+ifeq ($(BOOTROM_SRCDIR),)
+BOOTROM_SRCDIR = $(HOME)/work/bootrom
+endif
+
+ODIR         = obj
+COMMONOBJDIR = $(TOPDIR)/obj
+BINDIR       = $(TOPDIR)/bin
+IDIR         = $(TOPDIR)/include
+LIBDIR       = $(TOPDIR)/libs
+
+SHARED_INCDIR = $(BOOTROM_SRCDIR)/common/shared_inc
+COMMON_INCDIRS = -I$(TOPDIR)/include -I$(SHARED_INCDIR)
+
+-include $(COBJS:.o=.d) $(AOBJS:.o=.d)
+
+$(ODIR)/%.o: %.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(INC_DIRS) -MM -MT $@ -MF $(patsubst %.o,%.d,$@) -c $<
+	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
 

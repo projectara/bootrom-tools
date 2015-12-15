@@ -29,42 +29,17 @@
 
 include $(TOPDIR)/Makefile.inc
 
-ODIR         = obj
-COMMONOBJDIR = $(TOPDIR)/obj
-BINDIR       = $(TOPDIR)/bin
-IDIR         = $(TOPDIR)/include
-LIBDIR       = $(TOPDIR)/libs
-
 EXE_NAME = create-ffff
 EXE      = $(BINDIR)/$(EXE_NAME)
 
-INC_DIRS := -I. -I$(IDIR)
+INC_DIRS := -I. $(COMMON_INCDIRS)
 EXTRA_LIBS := -lelf
-
-_DEPS = \
-  util.h \
-  parse_support.h \
-  ffff.h \
-  ffff_common.h \
-  ffff_in.h \
-  ffff_out.h \
-  ffff_map.h \
-  ffff_print.h
-DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 OBJ = $(ODIR)/create-ffff.o
 
 _LIBS = -lffff -ltftf -lcommon
 _LIBDEPS = libffff.a libcommon.a libtftf.a
 LIBDEPS = $(patsubst %,$(LIBDIR)/%,$(_LIBDEPS))
-
-INC_DIRS := -I. -I$(IDIR)
-SFILES   := c
-OFILES   := o
-CC       := gcc
-LD       := gcc
-CFLAGS   := -c -Wall
-EXE      := $(BINDIR)/$(EXE_NAME)
 
 .PHONY: all clean exe
 
@@ -74,11 +49,6 @@ $(EXE): $(OBJ) $(LIBDEPS)
 	mkdir -p $(ODIR) $(BINDIR)
 	@ echo Compiling exe: $<
 	$(CC) $^ $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -lelf -o $@
-
-$(ODIR)/create-ffff.o: create-ffff.c $(DEPS)
-	mkdir -p $(ODIR)
-	@ echo Compiling $<
-	$(CC) $(CFLAGS) $(INC_DIRS) $< -o $@
 
 clean:
 	rm -f $(OBJ) $(EXE)

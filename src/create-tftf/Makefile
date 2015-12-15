@@ -29,42 +29,17 @@
 
 include $(TOPDIR)/Makefile.inc
 
-ODIR         = obj
-COMMONOBJDIR = $(TOPDIR)/obj
-BINDIR       = $(TOPDIR)/bin
-IDIR         = $(TOPDIR)/include
-LIBDIR       = $(TOPDIR)/libs
-
 EXE_NAME = create-tftf
 EXE      = $(BINDIR)/$(EXE_NAME)
 
-INC_DIRS := -I. -I$(IDIR)
+INC_DIRS := -I. $(COMMON_INCDIRS)
 EXTRA_LIBS := -lelf
-
-
-_DEPS = \
-  parse_support.h \
-  util.h \
-  tftf_common.h \
-  tftf_in.h \
-  tftf_out.h \
-  tftf_map.h \
-  tftf_print.h
-DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 OBJ = $(ODIR)/create-tftf.o
 
 _LIBS = -ltftf -lcommon
 _LIBDEPS = libcommon.a libtftf.a
 LIBDEPS = $(patsubst %,$(LIBDIR)/%,$(_LIBDEPS))
-
-INC_DIRS := -I. -I$(IDIR)
-SFILES   := c
-OFILES   := o
-CC       := gcc
-LD       := gcc
-CFLAGS   := -c -Wall
-EXE      := $(BINDIR)/$(EXE_NAME)
 
 .PHONY: all clean exe
 
@@ -74,11 +49,6 @@ $(EXE): $(OBJ) $(LIBDEPS)
 	mkdir -p $(ODIR) $(BINDIR)
 	@ echo Compiling exe: $<
 	$(CC) $^ $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -lelf -o $@
-
-$(ODIR)/create-tftf.o: create-tftf.c $(DEPS)
-	mkdir -p $(ODIR)
-	@ echo Compiling $<
-	$(CC) $(CFLAGS) $(INC_DIRS) $< -o $@
 
 clean:
 	rm -f $(OBJ) $(EXE)

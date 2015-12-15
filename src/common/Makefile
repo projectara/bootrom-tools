@@ -29,27 +29,6 @@
 
 include $(TOPDIR)/Makefile.inc
 
-IDIR = $(TOPDIR)/include
-#ODIR = obj
-ODIR = $(TOPDIR)/obj
-LIBDIR = $(TOPDIR)/libs
-
-_DEPS = \
-  parse_support.h \
-  util.h \
-  tftf_common.h \
-  tftf_in.h \
-  tftf_out.h \
-  tftf_map.h \
-  tftf_print.h \
-  ffff_common.h \
-  ffff_in.h \
-  ffff_out.h \
-  ffff_map.h \
-  ffff_print.h
-
-DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
-
 _COMMONOBJ = \
   parse_support.o \
   util.o
@@ -78,7 +57,7 @@ OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 _LIBS = libcommon.a libtftf.a libffff.a
 LIBS = $(patsubst %,$(LIBDIR)/%,$(_LIBS))
 
-INC_DIRS := -I. -I$(IDIR)
+INC_DIRS := -I. $(COMMON_INCDIRS)
 
 all: $(OBJ) $(LIBS)
 
@@ -97,57 +76,6 @@ $(LIBDIR)/libffff.a: $(FFFFOBJ)
 	mkdir -p $(dir $@)
 	ar rcs $@ $^
 	ranlib $@
-
-
-
-$(ODIR)/parse_support.o: parse_support.c $(IDIR)/parse_support.h $(IDIR)/ffff.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/util.o: util.c $(IDIR)/util.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/tftf_common.o: tftf_common.c $(IDIR)/tftf_common.h $(IDIR)/tftf.h $(IDIR)/tftf_print.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/tftf_in.o: tftf_in.c $(IDIR)/util.h $(IDIR)/tftf.h $(IDIR)/tftf_in.h $(IDIR)/tftf_common.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/tftf_out.o: tftf_out.c $(IDIR)/util.h $(IDIR)/tftf.h $(IDIR)/tftf_out.h $(IDIR)/tftf_common.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/tftf_map.o: tftf_map.c $(IDIR)/util.h $(IDIR)/tftf.h $(IDIR)/tftf_map.h $(IDIR)/tftf_common.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/tftf_print.o: tftf_print.c $(IDIR)/util.h $(IDIR)/tftf.h $(IDIR)/tftf_print.h $(IDIR)/tftf_common.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/ffff_common.o: ffff_common.c $(IDIR)/ffff_common.h $(IDIR)/ffff.h $(IDIR)/util.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/ffff_in.o: ffff_in.c $(IDIR)/util.h $(IDIR)/ffff.h $(IDIR)/ffff_in.h $(IDIR)/ffff_common.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/ffff_out.o: ffff_out.c $(IDIR)/util.h $(IDIR)/ffff.h $(IDIR)/ffff_out.h $(IDIR)/ffff_common.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/ffff_map.o: ffff_map.c $(IDIR)/util.h $(IDIR)/ffff.h $(IDIR)/ffff_map.h $(IDIR)/ffff_common.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
-$(ODIR)/ffff_print.o: ffff_print.c $(IDIR)/util.h $(IDIR)/ffff.h $(IDIR)/ffff_print.h $(IDIR)/ffff_common.h
-	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(CFLAGS) $(INC_DIRS)
-
 
 .PHONY: all clean
 

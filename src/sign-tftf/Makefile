@@ -29,11 +29,6 @@
 
 include $(TOPDIR)/Makefile.inc
 
-ODIR         = obj
-COMMONOBJDIR = $(TOPDIR)/obj
-BINDIR       = $(TOPDIR)/bin
-IDIR         = $(TOPDIR)/include
-
 EXE_NAME = sign-tftf
 EXE      = $(BINDIR)/$(EXE_NAME)
 
@@ -45,58 +40,23 @@ COMMON_NAMES := \
   $(COMMONDIR)/tftf_out.c \
   $(COMMONDIR)/tftf_print.c
 
-INC_DIRS := -I. -I$(IDIR)
+INC_DIRS := -I. $(COMMON_INCDIRS)
 EXTRA_LIBS := -lelf -lcrypto
 
+_LIBS = -ltftf -lcommon
+_LIBDEPS = libcommon.a libtftf.a
+LIBDEPS = $(patsubst %,$(LIBDIR)/%,$(_LIBDEPS))
 
-_DEPS = \
-  parse_support.h \
-  util.h \
-  tftf_common.h \
-  tftf_in.h \
-  tftf_out.h \
-  tftf_print.h \
-  tftf.h \
-  crypto.h \
-
-DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
-
-_COMMONOBJ = \
-  parse_support.o \
-  util.o \
-  tftf_common.o \
-  tftf_in.o \
-  tftf_out.o \
-  tftf_print.o
-COMMONOBJ = $(patsubst %,$(COMMONOBJDIR)/%,$(_COMMONOBJ))
-OBJ = $(ODIR)/sign.o $(ODIR)/sign-tftf.o $(COMMONOBJ)
-
-INC_DIRS := -I. -I$(IDIR)
-SFILES   := c
-OFILES   := o
-CC       := gcc
-LD       := gcc
-CFLAGS   := -c -Wall
-EXE      := $(BINDIR)/$(EXE_NAME)
+OBJ = $(ODIR)/sign.o $(ODIR)/sign-tftf.o
 
 .PHONY: all clean exe
 
 all: $(EXE)
 
-$(EXE): $(OBJ)
+$(EXE): $(OBJ) $(LIBDEPS)
 	mkdir -p $(ODIR) $(BINDIR)
 	@ echo Compiling exe $<
-	$(CC) $^ $(EXTRA_LIBS) -o $@
-
-$(ODIR)/sign-tftf.o: sign-tftf.c $(DEPS) sign.h
-	mkdir -p $(ODIR)
-	@ echo Compiling $<
-	$(CC) $(CFLAGS) $(INC_DIRS) $< -o $@
-
-$(ODIR)/sign.o: sign.c $(DEPS) sign.h
-	mkdir -p $(ODIR)
-	@ echo Compiling $<
-	$(CC) $(CFLAGS) $(INC_DIRS) $< -o $@
+	$(CC) $^ $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -lelf -o $@
 
 clean:
 	rm -f $(OBJ) $(EXE)

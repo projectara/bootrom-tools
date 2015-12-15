@@ -411,6 +411,9 @@ int main(int argc, char * argv[]) {
                              close_element_if_needed);
     if (parse_tbl) {
         success =  parse_args(argc, argv, all_args, parse_tbl);
+        if (!success) {
+            program_status = parser_help? PROGRAM_SUCCESS : PROGRAM_ERRORS;
+        }
     } else {
         success = false;
     }
@@ -440,7 +443,6 @@ int main(int argc, char * argv[]) {
     }
 
     if (!success) {
-         usage(parse_tbl);
         program_status = PROGRAM_ERRORS;
     } else {
         /* Calculate the number of sections in this ffff header */

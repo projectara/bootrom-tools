@@ -137,6 +137,18 @@ struct argparse {
     struct option *     opt;
 };
 
+/* Globals indicating parser results */
+extern bool parser_help;        /**
+                                 * "--help" encountered, arg processing
+                                 * stopped. Hint that caller can suppress
+                                 * further argument validation.*/
+extern bool parser_invalid_arg; /**
+                                 * parser hit an invalid arg. Hint that
+                                 * caller can suppress further argument
+                                 * validation.
+                                 */
+
+
 
 /**
  * @brief Create an option table from an optionx table

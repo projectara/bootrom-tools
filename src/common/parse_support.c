@@ -39,12 +39,16 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <getopt.h>
+#include <libgen.h>
 #include "util.h"
 #include "ffff.h"
 #include "parse_support.h"
 
 /* Maximum length of a usage line to be displayed */
 #define USAGE_LINE_LENGTH 80
+
+bool parser_help = false;
+bool parser_invalid_arg = false;
 
 
 static parse_entry element_types[] = {
@@ -67,7 +71,8 @@ static parse_entry element_types[] = {
  *
  * @returns Nothing
  */
-void parse_args_init_opt_entry(struct option * opt, const char * name, struct optionx * optx) {
+void parse_args_init_opt_entry(struct option * opt, const char * name,
+                               struct optionx * optx) {
     opt->val = optx->short_name;
     opt->name = name;
     opt->flag = NULL;
@@ -255,6 +260,11 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
     total_entries = parse_table->num_entries +
             parse_table->num_secondary_entries;
 
+    /**
+     * Suppress the builtin "unrecognized option" so we can preprocess for "--help"
+     */
+    opterr = 0;
+
     /* Pre-parsing, apply defaults */
     for (optx = parse_table->optx; (optx->long_names) != NULL; optx++) {
         if (optx->count == 0) {
@@ -279,6 +289,17 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
 
         /* Unrecognized option? */
         if (option == '?') {
+            char * offending_arg = argv[optind - 1];
+            if (strcmp(offending_arg, "--help") == 0) {
+                parser_help = true;
+                usage(parse_table);
+            } else {
+                parser_invalid_arg = true;
+                fprintf(stderr, "%s: unrecognized option '%s'\n\n",
+                        basename(argv[0]), offending_arg);
+                parser_help = true;
+                usage(parse_table);
+            }
             success = false;
             continue;
         }
@@ -338,13 +359,16 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
         }
     }
 
-    /* Post-parsing, squawk about missing params */
-    for (optx = parse_table->optx; (optx->long_names) != NULL; optx++) {
-        if (optx->count == 0) {
-            /* Missing arg */
-            if (optx->flags & REQUIRED) {
-                fprintf (stderr, "ERROR: --%s is required\n", (optx->long_names)[0]);
-                success = false;
+    if (success) {
+        /* Post-parsing, squawk about missing params */
+        for (optx = parse_table->optx; (optx->long_names) != NULL; optx++) {
+            if (optx->count == 0) {
+                /* Missing arg */
+                if (optx->flags & REQUIRED) {
+                    fprintf (stderr, "ERROR: --%s is required\n",
+                            (optx->long_names)[0]);
+                    success = false;
+                }
             }
         }
     }

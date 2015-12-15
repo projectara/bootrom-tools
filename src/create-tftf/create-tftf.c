@@ -634,6 +634,9 @@ int main(int argc, char * argv[]) {
                              close_section_if_needed);
     if (parse_tbl) {
         success =  parse_args(argc, argv, all_args, parse_tbl);
+        if (!success) {
+            program_status = parser_help? PROGRAM_SUCCESS : PROGRAM_ERRORS;
+        }
     } else {
         success = false;
     }
@@ -644,12 +647,12 @@ int main(int argc, char * argv[]) {
 
         /* Validate that we have the needed args */
        success = validate_args();
+       if (!success) {
+           program_status = PROGRAM_ERRORS;
+       }
     }
 
-    if (!success) {
-        usage(parse_tbl);
-        program_status = PROGRAM_ERRORS;
-    } else {
+    if (success) {
         /* Calculate the number of sections in this TFTF header */
         /* TODO: Use macro (TBD) in tftf.h to calculate max_sections */
         tftf_max_sections = CALC_MAX_TFTF_SECTIONS(header_size);

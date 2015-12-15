@@ -102,6 +102,9 @@ int main(int argc, char * argv[]) {
                              "<file>...", NULL);
     if (parse_tbl) {
         success =  parse_args(argc, argv, "", parse_tbl);
+        if (!success) {
+            program_status = parser_help? PROGRAM_SUCCESS : PROGRAM_ERRORS;
+        }
         parse_tbl = free_argparse(parse_tbl);
     } else {
         success = false;

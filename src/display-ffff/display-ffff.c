@@ -105,39 +105,34 @@ int main(int argc, char * argv[]) {
     int program_status = PROGRAM_SUCCESS;
 
     /* Parse the command line arguments */
-    /*****/printf("main: parse\n");
     parse_tbl = new_argparse(parse_table, argv[0], NULL, epilog, NULL,
                              NULL);
     if (parse_tbl) {
         success =  parse_args(argc, argv, all_args, parse_tbl);
+        if (!success) {
+            program_status = parser_help? PROGRAM_SUCCESS : PROGRAM_ERRORS;
+        }
     } else {
         success = false;
     }
-    /*****/printf("main: post-parse, success %d\n", success);
 
     if (success) {
-        /* Print any remaining command line arguments. */
+        /* Process any remaining command line arguments as filenames */
         if (optind < argc) {
             for (; optind < argc; optind++) {
                 struct ffff * romimage = NULL;
 
-                /*****/printf("main: display argv[%d]: '%s'\n", success, argv[success]);
                 /* Read in the TFTF file as a blob... */
-                /*****/printf("main: read_ffff_romimage...\n");
                 romimage = read_ffff_romimage(argv[success]);
 
                 if (romimage) {
-                    /*****/printf("main: romimage %p\n", romimage);
                     /* ...and print it out */
-                    /*****/printf("main: print_ffff_file...\n");
                     print_ffff_file(romimage, argv[optind]);
 
                     if (map_flag) {
                         /* ...and write out the map file */
-                        /*****/printf("main: write_ffff_map_file...\n");
                        success = write_ffff_map_file(romimage, argv[optind]);
                     }
-                    /*****/printf("main: free_ffff...\n");
                     romimage = free_ffff(romimage);
                 }
             }
@@ -149,7 +144,6 @@ int main(int argc, char * argv[]) {
     }
 
     parse_tbl = free_argparse(parse_tbl);
-    /*****/printf("main: done\n");
     return program_status;
 }
 

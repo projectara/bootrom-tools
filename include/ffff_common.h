@@ -57,33 +57,6 @@ struct ffff {
  */
 void print_element(char * title, ffff_element_descriptor * element);
 
-
-/** TODO: NB. both must be done on the same check-in because we don't want to
- *  end up with two different ffff.h in two projects.
- * 1. As Greg suggested, have an environment variable in the bootrom-tools
- *    project to point to the shared header in the bootrom for ffff.h
- * 2. Move stuff like CALC_MAX_FFFF_ELEMENTS into ffff.h, too.
- */
-
-/**
- * @brief Macro to calculate the last address in an element.
- */
-#define ELEMENT_END_ADDRESS(element_ptr) \
-    ((element_ptr)->element_load_address + \
-     (element_ptr)->element_expanded_length - 1)
-
-
-/**
- * @brief Macro to calculate the number of elements in an FFFF header
- */
-#define CALC_MAX_FFFF_ELEMENTS(header_size) \
-		(((header_size) - \
-		 (offsetof(ffff_header, elements) + FFFF_SENTINEL_SIZE)) / \
-		 sizeof(ffff_element_descriptor))
-
-#define FFFF_HEADER_SIZE_DEFAULT    FFFF_HEADER_SIZE_MAX
-
-
 /* This contains the maximum number of elements in the header. */
 extern uint32_t ffff_max_elements;
 

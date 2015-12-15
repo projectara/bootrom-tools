@@ -50,39 +50,6 @@
 #define DFLT_SECT_CLASS     0
 #define DFLT_SECT_LOAD      ((uint32_t)-1)
 
-
-/** TODO: NB. both must be done on the same check-in because se don't want to
- *  end up with two different ffff.h in two projects.
- * 1. As Greg suggested, have an environment variable in the bootrom-tools
- *    project to point to the shared header in the bootrom for ffff.h
- * 2. Move stuff like CALC_MAX_FFFF_ELEMENTS into ffff.h, too.
- */
-
-/**
- * @brief Macro to calculate the address of the start of the TFTF payload.
- */
-#define SECTION_PAYLOAD_START(tftf_hdr) \
-    (((uint8_t *)(tftf_hdr)) + tftf_hdr->header_size)
-
-
-/**
- * @brief Macro to calculate the last address in a section.
- */
-#define SECTION_END_ADDRESS(section_ptr) \
-    ((section_ptr)->section_load_address + \
-     (section_ptr)->section_expanded_length - 1)
-
-
-/**
- * @brief Macro to calculate the number of sections in a TFTF header
- */
-#define CALC_MAX_TFTF_SECTIONS(header_size) \
-		(((header_size) - offsetof(tftf_header, sections)) / \
-		 sizeof(tftf_section_descriptor))
-
-#define TFTF_HEADER_SIZE_DEFAULT    TFTF_HEADER_SIZE_MIN
-
-
 /* This contains the maximum number of sections in the header. */
 extern uint32_t tftf_max_sections;
 

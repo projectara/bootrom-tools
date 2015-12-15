@@ -31,7 +31,7 @@
 #------------------------------------------------------------------------------
 #
 # Usage:
-#    nuttx2ffff {-v} {--build=name} {-outdir=<dir>}
+#    nuttx2ffff {-v} [--in=file} | {--build=name}] {-outdir=<dir>}
 #
 #    -v        Verbose mode on TFTF creation
 #    --build   Which nuttx image to use:
@@ -50,40 +50,40 @@ for arg in "$@" ; do    # arg will be each positional parameter
         verbose=${arg}
     elif [[ ${arg} == --build=* ]]; then
         nuttx_build="${arg#*=}"
+    elif [[ ${arg} == --build=* ]]; then
+        NUTTX_IMAGE="${arg#*=}"
     fi
 done
 
-if [ ${nuttx_build} ]; then
-    # Construct a canonical the path from the supplied build path or fragment
-    # (e.g., "ara-bridge-es2-debug-generic" or
-    # "~/nuttx/build/ara-bridge-es2-debug-generic").
-    nuttx_build=`basename ${nuttx_build}`
-    NuttX_build=`readlink -f $NUTTXROOT/../build`
-    NUTTX_IMAGE=$NuttX_build/$nuttx_build/image
-else
-    NUTTX_IMAGE=$NUTTXROOT
+if [ ! ${NUTTX_IMAGE} ]; then
+    if [ ${nuttx_build} ]; then
+        # Construct a canonical the path from the supplied build path or fragment
+        # (e.g., "ara-bridge-es2-debug-generic" or
+        # "~/nuttx/build/ara-bridge-es2-debug-generic").
+        nuttx_build=`basename ${nuttx_build}`
+        NuttX_build=`readlink -f $NUTTXROOT/../build`
+        NUTTX_IMAGE=$NuttX_build/$nuttx_build/image/nuttx
+    else
+        NUTTX_IMAGE=$NUTTXROOT/nuttx
+    fi
 fi
-echo "Packaging ${NUTTX_IMAGE}/nuttx"
+echo "Packaging ${NUTTX_IMAGE}"
 
 
-if [ ! -f ${NUTTX_IMAGE}/nuttx ]; then
-    echo "Error: Can't find ${NUTTX_IMAGE}/nuttx"
+if [ ! -f ${NUTTX_IMAGE} ]; then
+    echo "Error: Can't find ${NUTTX_IMAGE}"
     exit 1
 fi
-if [ ! -f ${NUTTX_IMAGE}/System.map ]; then
-    echo "Error: Can't find ${NUTTX_IMAGE}/System.map"
-    exit 1
-fi
 
 
-# Extract the start address by hunting for the "Reset_Handler" symbol in
-# the System.map file
-start=`grep Reset_Handler ${NUTTX_IMAGE}/System.map | head -c 8`
-if [ ! ${start} ]; then
-    echo "Couldn't find Reset_Handler"
-    start=`hexdump -n 4 -e '1/4 "%08x"' ${NUTTX_IMAGE}/System.map`
-    echo "Extracted start address from reset vector"
-fi
+## Extract the start address by hunting for the "Reset_Handler" symbol in
+## the System.map file
+#start=`grep Reset_Handler ${NUTTX_IMAGE}/System.map | head -c 8`
+#if [ ! ${start} ]; then
+#    echo "Couldn't find Reset_Handler"
+#    start=`hexdump -n 4 -e '1/4 "%08x"' ${NUTTX_IMAGE}/System.map`
+#    echo "Extracted start address from reset vector"
+#fi
 
 #echo
 #echo "Package ${NUTTX_IMAGE}/nuttx into nuttx.tftf:"
@@ -94,9 +94,8 @@ create-tftf \
   --header-size 0x200 \
   --type s2fw \
   --name "NuttX S3FW-as-S2FW" \
-  --elf ${NUTTX_IMAGE}/nuttx \
-  --start 0x$start \
-  --out ${NUTTX_IMAGE}/nuttx.tftf
+  --elf ${NUTTX_IMAGE} \
+  --out ${NUTTX_IMAGE}.tftf
 
 if [[ $? != 0 ]]; then
     echo "There were problems creating the TFTF"

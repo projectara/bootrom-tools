@@ -365,6 +365,7 @@ def main():
                         help="The name of an input ELF image file")
 
     parser.add_argument("--type",
+                        default="s2fw",
                         help="Package type")
 
     # Per-section numeric args
@@ -450,7 +451,8 @@ def main():
 
     # Populate the TFTF header from the command line args
     tftf_header = Tftf(args.header_size)
-    tftf_header.firmware_package_name = args.name
+    if args.name:
+        tftf_header.firmware_package_name = args.name
     tftf_header.package_type = package_type(args.type)
     if args.start != 0:
         tftf_header.start_location = args.start

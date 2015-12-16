@@ -109,7 +109,7 @@ require the following environment variables be set in order to function:
 
 Variable | Typical Value | Purpose
 -------- | ------------- | -------
-BOOTROM_ROOT | ~/work/bootrom | The bootrom repository
+BOOTROM_ROOT | ~/bootrom | The bootrom repository
 CONFIG_CHIP | es3tsb | The target chip (es2tsb, es3tsb, or fpgatsb)
 DEFAULT_CONFIG_CHIP | es3tsb | Optional fallback default value for CONFIG_CHIP
 DELIVERY_NAME | es3-bootrom-delivery | The name of a delivery (also used in creating the delivery folder)

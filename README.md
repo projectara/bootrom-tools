@@ -207,24 +207,23 @@ written for testing purposes.
 
 ## Appendix A: Required Libraries
 ### Python
-The `create-dual-image` script requires [pyelftools](https://github.com/eliben/pyelftools) to use its `--elf`
+The `create-tftf` and `create-dual-image` scripts require [pyelftools](https://github.com/eliben/pyelftools) to use its `--elf`
 flag, which can be installed via:
 
     sudo pip install pyelftools
+    
+`sign-tftf` requires [pyopenssl](https://pypi.python.org/pypi/pyOpenSSL) (see [Installation](http://www.pyopenssl.org/en/latest/install.html):
+
+    sudo pip install pyopenssl
 
 ### C
-FTDI libraries
-(See: https://learn.adafruit.com/adafruit-ft232h-breakout/mpsse-setup for an explanation and links to the installation scripts)
-
-* **D2xx** drivers/ibraries (see: FTDI [AN 220](http://www.ftdichip.com/Support/Documents/AppNotes/AN_220_FTDI_Drivers_Installation_Guide_for_Linux%20.pdf) for download and install instructions)
-* **LibMPSSE_SPI** There doesn't appear to be a place from which one can install the libraries. So, the current approach is to download the source from the [FTDI site](http://www.ftdichip.com/Support/SoftwareExamples/MPSSE/LibMPSSE-SPI.htm) and rebuild the libs. Follow the link at the bottom of the text "The source code for the LibMPSSE-SPI library is available for download here", and and unzip the dowloaded file to your home directory. Once unzipped, cd ~/LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux and type "make"
 
 Other libraries:
 
-* **libelf** See (https://launchpad.net/ubuntu/+source/libelf)
-* **openssl** From http://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-c-library-on-ubuntu:
+* **libelf** sudo apt-get install libelf-dev (See: https://launchpad.net/ubuntu/+source/libelf)
+* **openssl** sudo apt-get install libssl-dev (See: http://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-c-library-on-ubuntu)
 
-sudo apt-get install libssl-dev
+
 
 ## Appendix B: Environment
 The bootrom-tools require the following environment variables be set
@@ -232,16 +231,10 @@ in order to function:
 
 Variable | Typical Value | Purpose
 -------- | ------------- | -------
-BOOTROM_ROOT | ~/work/bootrom | The bootrom repository
+BOOTROM_ROOT | ~/bootrom | The bootrom repository
 CONFIG_CHIP | es3tsb | The target chip (es2tsb, es3tsb, or fpgatsb)
-DEFAULT_CONFIG_CHIP | es3tsb | Optional fallback default value for CONFIG_CHIP
-DELIVERY_NAME | es3-bootrom-delivery | The name of a delivery (also used in creating the delivery folder)
-DELIVERY_ROOT | ~ | Where the delivery folder will reside
-DROP_ASSEMBLY_DIR | ~/bootrom-tools/es3-test | Where test drop components are created
-KEY_DIR | ~/bin | Your local source of .pem files (used by makef4 to sign the TFTF)
-TEST_DROP_DIR | ~/es3-test | The target folder for a given test drop
 
-Because bootrom-tools grew organically, you need to ensure that
+**PATH**: Because bootrom-tools grew organically, you need to ensure that
 your PATH searches for them in the correct order:
 ${BOOTROM_TOOLS}/bin, ${BOOTROM_TOOLS}/scripts, ${BOOTROM_TOOLS}
 

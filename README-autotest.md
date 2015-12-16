@@ -274,7 +274,22 @@ the `--stop` parameters and is a backstop for images that silently fail.
 * `--ftdi-path`: The path to where the 'haps_test' helper app resides.
 
 
-# Appendix A: Adafruit FT232H Installation
+# Appendix A: Required Libraries
+## Python
+The `create-dual-image` script requires [pyelftools](https://github.com/eliben/pyelftools) to use its `--elf`
+flag, which can be installed via:
+
+    sudo pip install pyelftools
+
+## C
+FTDI libraries
+(See: https://learn.adafruit.com/adafruit-ft232h-breakout/mpsse-setup for an explanation and links to the installation scripts)
+
+* **D2xx** drivers/ibraries (see: FTDI [AN 220](http://www.ftdichip.com/Support/Documents/AppNotes/AN_220_FTDI_Drivers_Installation_Guide_for_Linux%20.pdf) for download and install instructions)
+* **LibMPSSE_SPI** There doesn't appear to be a place from which one can install the libraries. So, the current approach is to download the source from the [FTDI site](http://www.ftdichip.com/Support/SoftwareExamples/MPSSE/LibMPSSE-SPI.htm) and rebuild the libs. Follow the link at the bottom of the text "The source code for the LibMPSSE-SPI library is available for download here", and and unzip the dowloaded file to your home directory. Once unzipped, cd ~/LibMPSSE-SPI_source/LibMPSSE-SPI/LibMPSSE/Build/Linux and type "make"
+
+
+# Appendix B: Adafruit FT232H Installation
 The `autoboot` script supports the Adafruit FT232H USB->GPIO adapter for
 controlling the reset on the HAPS-62 SPIROM daughterboard. While its use is
 optional, you must install their drivers to keep Python happy.
@@ -365,7 +380,7 @@ Data.FT1248FlowControlH | 0
 Data.IsVCPH | 0
 Data.PowerSaveEnableH | 0
 
-# Appendix B efuse file
+# Appendix C: efuse file
 The *run-bootrom-tests* tool requires a file of keyword-value pairs describing the
 various e-Fuse settings. On a real ES3, these would be defined by the hardware,
 but on the HAPS-62, they must be preloaded before the BootRom image runs.
@@ -388,7 +403,7 @@ Listed below is the full set of keywords, and some stand-in values.
 Note that, to be valid, VID, PID, and SN (SN0 + SN1) must have equal numbers of
 zero and one bits. The IMS (IMS0..IMS8) have no such restriction.
 
-## Appendix C: Related Documents
+## Appendix d: Related Documents
 * **README.md** Describes the core Ara module packaging tools.
 * **README-Toshiba.md** This document.
 * **README-autotest.md** Describes the tools for loading and testing(ES3)

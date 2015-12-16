@@ -6,8 +6,8 @@ Format For Firmware (FFFF) file formats. These file formats and the basic
 set of tools used with them are described in
 [ES3 Bridge ASIC Stage 1 Firmware High Level Design](https://docs.google.com/document/d/1OxjQClSY5cvS370XG9xH7FR9DZgRGv17LXE33EEXSxE/edit) document.
 
-The FFFF file is a filesystem romimage, which is composed of filesystem headers and
-TFTF elements. The TFTF elements typically come from the build system, but can also
+The FFFF file is a filesystem romimage, comprised of filesystem headers and
+TFTF elements. The TFTF elements typically come from the build system, but can 
 contain data, certificates, etc.
 
 ## Getting Started
@@ -23,10 +23,11 @@ you would use the following command to package your nuttx image (in $NUTTXROOT)
 into a flashable image:
 
     nuttx2ffff
+    
+This will create an unsigned image in the same folder as the nuttx executable.
+If you want to package a specific build image in `$NUTTXROOT/build/<defconfig>/images`, use:
 
-This will create an unsigned (aka "untrusted") image in the same folder as the nuttx executable. If you want to package a specific build image in `$NUTTXROOT/build/<your_build>/images`, use:
-
-    nuttx2ffff --build=your_build
+    nuttx2ffff --build=<defconfig>
 
 
 ### Manually Packaging Your Nuttx Image
@@ -37,7 +38,9 @@ If *nuttx2ffff* doesn't meet your needs, you can manually run through the genera
 3. Optionally Sign the element(s) with sign-tftf (not used in initial
 development, but needed for creating trusted images towards the end)
 4. Create a new romimage containing the element(s) with create-ffff
-5. Re-flash the bridge with the ffff file.
+5. Resize the ffff to the rom size with trucate.
+6. Re-flash the bridge with the ffff file.
+
 
 The tools and their parameters are described briefly below, in roughly the order
 in which one would use them.
@@ -66,7 +69,7 @@ necessitating the manual passing of loading offsets, we instead pass a
 and let the script extract the `.text` and `.data` sections and offsets from the
 ELF header.
 
-    create-tftf --elf ~/nuttx/nuttx/nuttx \
+    create-tftf \
       --type s2fw \
       --header-size 0x200 \
       --name "NuttX S3FW-as-S2FW" \
@@ -101,7 +104,7 @@ The `--flash-capacity` and `--erase-size` parameters take values specific to the
 firmware.
 
 
-    create-ffff --flash-capacity 0x200000 --image-length 0x28000 --erase-size 0x1000 \
+    create-ffff \
       --header-size 0x1000 \
       --flash-capacity 0x40000 \
       --image-length 0x40000 \
@@ -207,21 +210,25 @@ written for testing purposes.
 
 ## Appendix A: Required Libraries
 ### Python
-The `create-tftf` and `create-dual-image` scripts require [pyelftools](https://github.com/eliben/pyelftools) to use its `--elf`
-flag, which can be installed via:
+* **[pyelftools](https://github.com/eliben/pyelftools)** Required by `create-tftf` to support the `--elf` flag. Install via:
 
-    sudo pip install pyelftools
+    `sudo pip install pyelftools`
     
-`sign-tftf` requires [pyopenssl](https://pypi.python.org/pypi/pyOpenSSL) (see [Installation](http://www.pyopenssl.org/en/latest/install.html):
+* **[pyopenssl](https://pypi.python.org/pypi/pyOpenSSL)** (Optional) Used by `sign-tftf. As we won't be using signed images during early bring-up, this can be skipped for now.  (see also  [Installation](http://www.pyopenssl.org/en/latest/install.html)):
 
-    sudo pip install pyopenssl
+    `sudo pip install pyopenssl`
 
 ### C
 
-Other libraries:
+If you use the 'C' version of the core tools, you will need to install these libraries:
 
-* **libelf** sudo apt-get install libelf-dev (See: https://launchpad.net/ubuntu/+source/libelf)
-* **openssl** sudo apt-get install libssl-dev (See: http://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-c-library-on-ubuntu)
+* **libelf**  (See: https://launchpad.net/ubuntu/+source/libelf)
+
+    `sudo apt-get install libelf-dev`
+
+* **openssl** (See: http://stackoverflow.com/questions/3016956/how-do-i-install-the-openssl-c-library-on-ubuntu)
+
+    `sudo apt-get install libssl-dev`
 
 
 
@@ -229,14 +236,13 @@ Other libraries:
 The bootrom-tools require the following environment variables be set
 in order to function:
 
-Variable | Typical Value | Purpose
--------- | ------------- | -------
-BOOTROM_ROOT | ~/bootrom | The bootrom repository
-CONFIG_CHIP | es3tsb | The target chip (es2tsb, es3tsb, or fpgatsb)
+* `export NUTXROOT=<root of your NuttX tree, typ. “~/nuttx”>`
+* `export PATH=$PATH:<bootrom-tools>/scripts:<bootrom-tools>`
 
-**PATH**: Because bootrom-tools grew organically, you need to ensure that
-your PATH searches for them in the correct order:
-${BOOTROM_TOOLS}/bin, ${BOOTROM_TOOLS}/scripts, ${BOOTROM_TOOLS}
+If you are using the 'C' tools, your PATH would instead be:
+
+* `export PATH=$PATH:<bootrom-tools>/bin:$PATH:<bootrom-tools>/scripts:<bootrom-tools>`
+
 
 ## Appendix C: Tools
 ### create-tftf

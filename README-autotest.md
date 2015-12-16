@@ -403,7 +403,7 @@ Listed below is the full set of keywords, and some stand-in values.
 Note that, to be valid, VID, PID, and SN (SN0 + SN1) must have equal numbers of
 zero and one bits. The IMS (IMS0..IMS8) have no such restriction.
 
-## Appendix d: Related Documents
+## Appendix D: Related Documents
 * **README.md** Describes the core Ara module packaging tools.
 * **README-Toshiba.md** This document.
 * **README-autotest.md** Describes the tools for loading and testing(ES3)

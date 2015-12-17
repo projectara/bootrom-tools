@@ -263,10 +263,14 @@ def validate_args(args, sections):
         error("--ara-stage is out of range")
         success = False
     try:
-        args.unipro_mfg = balance_vidpid(args.unipro_mfg, "Unipro MID")
-        args.unipro_pid = balance_vidpid(args.unipro_pid, "Unipro PID")
-        args.ara_vid = balance_vidpid(args.ara_vid, "Ara VID")
-        args.ara_pid = balance_vidpid(args.ara_pid, "Ara PID")
+        unbalanced_unipro_mfg = args.unipro_mfg
+        unbalanced_unipro_pid = args.unipro_pid
+        unbalanced_ara_vid = args.ara_vid
+        unbalanced_ara_pid = args.ara_pid
+        args.unipro_mfg = balance_vidpid(unbalanced_unipro_mfg, "Unipro MID")
+        args.unipro_pid = balance_vidpid(unbalanced_unipro_pid, "Unipro PID")
+        args.ara_vid = balance_vidpid(unbalanced_ara_vid, "Ara VID")
+        args.ara_pid = balance_vidpid(unbalanced_ara_pid, "Ara PID")
     except ValueError as e:
         error(e)
         success = False
@@ -274,8 +278,8 @@ def validate_args(args, sections):
 
     if not args.out:
         args.out = 'ara:{:08x}:{:08x}:{:08x}:{:08x}:{:02x}.tftf'.format(
-                   args.unipro_mfg, args.unipro_pid, args.ara_vid,
-                   args.ara_pid, args.ara_stage)
+                   unbalanced_unipro_mfg, unbalanced_unipro_pid,
+                   unbalanced_ara_vid, unbalanced_ara_pid, args.ara_stage)
 
     if args.outdir:
         args.out = os.path.join(args.outdir, args.out)

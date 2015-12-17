@@ -605,10 +605,8 @@ bool validate_args(void) {
          * to copy the 1s compliment of the lower 16 bits into the upper
          * 16 bits.
          */
-        success = balance_vidpid(&unipro_mfg, "unipro_mid") &&
-            balance_vidpid(&unipro_pid, "unipro_pid") &&
-            balance_vidpid(&ara_vid, "ara_vid") &&
-            balance_vidpid(&ara_pid, "ara_pid");
+        success = balance_vidpid(&ara_vid, "ara_vid") &&
+                  balance_vidpid(&ara_pid, "ara_pid");
     }
 
     return success;

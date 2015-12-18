@@ -34,6 +34,7 @@
 from __future__ import print_function
 from struct import pack_into, unpack_from
 import sys
+import os
 import binascii
 import hashlib
 import random
@@ -44,6 +45,11 @@ from util import error, print_to_error
 PROGRAM_SUCCESS = 0
 PROGRAM_WARNINGS = 1
 PROGRAM_ERROR = 2
+
+# output formats
+FORMAT_HUMAN = 1
+FORMAT_TOSHIBA_EFUSE = 2
+FORMAT_binascii = 3
 
 # IMS is 35 bytes long, but boot ROM only cares about the first 32 bytes
 IMS_BITS = 280
@@ -57,6 +63,31 @@ CMS_BYTES = (CMS_BITS + 7)//8
 CMS_DWORDS = (CMS_BYTES + 3)//4
 
 HASH_DIGEST_SIZE = 32
+
+
+def binlify_lsb_msb(binarray):
+    """ Convert a binary array into an ASCII binary string, LSb...MSb """
+    asciibin = ""
+    for byte in binarray:
+        for bit_pos in range(0, 8, 1):
+            if (byte & (1 << bit_pos)):
+                asciibin += "1"
+            else:
+                asciibin += "0"
+    return asciibin
+
+
+def binlify_msb_lsb(binarray):
+    """ Convert a binary array into an ASCII binary string, MSb...LSb """
+    asciibin = ""
+    for index in range(len(binarray) - 1, -1, -1):
+        byte = binarray[index]
+        for bit_pos in range(7, -1, -1):
+            if (byte & (1 << bit_pos)):
+                asciibin += "1"
+            else:
+                asciibin += "0"
+    return asciibin
 
 
 def permute_cms(cms_buf):
@@ -87,14 +118,9 @@ def permute_cms(cms_buf):
                 return
 
 
-def print_cms(cms_buf, toshiba_format):
+def print_cms(cms_buf, output_format, outfile):
     """ Print the CMS """
-    if toshiba_format:
-        # Print the CMS in toshiba .efz form
-        cms = unpack_from("<LLLLLL", cms_buf)
-        print("CMS[191:0] = {0:08x}_{1:08x}_{2:08x}_{3:08x}_{4:08x}_{5:08x}".
-              format(cms[5], cms[4], cms[3], cms[2], cms[1], cms[0]))
-    else:
+    if output_format == FORMAT_HUMAN:
         # Print the CMS in human-friendly form
         print("CMS {0:s}.{1:s}.{2:s}.{3:s}.{4:s}.{5:s}".
               format(binascii.hexlify(cms_buf[0:4]),
@@ -102,7 +128,16 @@ def print_cms(cms_buf, toshiba_format):
                      binascii.hexlify(cms_buf[8:11]),
                      binascii.hexlify(cms_buf[12:16]),
                      binascii.hexlify(cms_buf[16:20]),
-                     binascii.hexlify(cms_buf[20:24])))
+                     binascii.hexlify(cms_buf[20:24])), file=outfile)
+    elif output_format == FORMAT_TOSHIBA_EFUSE:
+        # Print the CMS in Toshiba .efz form
+        cms = unpack_from("<LLLLLL", cms_buf)
+        print("CMS[191:0] = {0:08x}_{1:08x}_{2:08x}_{3:08x}_{4:08x}_{5:08x}".
+              format(cms[5], cms[4], cms[3], cms[2], cms[1], cms[0]),
+              file=outfile)
+    elif output_format == FORMAT_binascii:
+        # Print the CMS in ascii binary MSB..LSB
+        print(binlify_msb_lsb(cms_buf[0:CMS_BYTES]), file=outfile)
 
 
 def permute_ims(ims_buf):
@@ -138,17 +173,9 @@ def permute_ims(ims_buf):
                 return
 
 
-def print_ims(ims_buf, ep_uid, ep_uid_es3, toshiba_format):
+def print_ims(ims_buf, ep_uid, ep_uid_es3, output_format, outfile):
     """ Print the IMS """
-    if toshiba_format:
-        # Print the IMS in toshiba .efz form
-        ims = unpack_from("<LLLLLLLLL", ims_buf)
-        print("IMS[279:0] = {0:06x}_{1:08x}_{2:08x}_{3:08x}_{4:08x}_"
-              "{5:08x}_{6:08x}_{7:08x}_{8:08x}".
-              format(ims[8], ims[7], ims[6], ims[5], ims[4],
-                     ims[3], ims[2], ims[1], ims[0]))
-
-    else:
+    if output_format == FORMAT_HUMAN:
         # Print the IMS in human-friendly form
         print("IMS        {0:s}.{1:s}.{2:s}.{3:s}.{4:s}.{5:s}."
               "{6:s}.{7:s}.{8:s}".
@@ -160,17 +187,17 @@ def print_ims(ims_buf, ep_uid, ep_uid_es3, toshiba_format):
                      binascii.hexlify(ims_buf[20:24]),
                      binascii.hexlify(ims_buf[24:28]),
                      binascii.hexlify(ims_buf[28:32]),
-                     binascii.hexlify(ims_buf[32:35])))
+                     binascii.hexlify(ims_buf[32:35])), file=outfile)
         print("EP_UID     {0:s}.{1:s}".
               format(binascii.hexlify(ep_uid[0:4]),
-                     binascii.hexlify(ep_uid[4:8])))
+                     binascii.hexlify(ep_uid[4:8])), file=outfile)
         print("EP_UID_ES3 {0:s}.{1:s}".
               format(binascii.hexlify(ep_uid_es3[0:4]),
-                     binascii.hexlify(ep_uid_es3[4:8])))
+                     binascii.hexlify(ep_uid_es3[4:8])), file=outfile)
         m = hashlib.sha256()
         m.update(ims_buf[0:IMS_BYTES])
         sha256 = m.digest()
-        print("IMS        {0:s}.{1:s}.{2:s}.{3:s}.{4:s}.{5:s}."
+        print("IMS SHA256 {0:s}.{1:s}.{2:s}.{3:s}.{4:s}.{5:s}."
               "{6:s}.{7:s}".
               format(binascii.hexlify(sha256[0:4]),
                      binascii.hexlify(sha256[4:8]),
@@ -179,7 +206,17 @@ def print_ims(ims_buf, ep_uid, ep_uid_es3, toshiba_format):
                      binascii.hexlify(sha256[16:20]),
                      binascii.hexlify(sha256[20:24]),
                      binascii.hexlify(sha256[24:28]),
-                     binascii.hexlify(sha256[28:32])))
+                     binascii.hexlify(sha256[28:32])), file=outfile)
+    elif output_format == FORMAT_TOSHIBA_EFUSE:
+        # Print the IMS in toshiba .efz form
+        ims = unpack_from("<LLLLLLLLL", ims_buf)
+        print("IMS[279:0] = {0:06x}_{1:08x}_{2:08x}_{3:08x}_{4:08x}_"
+              "{5:08x}_{6:08x}_{7:08x}_{8:08x}".
+              format(ims[8], ims[7], ims[6], ims[5], ims[4],
+                     ims[3], ims[2], ims[1], ims[0]), file=outfile)
+    elif output_format == FORMAT_binascii:
+        # Print the IMS in ascii binary MSB..LSB
+        print(binlify_msb_lsb(ims_buf[0:IMS_BYTES]), file=outfile)
 
 
 def endpoint_unique_id(ims_buf):
@@ -284,36 +321,66 @@ def main():
                         type=int,
                         help="How many CMS values to generate")
 
-    parser.add_argument("--toshiba", "-t",
+    parser.add_argument("--toshiba-efuse", "--efuse", "-e",
                         action='store_true',
                         help="Generates the IMS/CMS values in Toshiba "
                              "'.efz' format")
 
+    parser.add_argument("--binascii", "-b",
+                        action='store_true',
+                        help="Generates the IMS/CMS values in ascii binary"
+                             "format (MSB...LSB)")
+
     args = parser.parse_args()
+    # Sanity-check the args
     if (args.ims == 0) and (args.cms == 0):
-        error("You must specify --ims or --cms")
-        sys.exit(PROGRAM_ERROR)
-    elif (args.ims > 0) and (args.cms > 0):
-        error("You can specify --ims or --cms, but not both")
+        error("You must specify at least one of --ims or --cms")
         sys.exit(PROGRAM_ERROR)
 
-    num_generated = 0
     if args.ims:
-        ims_buf = bytearray(IMS_DWORDS * 4)
-        print_to_error("Generate", args.ims, "IMS values:")
-        while num_generated < args.ims:
-            permute_ims(ims_buf)
-            num_generated += 1
-            print_ims(ims_buf, endpoint_unique_id(ims_buf),
-                      endpoint_unique_id_es3(ims_buf), args.toshiba)
+        num_generated = 0
+        with open("ims_efuse.txt", "w") as ims_efuse:
+            with open("ims_binascii.txt", "w") as ims_binascii:
+                ims_buf = bytearray(IMS_DWORDS * 4)
+                print_to_error("Generate", args.ims, "IMS values:")
+                while num_generated < args.ims:
+                    permute_ims(ims_buf)
+                    num_generated += 1
+                    print_ims(ims_buf,
+                              endpoint_unique_id(ims_buf),
+                              endpoint_unique_id_es3(ims_buf),
+                              FORMAT_HUMAN, sys.stdout)
+                    print_ims(ims_buf,
+                              endpoint_unique_id(ims_buf),
+                              endpoint_unique_id_es3(ims_buf),
+                              FORMAT_TOSHIBA_EFUSE, ims_efuse)
+                    print_ims(ims_buf,
+                              endpoint_unique_id(ims_buf),
+                              endpoint_unique_id_es3(ims_buf),
+                              FORMAT_binascii, ims_binascii)
+        # Remove unwanted formats (can't selectively choose "with")
+        if not args.toshiba_efuse:
+            os.remove("ims_efuse.txt")
+        if not args.binascii:
+            os.remove("ims_binascii.txt")
 
     if args.cms:
-        cms_buf = bytearray(CMS_DWORDS * 4)
-        print_to_error("Generate", args.cms, "CMS values:")
-        while num_generated < args.cms:
-            permute_cms(cms_buf)
-            num_generated += 1
-            print_cms(cms_buf, args.toshiba)
+        num_generated = 0
+        with open("cms_efuse.txt", "w") as cms_efuse:
+            with open("cms_binascii.txt", "w") as cms_binascii:
+                cms_buf = bytearray(CMS_DWORDS * 4)
+                print_to_error("Generate", args.cms, "CMS values:")
+                while num_generated < args.cms:
+                    permute_cms(cms_buf)
+                    num_generated += 1
+                    print_cms(cms_buf, FORMAT_HUMAN, sys.stdout)
+                    print_cms(cms_buf, FORMAT_TOSHIBA_EFUSE, cms_efuse)
+                    print_cms(cms_buf, FORMAT_binascii, cms_binascii)
+        # Remove unwanted formats (can't selectively choose "with")
+        if not args.toshiba_efuse:
+            os.remove("cms_efuse.txt")
+        if not args.binascii:
+            os.remove("cms_binascii.txt")
 
 
 ## Launch main

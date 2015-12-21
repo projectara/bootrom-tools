@@ -70,27 +70,6 @@ static RSA *    rsa = NULL;
 
 
 /**
- * @brief Returns the name of the signature key type
- *
- * @param package_type The signature key type
- *
- * @returns Returns a valid string on success, an error string on failure.
- *          Note that, where we are used, signature_algorithm has already
- *          been vetted.
- */
-const char * get_key_name(const uint32_t package_type) {
-    const char * name;
-
-    name = token_to_kw(package_type, package_types);
-    if (!name) {
-        name = "ERROR";
-    }
-
-    return name;
-}
-
-
-/**
  * @brief Returns the algorithm name
  *
  * @param signature_algorithm The signature algorithm used
@@ -112,102 +91,20 @@ const char * get_signature_algorithm_name(const uint32_t signature_algorithm) {
 
 
 /**
- * @brief Derive the name of the key from the key's filename
- *
- * @param signature_format The pathname to the TFTF file to sign.
- * @param package_type The pathname to the TFTF file to sign.
- * @param signature_algorithm The pathname to the TFTF file to sign.
- * @param key_filename The pathname to the TFTF file to sign.
- * @param suffix The optional suffix to append to the name
- *        ("keys.projectara.com" is used if omitted.)
- *
- * @returns True on success, false on failure
- */
-char * format_key_name(const uint32_t signature_format,
-                       const uint32_t package_type,
-                       const uint32_t signature_algorithm,
-                       const char * key_filename,
-                       const char * suffix) {
-    static char key_name_buf[256];
-    char * key_name = key_name_buf;
-    char * loc_key_filename = NULL;
-
-    key_name_buf[0] = '\0';
-
-    /* Create a local copy of the key_filename */
-    loc_key_filename = malloc(strlen(key_filename) + 1);
-    if (!loc_key_filename) {
-        fprintf(stderr,
-                "ERROR (format_key_name): can't alloc. local key_filename\n");
-        return key_name_buf;
-    }
-    strcpy(loc_key_filename, key_filename);
-
-
-    /* Use a default suffix if none provided */
-    if (!suffix) {
-        suffix = "keys.projectara.com";
-    }
-
-    /**
-     * Strip any ".pem", ".private.pem" or ".public.pem" extensions from
-     * the filename
-     */
-    rchop(loc_key_filename, ".private.pem");
-    rchop(loc_key_filename, ".public.pem");
-    rchop(loc_key_filename, ".pem");
-
-    /* Generate the key name based on the format */
-    switch (signature_format) {
-    case FORMAT_TYPE_STANDARD:
-        /**
-         * In *standard* format, the name for each key is constructed by using
-         * the key filename, with the *.public.pem* or *.pem* suffix removed
-         * as the left half of the name, followed by an *@* symbol, followed
-         * the right half of the name comprising the _Type_, a period, and the
-         * _Suffix_.
-         */
-        snprintf(key_name_buf, sizeof(key_name_buf), "%s@%s.%s",
-                 loc_key_filename,
-                 get_key_name(package_type),
-                 suffix);
-        break;
-
-    case FORMAT_TYPE_ES3:
-        /**
-         * In *es3* format, the name for each key is constructed by using the
-         * key filename, with the *.public.pem* or *.pem* suffix removed as the
-         * left half of the name, followed by an *@* symbol, followed the right
-         * half of the name comprising the _Algorithm_, a period, and the
-         * _Suffix_. The key _Type_ is not included in "es3"-format key name.
-         */
-        snprintf(key_name_buf, sizeof(key_name_buf), "%s@%s.%s",
-                 loc_key_filename,
-                 get_signature_algorithm_name(signature_algorithm),
-                 suffix);
-        break;
-
-    default:
-        fprintf(stderr, "ERROR: Unknown key format %d\n", signature_format);
-        key_name = NULL;
-    }
-
-    if (loc_key_filename) {
-        free(loc_key_filename);
-    }
-
-    return key_name;
-}
-
-/**
  * @brief Initialize the signing subsystem
  *
  * @param key_filename The pathname to the private key file
+ * @param bad_passphrase Pointer to flag that is set if the failure was
+ *        likley due to an incorrect passphrase
  *
  * @returns True on success, false on failure.
  */
-bool sign_init(char * key_filename) {
+bool sign_init(char * key_filename, bool * bad_passphrase) {
     FILE * fp;
+
+    if (bad_passphrase) {
+        *bad_passphrase = false;
+    }
 
     if (!crypto_initialized) {
 
@@ -236,11 +133,17 @@ bool sign_init(char * key_filename) {
     }
     rsa = RSA_new();
     if (rsa == NULL) {
-        fprintf(stderr, "ERROR: Can't open private key %s (err %d)\n",
+        fprintf(stderr, "ERROR: Can't allocate RSA for key %s (err %d)\n",
                key_filename, errno);
             return false;
     } else {
         rsa = PEM_read_RSAPrivateKey(fp, &rsa, NULL, passphrase);
+        if (rsa == NULL) {
+            if (bad_passphrase) {
+                *bad_passphrase = true;
+            }
+            return false;
+        }
     }
 
     return true;
@@ -260,7 +163,7 @@ void sign_deinit(void) {
         rsa = NULL;
     }
 
-    if (!crypto_initialized) {
+    if (crypto_initialized) {
         /* (From: https://wiki.openssl.org/index.php/Libcrypto_API) */
         /* Removes all digests and ciphers */
          EVP_cleanup();
@@ -284,27 +187,20 @@ void sign_deinit(void) {
  *
  * @param filename The pathname to the TFTF file to sign.
  * @param signature_format The pathname to the TFTF file to sign.
- * @param package_type The pathname to the TFTF file to sign.
  * @param signature_algorithm The pathname to the TFTF file to sign.
  * @param key_filename The pathname to the TFTF file to sign.
- * @param suffix The optional suffix to append to the name.
  * @param write_if_good If true and we were able to sign it, write the signed
  *        TFTF file. If false only verify we can sign the TFTF.
  * @param verbose If true, display the signed TFTF.
- * @param passphrase_invalid A pointer to a boolean which will be set if the
- *        actual signing failed. (This is to support the "--retry" flag.)
  *
  * @returns True on success, false on failure
  */
 bool sign_tftf(const char * filename,
-               const int32_t signature_format,
-               const uint32_t package_type,
                const uint32_t signature_algorithm,
+               const char * key_name,
                const char * key_filename,
-               const char * suffix,
                const bool write_if_good,
-               const bool verbose,
-               bool * passphrase_invalid) {
+               const bool verbose) {
     bool success = false;
     int status;
     ssize_t tftf_size;
@@ -344,13 +240,9 @@ bool sign_tftf(const char * filename,
         /* Initialize the signature block */
         signature_block.length = sizeof(signature_block);
         signature_block.type = signature_algorithm;
-        safer_strcpy (signature_block.key_name,
-                  sizeof(signature_block.key_name),
-                  format_key_name(signature_format,
-                                  package_type,
-                                  signature_algorithm,
-                                  basename(loc_key_filename),
-                                  suffix));
+        safer_strcpy(signature_block.key_name,
+                     sizeof(signature_block.key_name),
+                     key_name);
 
         /* Extract the signable blob from the TFTF and sign it */
         success = tftf_get_signable_region(tftf_hdr,
@@ -386,9 +278,6 @@ bool sign_tftf(const char * filename,
                               signature_block.signature, &sig_len, rsa);
             if (status < 1) {
                 fprintf(stderr, "ERROR: RSA_sign failed\n");
-                if (passphrase_invalid) {
-                    *passphrase_invalid = true;
-                }
             }
             success = true;
 

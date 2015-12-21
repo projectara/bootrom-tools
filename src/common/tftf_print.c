@@ -110,7 +110,7 @@ static void print_tftf_signature(const tftf_signature * sig_block,
         printf("%s  Key name:\n", indent);
         printf("%s      '%4s'\n", indent, sig_block->key_name);
         printf("%s  Signature:\n", indent);
-        display_binary_data((uint8_t *)sig_block->signature, sig_block->length, true,
+        display_binary_data((uint8_t *)sig_block->signature, sizeof(sig_block->signature), true,
                             data_indent);
     }
 }

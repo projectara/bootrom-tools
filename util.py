@@ -83,12 +83,14 @@ def display_binary_data(blob, show_all, indent=""):
     """
     # Print the data blob
     length = len(blob)
+    dyn_length = length;
     max_on_line = 32
 
     if length <= (3 * max_on_line) or show_all:
         # Nominally a small blob
         for start in range(0, length, max_on_line):
-            num_bytes = min(length, max_on_line)
+            num_bytes = min(dyn_length, max_on_line)
+            dyn_length -= num_bytes
             print("{0:s}{1:s}".format(
                   indent,
                   binascii.hexlify(blob[start:start+num_bytes])))

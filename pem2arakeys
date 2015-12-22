@@ -34,26 +34,30 @@ import os
 import argparse
 import subprocess
 from util import error
-from signature_common import get_signature_algorithm, \
-    get_key_type,  get_format_type, format_key_name, \
-    get_key_filename, SIGNATURE_COMMON_ARGUMENTS
+from signature_block import TFTF_SIGNATURE_KEY_NAME_LENGTH
+from signature_common import get_signature_algorithm, get_signature_algorithm_name, \
+    format_key_name, get_key_id, get_key_filename, SIGNATURE_COMMON_ARGUMENTS, \
+    TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256
 
 MAX_FILES = 4
 
-MAX_KEY_NAME_LENGTH = 96
-
-USAGE = """"%(prog)s  public_key.pem... --format <format> --usage <string> \\
-           {--name <string>} {--singleton}
+USAGE = """"%(prog)s  --key public_key.pem... --domain <string> --algorithm <string> \\
+           {--id <string>} {--name <string>} {--singleton}
 Where:
-    public_key.pem
-        One or more public key files
-     --usage
-        The right half of the key names (e.g. 's2fvk.projectara.com')
-     --format
-        Specifies the format (e.g., 'rsa2048-sha256')
-     --name
+    --key
+        One to four public key files
+    --id
+        The key ID for the key (forms the left half of the key name
+        (e.g. 'test-151210-02-20151212-01'). Normally the key ID is
+        derived from the key file name, and up to 4 keys may be specified.
+        If --id is specified, only 1 key file may be used.
+    --domain
+        The right half of the key name (e.g. 's2fvk.projectara.com')
+    --algorithm
+        Specifies the signing algorithm (e.g., 'rsa2048-sha256')
+    --name
         Name of the 'C' variable containing the keys (default: 'public_keys')
-     --singleton
+    --singleton
         Declare the one key as a struct instead of an array
 """
 
@@ -97,19 +101,19 @@ KEY_ARRAY = "const crypto_public_key {0:s}[] = {1:s}\n"
 # TFTF Signature Types and associated dictionary of types and names
 # NOTE: When adding new types, both the "define" and the dictionary
 # need to be updated.
-TFTF_SIGNATURE_TYPE_UNKNOWN = 0x00
-TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256 = 0x01
-tftf_signature_types = {"rsa2048-sha256":
-                        TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256}
 tftf_signature_names = {TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256:
                         "ALGORITHM_TYPE_RSA2048_SHA256"}
 
 
-def get_key_define(key_type):
+def get_signature_algorithm_define(algorithm):
+    """ Convert a algorithm_type (TFTF_SIGNATURE_TYPE_xxx) into a string
+
+    returns a key name, or raises an exception if invalid
+    """
     try:
-        return tftf_signature_names[key_type]
+        return tftf_signature_names[algorithm]
     except:
-        return "INVALID"
+        raise ValueError("Unknown algorithm type: '{0:d}'".format(algorithm))
 
 
 def validate_input_files(keyfiles):
@@ -126,8 +130,8 @@ def validate_input_files(keyfiles):
     return success
 
 
-def convert_pem_to_array(keyfile, wf, usage, key_format, key_type, algorithm,
-                         suffix, indent, include_braces):
+def convert_pem_to_array(key_filename, wf, key_id, domain, algorithm,
+                         indent, include_braces):
     # Convert a public key file into a C-style array appended to the ouput
     # file
 
@@ -138,16 +142,15 @@ def convert_pem_to_array(keyfile, wf, usage, key_format, key_type, algorithm,
 
     # Generate the key_name from the file and verify that it will fit
     # in the 96-byte field as a null-terminated string
-    key_name = format_key_name(key_format, os.path.basename(keyfile),
-                               key_type, algorithm, suffix)
-    if (len(key_name) >= MAX_KEY_NAME_LENGTH):
+    key_name = format_key_name(get_key_id(key_id, key_filename), domain)
+    if (len(key_name) >= TFTF_SIGNATURE_KEY_NAME_LENGTH):
         error("Key name too long: '{0:s}'".format(key_name))
-        error("Key name must be <", MAX_KEY_NAME_LENGTH, "characters")
+        error("Key name must be <", TFTF_SIGNATURE_KEY_NAME_LENGTH, "characters")
         sys.exit(1)
 
     # Get the blob and strip off the cruft around it.
     str = subprocess.check_output(["openssl", "rsa", "-pubin", "-text",
-                                   "-noout", "-in", keyfile])
+                                   "-noout", "-in", key_filename])
     array_start = str.index("Modulus:") + 13
     array_end = str.index("Exponent:") - 1
     str = str[array_start:array_end]
@@ -158,7 +161,8 @@ def convert_pem_to_array(keyfile, wf, usage, key_format, key_type, algorithm,
     column = 0
     if include_braces:
         wf.write("{0:s}{1:s}\n".format(indent, "{"))
-    wf.write("{0:s}.type = {1:s},\n".format(indent2, get_key_define(key_type)))
+    wf.write("{0:s}.type = {1:s},\n".
+             format(indent2, get_signature_algorithm_define(algorithm)))
     wf.write("{0:s}.key_name = \"{1:s}\",\n".format(indent2, key_name))
     wf.write("{0:s}.key = {1:s}\n".format(indent2, "{"))
     for index, byte in enumerate(block):
@@ -179,40 +183,40 @@ def convert_pem_to_array(keyfile, wf, usage, key_format, key_type, algorithm,
         wf.write("{0:s}{1:s},\n".format(indent, "}"))
 
 
-def process_input_files(keyfiles, wf, array_name, key_format, key_type,
-                        signature_algorithm, suffix, usage, singleton):
-    # Convert each of the public key files into a C array in a header file
-        # Add the boilerplate copyright and #includes
-        wf.write(COPYRIGHT)
-        wf.write(INCLUDES)
+def process_input_files(keyfiles, wf, array_name, algorithm, key_id,
+                        domain, singleton):
+    """ Convert the public key files into a C array in a header file """
 
-        # Add the constant for the number of keys in the array
-        if singleton:
-            # Add the "public_keys" declaration
-            wf.write("const crypto_public_key {0:s} = {1:s}\n".
-                     format(array_name, "{"))
+    # Add the boilerplate copyright and #includes
+    wf.write(COPYRIGHT)
+    wf.write(INCLUDES)
 
-            # Process each file as a component of the array
-            for f in keyfiles:
-                convert_pem_to_array(f, wf, usage, key_format, key_type,
-                                     signature_algorithm, suffix, "", False)
+    # Add the constant for the number of keys in the array
+    if singleton:
+        # Add the "public_keys" declaration
+        wf.write("const crypto_public_key {0:s} = {1:s}\n".
+                 format(array_name, "{"))
 
-            # Complete the declaration
-            wf.write("};\n\n")
-        else:
-            # Add the start of the "public_keys" array
-            wf.write(KEY_ARRAY.format(array_name, "{"))
+        # Process each file as a component of the array
+        for keyfile in keyfiles:
+            convert_pem_to_array(keyfile, wf, key_id, domain,
+                                 algorithm, "", False)
 
-            # Process each file as a component of the array
-            for f in keyfiles:
-                convert_pem_to_array(f, wf, usage, key_format, key_type,
-                                     signature_algorithm, suffix, "    ", True)
+        # Complete the declaration
+        wf.write("};\n\n")
+    else:
+        # Add the start of the "public_keys" array
+        wf.write(KEY_ARRAY.format(array_name, "{"))
 
-            # Complete the 2D array declaration
-            wf.write("};\n\n")
+        # Process each file as a component of the array
+        for keyfile in keyfiles:
+            convert_pem_to_array(keyfile, wf, key_id, domain,
+                                 algorithm, "    ", True)
 
-            wf.write("const uint32_t number_of_public_keys = "
-                     "sizeof(public_keys)/sizeof(crypto_public_key);\n")
+        # Complete the 2D array declaration
+        wf.write("};\n\n")
+        wf.write("const uint32_t number_of_public_keys = "
+                 "sizeof(public_keys)/sizeof(crypto_public_key);\n")
 
 
 def main():
@@ -223,39 +227,45 @@ def main():
     # Parse the command line args
     parser = argparse.ArgumentParser(usage=USAGE)
 
-    # Common args (--type, --suffix, --signature-algorithm, --format):
-    for args, kwargs in SIGNATURE_COMMON_ARGUMENTS:
-        parser.add_argument(*args, **kwargs)
-
     # App-specific args:
-    parser.add_argument("keyfiles", metavar="N", nargs="*",
-                        help="One or more public key files (e.g., foo.pem)")
-#    parser.add_argument("--format", required=True,
-#                        help="Specifies the format (e.g., rsa2048-sha256)")
-    parser.add_argument("--usage", required=True,
-                        help="The right half of the key name(s)")
+    parser.add_argument("--key", required=True,
+                        help="The name of the signing key PEM file "
+                        "(e.g. 'test-151210-02-20151212-01.private.pem')")
+    parser.add_argument("--id", required=False,
+                        help="The key ID (and the left half of the key name)")
+    parser.add_argument("--domain", required=True,
+                        help="The key domain - the right-hand part "
+                             "of the validation key name")
+    parser.add_argument("--algorithm", required=True,
+                        help="The cryptographic signature algorithm used "
+                             "in the PEM file")
     parser.add_argument("--name", required=False, default="public_keys",
                         help="Name of the 'C' array or single struct")
     parser.add_argument("--singleton", action='store_true',
                         help="Declare the one key as a variable instead "
                              "of an array of variables")
+    parser.add_argument("keyfiles", metavar="N", nargs="*",
+                        help="One or more public key files (e.g., foo.pem)")
 
     args = parser.parse_args()
 
     # Validate parameters
-    signature_algorithm = get_signature_algorithm(args.signature_algorithm)
-    key_type = get_key_type(args.type)
-    key_format = get_format_type(args.format)
+    algorithm = get_signature_algorithm(args.algorithm)
+    key_id = get_key_id(args.id, args.key)
 
     if args.singleton and (len(args.keyfiles) > 1):
         error("--singleton specified with multiple files")
         sys.exit(1)
 
+    if args.id and (len(args.keyfiles) > 1):
+        error("--id specified with multiple files")
+        sys.exit(1)
+
     # Create the file on stdout
     if validate_input_files(args.keyfiles):
         process_input_files(args.keyfiles, sys.stdout, args.name,
-                            key_format, key_type, signature_algorithm,
-                            args.suffix, args.usage, args.singleton)
+                            algorithm,
+                            args.id, args.domain, args.singleton)
 
 ## Launch main
 #

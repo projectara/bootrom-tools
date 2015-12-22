@@ -61,24 +61,28 @@ FORMAT_NAMES = {FORMAT_TYPE_STANDARD: "standard",
 
 # Common command-line arguments for signing apps
 SIGNATURE_COMMON_ARGUMENTS = [
-    (["--type"], {"required": True,
-                  "help": "The type of the key file (e.g., s2fsk)"}),
-    (["--suffix"], {"default": "keys.projectara.com",
-                    "help": "The right hand part of the key name "
-                    "(keys.projectara.com)"}),
-    (["--signature-algorithm"], {"required": True,
-                                 "help": "The name of the signing algorithm "
-                                 "(e.g., rsa2048-sha256)"}),
-    (["--format"], {"required": True,
-                    "help": "The naming format for keys (standard | es3)"})]
+#    (["--type"], {"required": True,
+#                  "help": "The type of the key file (e.g., s2fsk)"}),
+#    (["--format"], {"required": True,
+#                    "help": "The naming format for keys (standard | es3)"})
+    (["--domain"], {"required": True,
+                    "help": "The key domain - the right-hand part of the "
+                           "validation key name"}),
+
+    (["--id"], {"help": "The ID of the key (instead of deriving it "
+                        "from the key filename)"}),
+
+    (["--algorithm"], {"required": True,
+                       "help": "The cryptographic signature algorithm used "
+                               "in the PEM file (e.g., rsa2048-sha256)"})]
 
 
-def rchop(string, suffix):
-    thelength = len(suffix)
-    if (thelength < len(string)) and (string[-thelength:] == suffix):
-        return string[:-thelength]
+def rchop(thestring, ending):
+    # Remove trailing substing if present
+    if thestring.endswith(ending):
+        return thestring[:-len(ending)]
     else:
-        return string
+        return thestring
 
 
 def get_key_filename(filename, private):
@@ -100,36 +104,21 @@ def get_key_filename(filename, private):
     return None
 
 
-def format_key_name(key_format, key_filename, key_type,
-                    signature_algorithm, suffix):
-    """ Derive the name of the key from the key's filename """
-    # Strip any ".pem", ".private.pem" or ".public.pem" extensions from
-    # the filename
-    key_filename = rchop(key_filename, ".private.pem")
-    key_filename = rchop(key_filename, ".public.pem")
-    key_filename = rchop(key_filename, ".pem")
+def get_key_id(key_id, key_filename):
+    """ Derive the key ID from the key's filename if not user-specified """
+    if not key_id:
+        # Strip any leading path, and any ".pem", ".private.pem" or
+        # ".public.pem" extensions from the filename
+        key_id = os.path.basename(key_filename)
+        key_id = rchop(key_id, ".private.pem")
+        key_id = rchop(key_id, ".public.pem")
+        key_id = rchop(key_id, ".pem")
+    return key_id
 
-    # Generate the key name based on the format
-    if key_format == FORMAT_TYPE_STANDARD:
-        # In *standard* format, the name for each key is constructed by using
-        # the key filename, with the *.public.pem* or *.pem* suffix removed
-        # as the left half of the name, followed by an *@* symbol, followed
-        # the right half of the name comprising the _Type_, a period, and the
-        # _Suffix_ (if unspecified, *keys.projectara.com*)
-        key_name = "{0:s}@{1:s}.{2:s}".format(key_filename,
-                                              get_key_name(key_type),
-                                              suffix)
-    elif key_format == FORMAT_TYPE_ES3:
-        # In *es3* format, the name for each key is constructed by using the
-        # key filename, with the *.public.pem* or *.pem* suffix removed as the
-        # left half of the name, followed by an *@* symbol, followed the right
-        # half of the name comprising the _Algorithm_, a period, and the
-        # _Suffix_ (if unspecified, *keys.projectara.com*). The key _Type_
-        # is not included in *es3*-format key name.
-        alg_name = get_signature_algorithm_name(signature_algorithm)
-        key_name = "{0:s}@{1:s}.{2:s}".format(key_filename, alg_name, suffix)
-    else:
-        raise ValueError("Unknown key format {0:d}".format(key_format))
+
+def format_key_name(key_id, key_domain):
+    """ Assemble a key name from ID & domain """
+    key_name = "{0:s}@{1:s}".format(key_id, key_domain)
     return key_name
 
 
@@ -145,57 +134,12 @@ def get_signature_algorithm(algorithm_type_string):
                          format(algorithm_type_string))
 
 
-def get_signature_algorithm_name(key_type):
+def get_signature_algorithm_name(algorithm):
     """ Convert a algorithm_type (TFTF_SIGNATURE_TYPE_xxx) into a string
 
     returns a key name, or raises an exception if invalid
     """
     try:
-        return TFTF_SIGNATURE_ALGORITHM_NAMES[key_type]
+        return TFTF_SIGNATURE_ALGORITHM_NAMES[algorithm]
     except:
-        raise ValueError("Unknown algorithm type: '{0:d}'".format(key_type))
-
-
-def get_key_type(key_type_string):
-    """ Convert a string into a key_type (KEY_TYPE_xxx)
-
-    returns a numeric key_type, or raises an exception if invalid
-    """
-    try:
-        return KEY_TYPES[key_type_string]
-    except:
-        raise ValueError("Unknown algorithm type: '{0:s}'".
-                         format(key_type_string))
-
-
-def get_key_name(key_type):
-    """ Convert a key_type (KEY_TYPE_xxx) into a string
-
-    returns a key name, or raises an exception if invalid
-    """
-    try:
-        return KEY_NAMES[key_type]
-    except:
-        raise ValueError("Unknown key type: '{0:d}'".format(key_type))
-
-
-def get_format_type(format_type_string):
-    """ Convert a string into a format_type (FORMAT_TYPE_xxx)
-
-    returns a numeric format_type, or None if invalid
-    """
-    try:
-        return FORMAT_TYPES[format_type_string]
-    except:
-        raise ValueError("Unknown format: '{0:s}'".format(format_type_string))
-
-
-def get_format_name(format_type):
-    """ Convert a format_type (FORMAT_TYPE_xxx) into a string
-
-    returns a format name string, or None if invalid
-    """
-    try:
-        return FORMAT_NAMES[format_type]
-    except:
-        raise ValueError("Unknown format type: '{0:d}'".format(format_type))
+        raise ValueError("Unknown algorithm type: '{0:d}'".format(algorithm))

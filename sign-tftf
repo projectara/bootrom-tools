@@ -30,14 +30,16 @@
 
 from __future__ import print_function
 import sys
+import os
 import argparse
 from struct import pack_into
 from tftf import Tftf, TFTF_SECTION_TYPE_SIGNATURE
 import M2Crypto
 from signature_block import SignatureBlock, TFTF_SIGNATURE_LEN_FIXED_PART, \
-    TFTF_SIGNATURE_OFF_TYPE, TFTF_SIGNATURE_OFF_KEY_NAME
+    TFTF_SIGNATURE_OFF_TYPE, TFTF_SIGNATURE_OFF_KEY_NAME, \
+    TFTF_SIGNATURE_KEY_NAME_LENGTH
 from signature_common import get_key_filename, get_signature_algorithm, \
-    get_key_type, get_format_type, format_key_name, \
+    format_key_name, get_key_id, \
     TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256, SIGNATURE_COMMON_ARGUMENTS
 from util import error, print_to_error
 from getpass import getpass
@@ -60,7 +62,7 @@ passphrase = None
 # Program return values
 PROGRAM_SUCCESS = 0
 PROGRAM_WARNINGS = 1
-PROGRAM_ERRORS = 2
+PROGRAM_ERROR = 2
 
 
 def get_hash_from_signature_algorithm(tftf_signature_algorithm):
@@ -95,11 +97,6 @@ def validate_args(args):
         return False
     if len(args.files) > 1:
         error("Too many TFTF files to sign")
-        return False
-
-    if not get_format_type(args.format):
-        error("Unknown --format: '{0:s}' - must be standard | es3".
-              format(args.type))
         return False
 
     return True
@@ -180,7 +177,7 @@ def get_key(key_filename, passin, no_retry):
 
             # Try to load the key, using the passphrase. If that fails and
             # we got the passphrase interactively, try again until they get
-            # it right (or ^C out). NB the --retry flag causes us to skip
+            # it right (or ^C out). NB the --no-retry flag causes us to skip
             # retrying
             try:
                 return M2Crypto.RSA.load_key(key_filename, get_passphrase)
@@ -211,7 +208,8 @@ def main():
     # App-specific args:
     parser.add_argument("--key",
                         required=True,
-                        help="The name of input PEM file")
+                        help="The name of the signing key PEM file (e.g. "
+                             "'test-151210-02-20151212-01.private.pem')")
 
     parser.add_argument("--verbose", "-v",
                         action='store_true',
@@ -222,7 +220,7 @@ def main():
                         help="Key file passphrase (stdin | (prompt) | "
                              "pass:<passphrase>)")
 
-    parser.add_argument("--retry",
+    parser.add_argument("--no-retry",
                         action='store_true',
                         help="Fail if '--passin prompt' passphrase is invalid")
 
@@ -243,22 +241,38 @@ def main():
     # Sanity-check the arguments
     if not validate_args(args):
         error("Invalid args")
-        sys.exit(PROGRAM_ERRORS)
+        sys.exit(PROGRAM_ERROR)
 
-    # Convert the key and signature type strings into tokens
-    signature_algorithm = get_signature_algorithm(args.signature_algorithm)
-    key_type = get_key_type(args.type)
-    key_format = get_format_type(args.format)
-    hash_algorithm = get_hash_from_signature_algorithm(key_type)
+    # Convert the algorithm string into a known key type token
+    try:
+        algorithm = get_signature_algorithm(args.algorithm)
+    except ValueError as e:
+        error(e)
+        sys.exit(PROGRAM_ERROR)
+
+    # Obtain the key ID, normally extracted from the key file name, but
+    # it may be overridden by the --id parameter
+    key_id = get_key_id(args.id, args.key)
+
+    # Derive a key name from the key ID and domain
+    key_name = format_key_name(key_id, args.domain)
+    if (len(key_name) >= TFTF_SIGNATURE_KEY_NAME_LENGTH):
+        error("Key name too long: '{0:s}'".format(key_name))
+        error("Key name must be <", TFTF_SIGNATURE_KEY_NAME_LENGTH,
+              "characters")
+        sys.exit(PROGRAM_ERROR)
+
+    hash_algorithm = get_hash_from_signature_algorithm(algorithm)
     if not hash_algorithm:
         error("Unknown hash algorithm")
-        sys.exit(PROGRAM_ERRORS)
+        sys.exit(PROGRAM_ERROR)
 
     # Read the key
     key_filename = get_key_filename(args.key, True)
     if not key_filename:
         error("Can't find key file '{0:s}'".format(args.key))
-        sys.exit(PROGRAM_ERRORS)
+        sys.exit(PROGRAM_ERROR)
+    key = get_key(key_filename, args.passin, args.no_retry)
 
     # Create an initial signature block, sized to the fixed portion, with
     # as much initialized as possible.  We'll use this as the base image
@@ -268,11 +282,7 @@ def main():
 
     # Fill in the signature block type
     pack_into("<L", base_signature_block, TFTF_SIGNATURE_OFF_TYPE,
-              signature_algorithm)
-
-    # Derive a key name from the key file and add it to the signature block
-    key_name = format_key_name(key_format, key_filename, key_type,
-                               signature_algorithm, args.suffix)
+              algorithm)
     pack_into("<96s", base_signature_block, TFTF_SIGNATURE_OFF_KEY_NAME,
               key_name)
 
@@ -286,19 +296,18 @@ def main():
         # Process each TFTF, unless "--check" was specified
         if not args.check:
             # Extract the signable blob from the TFTF and sign it
-            signable_blob = get_signable_blob(tftf)
             MsgDigest = M2Crypto.EVP.MessageDigest(hash_algorithm)
-            MsgDigest.update(signable_blob)
+            MsgDigest.update(get_signable_blob(tftf))
             signature = key.sign(MsgDigest.digest(), hash_algorithm)
 
             # Append the signature block to the TFTF
-            signature_block = SignatureBlock(None, signature_type, key_name,
+            signature_block = SignatureBlock(None, algorithm, key_name,
                                              signature)
             if not tftf.add_section(TFTF_SECTION_TYPE_SIGNATURE,  # type
                                     0,                            # class
                                     0,                            # id
                                     signature_block.pack()):      # data
-                sys.exit(PROGRAM_ERRORS)
+                sys.exit(PROGRAM_ERROR)
 
             tftf.post_process()
 
@@ -310,7 +319,7 @@ def main():
 
             # Write the TFTF file (i.e., header and section files)
             if not tftf.write(f):
-                sys.exit(PROGRAM_ERRORS)
+                sys.exit(PROGRAM_ERROR)
 
     print("Done")
 

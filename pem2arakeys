@@ -30,19 +30,23 @@
 
 from __future__ import print_function
 import sys
-import os
 import argparse
 import subprocess
 from util import error
-from signature_block import TFTF_SIGNATURE_KEY_NAME_LENGTH
-from signature_common import get_signature_algorithm, get_signature_algorithm_name, \
-    format_key_name, get_key_id, get_key_filename, SIGNATURE_COMMON_ARGUMENTS, \
+from signature_block import get_signature_algorithm
+from signature_common import format_key_name, get_key_id, get_key_filename, \
     TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256
+
+
+# Program return values
+PROGRAM_SUCCESS = 0
+PROGRAM_WARNINGS = 1
+PROGRAM_ERROR = 2
 
 MAX_FILES = 4
 
-USAGE = """"%(prog)s  --key public_key.pem... --domain <string> --algorithm <string> \\
-           {--id <string>} {--name <string>} {--singleton}
+USAGE = """"%(prog)s  --key public_key.pem... --domain <string> \\
+           --algorithm <string> {--id <string>} {--name <string>} {--singleton}
 Where:
     --key
         One to four public key files
@@ -101,17 +105,20 @@ KEY_ARRAY = "const crypto_public_key {0:s}[] = {1:s}\n"
 # TFTF Signature Types and associated dictionary of types and names
 # NOTE: When adding new types, both the "define" and the dictionary
 # need to be updated.
-tftf_signature_names = {TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256:
-                        "ALGORITHM_TYPE_RSA2048_SHA256"}
+tftf_signature_define_names = \
+    {TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256:
+        "ALGORITHM_TYPE_RSA2048_SHA256"}
 
 
 def get_signature_algorithm_define(algorithm):
     """ Convert a algorithm_type (TFTF_SIGNATURE_TYPE_xxx) into a string
 
+    Convert the algorithm type into a string used as part of a "#define" (as
+    distinct from the regular name returned by get_signature_algorithm_name)
     returns a key name, or raises an exception if invalid
     """
     try:
-        return tftf_signature_names[algorithm]
+        return tftf_signature_define_names[algorithm]
     except:
         raise ValueError("Unknown algorithm type: '{0:d}'".format(algorithm))
 
@@ -142,11 +149,11 @@ def convert_pem_to_array(key_filename, wf, key_id, domain, algorithm,
 
     # Generate the key_name from the file and verify that it will fit
     # in the 96-byte field as a null-terminated string
-    key_name = format_key_name(get_key_id(key_id, key_filename), domain)
-    if (len(key_name) >= TFTF_SIGNATURE_KEY_NAME_LENGTH):
-        error("Key name too long: '{0:s}'".format(key_name))
-        error("Key name must be <", TFTF_SIGNATURE_KEY_NAME_LENGTH, "characters")
-        sys.exit(1)
+    try:
+        key_name = format_key_name(get_key_id(key_id, key_filename), domain)
+    except ValueError as e:
+        error(e)
+        sys.exit(PROGRAM_ERROR)
 
     # Get the blob and strip off the cruft around it.
     str = subprocess.check_output(["openssl", "rsa", "-pubin", "-text",
@@ -232,7 +239,9 @@ def main():
                         help="The name of the signing key PEM file "
                         "(e.g. 'test-151210-02-20151212-01.private.pem')")
     parser.add_argument("--id", required=False,
-                        help="The key ID (and the left half of the key name)")
+                        help="The key ID to be used as the left half of the "
+                             "validaion key name instead of using the key "
+                             "file name")
     parser.add_argument("--domain", required=True,
                         help="The key domain - the right-hand part "
                              "of the validation key name")
@@ -251,7 +260,6 @@ def main():
 
     # Validate parameters
     algorithm = get_signature_algorithm(args.algorithm)
-    key_id = get_key_id(args.id, args.key)
 
     if args.singleton and (len(args.keyfiles) > 1):
         error("--singleton specified with multiple files")

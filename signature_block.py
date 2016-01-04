@@ -31,17 +31,62 @@
 from __future__ import print_function
 from struct import pack_into, unpack_from
 from util import display_binary_data, error
-from signature_common import get_signature_algorithm_name, \
-    TFTF_SIGNATURE_TYPE_UNKNOWN
+
+
+# TFTF Signature algorithm and associated dictionary of types and names
+# NOTE: When adding new types, both the "define" and the dictionary
+# need to be updated. (see "--algorithm" in sign-tftf and pem2arakeys)
+TFTF_SIGNATURE_TYPE_UNKNOWN = 0x00
+TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256 = 0x01
+TFTF_SIGNATURE_ALGORITHMS = \
+    {"rsa2048-sha256": TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256}
+TFTF_SIGNATURE_ALGORITHM_NAMES = \
+    {TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256: "rsa2048-sha256"}
 
 # TFTF Signature Block layout
 TFTF_SIGNATURE_KEY_NAME_LENGTH = 96
-TFTF_SIGNATURE_OFF_LENGTH = 0x00
-TFTF_SIGNATURE_OFF_TYPE = 0x04
-TFTF_SIGNATURE_OFF_KEY_NAME = 0x08
-TFTF_SIGNATURE_OFF_KEY_SIGNATURE = 0x68
-# Size of the fixed portion of the signature block
-TFTF_SIGNATURE_LEN_FIXED_PART = TFTF_SIGNATURE_OFF_KEY_SIGNATURE
+TFTF_SIGNATURE_SIGNATURE_LENGTH = 256
+
+# TFTF signature block field lengths
+TFTF_SIGNATURE_LEN_LENGTH = 4
+TFTF_SIGNATURE_LEN_TYPE = 4
+TFTF_SIGNATURE_LEN_KEY_NAME = TFTF_SIGNATURE_KEY_NAME_LENGTH
+TFTF_SIGNATURE_LEN_KEY_SIGNATURE = TFTF_SIGNATURE_SIGNATURE_LENGTH
+TFTF_SIGNATURE_LEN_FIXED_PART = (TFTF_SIGNATURE_LEN_LENGTH +
+                                 TFTF_SIGNATURE_LEN_TYPE +
+                                 TFTF_SIGNATURE_LEN_KEY_NAME)
+
+# TFTF signature block field offsets
+TFTF_SIGNATURE_OFF_LENGTH = 0
+TFTF_SIGNATURE_OFF_TYPE = (TFTF_SIGNATURE_OFF_LENGTH +
+                           TFTF_SIGNATURE_LEN_LENGTH)
+TFTF_SIGNATURE_OFF_KEY_NAME = (TFTF_SIGNATURE_OFF_TYPE +
+                               TFTF_SIGNATURE_LEN_TYPE)
+TFTF_SIGNATURE_OFF_KEY_SIGNATURE = (TFTF_SIGNATURE_OFF_KEY_NAME +
+                                    TFTF_SIGNATURE_LEN_KEY_NAME)
+
+
+def get_signature_algorithm(algorithm_type_string):
+    """convert a string into a key_type (TFTF_SIGNATURE_TYPE_xxx)
+
+    returns a numeric key_type, or raises an exception if invalid
+    """
+    try:
+        return TFTF_SIGNATURE_ALGORITHMS[algorithm_type_string]
+    except:
+        raise ValueError("Unknown algorithm type: '{0:s}'".
+                         format(algorithm_type_string))
+
+
+def get_signature_algorithm_name(algorithm):
+    """ Convert a algorithm_type (TFTF_SIGNATURE_TYPE_xxx) into a string
+
+    returns a key name, or raises an exception if invalid
+    """
+    try:
+        return TFTF_SIGNATURE_ALGORITHM_NAMES[algorithm]
+    except:
+        raise ValueError("Unknown algorithm type: '{0:d}'".format(algorithm))
 
 
 def signature_block_write_map(wf, base_offset, prefix=""):

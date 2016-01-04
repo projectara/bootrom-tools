@@ -35,11 +35,11 @@ import argparse
 from struct import pack_into
 from tftf import Tftf, TFTF_SECTION_TYPE_SIGNATURE
 import M2Crypto
-from signature_block import SignatureBlock, TFTF_SIGNATURE_LEN_FIXED_PART, \
-    TFTF_SIGNATURE_OFF_TYPE, TFTF_SIGNATURE_OFF_KEY_NAME, \
-    TFTF_SIGNATURE_KEY_NAME_LENGTH
-from signature_common import get_key_filename, get_signature_algorithm, \
-    format_key_name, get_key_id, \
+from signature_block import SignatureBlock, get_signature_algorithm, \
+    TFTF_SIGNATURE_LEN_FIXED_PART, TFTF_SIGNATURE_OFF_TYPE, \
+    TFTF_SIGNATURE_OFF_KEY_NAME
+from signature_common import \
+    format_key_name, get_key_id, get_key_filename, \
     TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256, SIGNATURE_COMMON_ARGUMENTS
 from util import error, print_to_error
 from getpass import getpass
@@ -255,11 +255,10 @@ def main():
     key_id = get_key_id(args.id, args.key)
 
     # Derive a key name from the key ID and domain
-    key_name = format_key_name(key_id, args.domain)
-    if (len(key_name) >= TFTF_SIGNATURE_KEY_NAME_LENGTH):
-        error("Key name too long: '{0:s}'".format(key_name))
-        error("Key name must be <", TFTF_SIGNATURE_KEY_NAME_LENGTH,
-              "characters")
+    try:
+        key_name = format_key_name(key_id, args.domain)
+    except ValueError as e:
+        error(e)
         sys.exit(PROGRAM_ERROR)
 
     hash_algorithm = get_hash_from_signature_algorithm(algorithm)

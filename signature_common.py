@@ -32,15 +32,8 @@
 
 from __future__ import print_function
 import os
+from signature_block import TFTF_SIGNATURE_KEY_NAME_LENGTH
 
-
-# Recognized algorithm types (--algorithm)
-TFTF_SIGNATURE_TYPE_UNKNOWN = 0x00
-TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256 = 0x01
-TFTF_SIGNATURE_ALGORITHMS = \
-    {"rsa2048-sha256": TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256}
-TFTF_SIGNATURE_ALGORITHM_NAMES = \
-    {TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256: "rsa2048-sha256"}
 
 # Recognized key types (--type)
 KEY_TYPE_UNKNOWN = 0
@@ -61,13 +54,9 @@ FORMAT_NAMES = {FORMAT_TYPE_STANDARD: "standard",
 
 # Common command-line arguments for signing apps
 SIGNATURE_COMMON_ARGUMENTS = [
-#    (["--type"], {"required": True,
-#                  "help": "The type of the key file (e.g., s2fsk)"}),
-#    (["--format"], {"required": True,
-#                    "help": "The naming format for keys (standard | es3)"})
     (["--domain"], {"required": True,
                     "help": "The key domain - the right-hand part of the "
-                           "validation key name"}),
+                            "validation key name"}),
 
     (["--id"], {"help": "The ID of the key (instead of deriving it "
                         "from the key filename)"}),
@@ -117,29 +106,14 @@ def get_key_id(key_id, key_filename):
 
 
 def format_key_name(key_id, key_domain):
-    """ Assemble a key name from ID & domain """
+    """ Assemble a key name from ID & domain
+
+    Returns the formatted key name, or raises ValuError if the name is too
+    long to fit in the 96-byte field as an ASCIIZ string.
+    """
     key_name = "{0:s}@{1:s}".format(key_id, key_domain)
+    if (len(key_name) >= TFTF_SIGNATURE_KEY_NAME_LENGTH):
+        raise ValueError("Key name too long: '{0:s}'\n"
+                         "(Key name must be < {1:d} characters)".
+                         format(key_name, TFTF_SIGNATURE_KEY_NAME_LENGTH))
     return key_name
-
-
-def get_signature_algorithm(algorithm_type_string):
-    """convert a string into a key_type (TFTF_SIGNATURE_TYPE_xxx)
-
-    returns a numeric key_type, or raises an exception if invalid
-    """
-    try:
-        return TFTF_SIGNATURE_ALGORITHMS[algorithm_type_string]
-    except:
-        raise ValueError("Unknown algorithm type: '{0:s}'".
-                         format(algorithm_type_string))
-
-
-def get_signature_algorithm_name(algorithm):
-    """ Convert a algorithm_type (TFTF_SIGNATURE_TYPE_xxx) into a string
-
-    returns a key name, or raises an exception if invalid
-    """
-    try:
-        return TFTF_SIGNATURE_ALGORITHM_NAMES[algorithm]
-    except:
-        raise ValueError("Unknown algorithm type: '{0:d}'".format(algorithm))

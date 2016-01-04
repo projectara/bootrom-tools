@@ -35,8 +35,7 @@ from struct import pack_into, unpack_from
 from string import rfind
 from time import gmtime, strftime
 from util import display_binary_data, error, print_to_error
-from signature_block import signature_block_write_map
-from signature_common import TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256
+from signature_block import signature_block_write_map, SignatureBlock
 
 # TFTF section types
 TFTF_SECTION_TYPE_RESERVED = 0x00
@@ -160,38 +159,6 @@ TFTF_HDR_OFF_RESERVED = (TFTF_HDR_OFF_ARA_PRODUCT_ID +
                          TFTF_HDR_LEN_ARA_PRODUCT_ID)
 TFTF_HDR_OFF_SECTIONS = (TFTF_HDR_OFF_RESERVED +
                          TFTF_HDR_LEN_RESERVED)
-
-
-# TFTF Signature Block layout
-TFTF_SIGNATURE_KEY_NAME_LENGTH = 96
-TFTF_SIGNATURE_SIGNATURE_LENGTH = 256
-
-# TFTF signature block field lengths
-TFTF_SIGNATURE_LEN_LENGTH = 4
-TFTF_SIGNATURE_LEN_TYPE = 4
-TFTF_SIGNATURE_LEN_KEY_NAME = TFTF_SIGNATURE_KEY_NAME_LENGTH
-TFTF_SIGNATURE_LEN_KEY_SIGNATURE = TFTF_SIGNATURE_SIGNATURE_LENGTH
-TFTF_SIGNATURE_LEN_FIXED_PART = (TFTF_SIGNATURE_LEN_LENGTH +
-                                 TFTF_SIGNATURE_LEN_TYPE +
-                                 TFTF_SIGNATURE_LEN_KEY_NAME)
-
-# TFTF signature block field offsets
-TFTF_SIGNATURE_OFF_LENGTH = 0
-TFTF_SIGNATURE_OFF_TYPE = (TFTF_SIGNATURE_OFF_LENGTH +
-                           TFTF_SIGNATURE_LEN_LENGTH)
-TFTF_SIGNATURE_OFF_KEY_NAME = (TFTF_SIGNATURE_OFF_TYPE +
-                               TFTF_SIGNATURE_LEN_TYPE)
-TFTF_SIGNATURE_OFF_KEY_SIGNATURE = (TFTF_SIGNATURE_OFF_KEY_NAME +
-                                    TFTF_SIGNATURE_LEN_KEY_NAME)
-
-# TFTF Signature Types and associated dictionary of types and names
-# NOTE: When adding new types, both the "define" and the dictionary
-# need to be updated.
-TFTF_SIGNATURE_TYPE_UNKNOWN = 0x00
-tftf_signature_types = \
-    {"rsa2048-sha256": TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256}
-tftf_signature_names = \
-    {TFTF_SIGNATURE_ALGORITHM_RSA_2048_SHA_256: "rsa2048-sha256"}
 
 TFTF_FILE_EXTENSION = ".bin"
 
@@ -341,18 +308,8 @@ class TftfSection:
         if self.section_type == TFTF_SECTION_TYPE_SIGNATURE:
             # Signature blocks have a known format which we can break down
             # for the user
-            sig_block = unpack_from("<LL64s", blob, 0)
-            sig_type = tftf_signature_names[sig_block[1]]
-            if not sig_type:
-                sig_type = "UNKNOWN"
-            print("{0:s}  Length:    {1:08x}".format(indent, sig_block[0]))
-            print("{0:s}  Sig. type: {1:d} ({2:s})".
-                  format(indent, sig_block[1], sig_type))
-            print("{0:s}  Key name:".format(indent))
-            print("{0:s}      '{1:4s}'".format(indent, sig_block[2]))
-            print("{0:s}  Signature:".format(indent))
-            display_binary_data(blob[TFTF_SIGNATURE_OFF_KEY_SIGNATURE:],
-                                True, indent + "       ")
+            signature_block = SignatureBlock(blob)
+            signature_block.display()
         else:
             # The default is to show the blob as a binary dump.
             display_binary_data(blob, False, indent + " ")

@@ -59,10 +59,6 @@
 #include "tftf_print.h"
 #include "sign.h"
 
-/* The following constant *SHOULD* be in tftf.h */
-#define SIGNATURE_KEY_NAME_LENGTH   96
-
-
 /* Program return values */
 #define PROGRAM_SUCCESS     0
 #define PROGRAM_WARNINGS    1
@@ -87,12 +83,12 @@ static int      verbose_flag = false;
 static int      no_retry_flag = false;
 static int      check_flag = false;
 static char *   key_filename;
-static char *   key_domain = "s2fvk.projectara.com";
+static char *   key_domain;
 static char     key_id_buffer[256];
 static char *   key_id;
 static uint32_t signature_algorithm;
 static uint32_t passin_mode;
-static char     passphrase_buffer[256];
+static char     passphrase_buffer[TFTF_SIGNATURE_KEY_NAME_SIZE];
 char *          passphrase;
 
 static char *   verbose_flag_names[] = { "verbose", NULL };
@@ -275,7 +271,7 @@ bool format_key_name(char * buffer,
     bool success = false;
 
     /* validate the args */
-    if (!buffer || (length < SIGNATURE_KEY_NAME_LENGTH) ||
+    if (!buffer || (length < TFTF_SIGNATURE_KEY_NAME_SIZE) ||
         !key_filename || !key_domain) {
         /* (we should never get here) */
         errno = EINVAL;
@@ -286,12 +282,12 @@ bool format_key_name(char * buffer,
          * symbol, and the supplied key domain.
          */
         key_name_length = strlen(key_id) + 1 + strlen(key_domain);
-        if (key_name_length < SIGNATURE_KEY_NAME_LENGTH) {
+        if (key_name_length < TFTF_SIGNATURE_KEY_NAME_SIZE) {
             snprintf(buffer, length, "%s@%s", key_id, key_domain);
             success = true;
         } else {
             fprintf(stderr, "ERROR: Key Name is too long (%u > %u)\n",
-                    (uint32_t)key_name_length, SIGNATURE_KEY_NAME_LENGTH - 1);
+                    (uint32_t)key_name_length, TFTF_SIGNATURE_KEY_NAME_SIZE - 1);
         }
     }
 
@@ -352,7 +348,7 @@ int main(int argc, char * argv[]) {
     bool bad_passphrase = false;
     struct argparse * parse_tbl = NULL;
     int program_status = PROGRAM_SUCCESS;
-    char key_name[SIGNATURE_KEY_NAME_LENGTH];
+    char key_name[TFTF_SIGNATURE_KEY_NAME_SIZE];
 
     /* Parse the command line arguments */
     parse_tbl = new_argparse(parse_table, argv[0], NULL, NULL, "<file>...", NULL);

@@ -68,6 +68,9 @@
 static bool     crypto_initialized = false;
 static RSA *    rsa = NULL;
 
+#define SSL_ERROR_STRING_SIZE   256
+static char ssl_error_buf[SSL_ERROR_STRING_SIZE];
+
 
 /**
  * @brief Returns the algorithm name
@@ -133,8 +136,8 @@ bool sign_init(char * key_filename, bool * bad_passphrase) {
     }
     rsa = RSA_new();
     if (rsa == NULL) {
-        fprintf(stderr, "ERROR: Can't allocate RSA for key %s (err %d)\n",
-               key_filename, errno);
+        fprintf(stderr, "ERROR: Can't allocate RSA for key '%s': %s\n",
+               key_filename, ERR_error_string(ERR_get_error(), NULL));
             return false;
     } else {
         rsa = PEM_read_RSAPrivateKey(fp, &rsa, NULL, passphrase);
@@ -254,30 +257,35 @@ bool sign_tftf(const char * filename,
         if (mdctx) {
             status = EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
             if (status < 1) {
-                fprintf(stderr, "ERROR: EVP_DigestInit_ex failed\n");
+                fprintf(stderr, "ERROR: EVP_DigestInit_ex failed: %s\n",
+                        ERR_error_string(ERR_get_error(), NULL));
                 goto signing_err;
             }
             status = EVP_DigestUpdate(mdctx, hdr_signable_start,
                                       hdr_signable_length);
             if (status < 1) {
-                fprintf(stderr, "ERROR: EVP_DigestUpdate (hdr) failed\n");
+                fprintf(stderr, "ERROR: EVP_DigestUpdate (hdr) failed: %s\n",
+                        ERR_error_string(ERR_get_error(), NULL));
                 goto signing_err;
             }
             status = EVP_DigestUpdate(mdctx, scn_signable_start,
                                       scn_signable_length);
             if (status < 1) {
-                fprintf(stderr, "ERROR: EVP_DigestUpdate (scn) failed\n");
+                fprintf(stderr, "ERROR: EVP_DigestUpdate (scn) failed: %s\n",
+                        ERR_error_string(ERR_get_error(), NULL));
                 goto signing_err;
             }
             status = EVP_DigestFinal_ex(mdctx, md_value, &md_len);
             if (status < 1) {
-                fprintf(stderr, "ERROR: EVP_DigestFinal_ex failed\n");
+                fprintf(stderr, "ERROR: EVP_DigestFinal_ex failed: %s\n",
+                        ERR_error_string(ERR_get_error(), NULL));
                 goto signing_err;
             }
             status = RSA_sign(NID_sha256, md_value, md_len,
                               signature_block.signature, &sig_len, rsa);
             if (status < 1) {
-                fprintf(stderr, "ERROR: RSA_sign failed\n");
+                fprintf(stderr, "ERROR: RSA_sign failed: %s\n",
+                        ERR_error_string(ERR_get_error(), NULL));
             }
             success = true;
 

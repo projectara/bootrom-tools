@@ -130,7 +130,7 @@ bool sign_init(char * key_filename, bool * bad_passphrase) {
      */
     fp = fopen(key_filename,"rb");
     if (fp == NULL) {
-        fprintf(stderr, "ERROR: Can't open private key %s (err %d)\n",
+        fprintf(stderr, "ERROR: Can't open private key '%s' (err %d)\n",
                 key_filename, errno);
         return false;
     }
@@ -142,6 +142,9 @@ bool sign_init(char * key_filename, bool * bad_passphrase) {
     } else {
         rsa = PEM_read_RSAPrivateKey(fp, &rsa, NULL, passphrase);
         if (rsa == NULL) {
+            fprintf(stderr,
+                    "ERROR: Can't read private key '%s' (%s)\n", key_filename,
+                    ERR_error_string(ERR_get_error(), NULL));
             if (bad_passphrase) {
                 *bad_passphrase = true;
             }

@@ -142,6 +142,9 @@ for i in ${!mids[*]}; do
         exit 1
     fi
 
+    tftf_name=$(printf "ara:%.8x:%.8x:%.8x:%.8x:02.tftf" ${mids[i]} ${pids[i]} \
+                0 0)
+
     create-ffff \
       $verbose \
       --header-size 0x1000 \
@@ -165,7 +168,7 @@ for i in ${!mids[*]}; do
     truncate -s 2M ${NUTTX_IMAGE}-${mids[i]}-${pids[i]}.ffff
 
     # Cleanup intermediate files
-    rm ${NUTTX_IMAGE}.tftf
+    mv ${NUTTX_IMAGE}.tftf $(dirname ${NUTTX_IMAGE})/$tftf_name
 done
 
 echo "Done"

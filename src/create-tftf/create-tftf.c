@@ -75,6 +75,7 @@ uint32_t    unipro_mfg;
 uint32_t    unipro_pid;
 uint32_t    ara_vid;
 uint32_t    ara_pid;
+const char *start_sym_name = NULL;
 int         verbose_flag = false;
 int         map_flag = false;
 
@@ -134,6 +135,7 @@ static char * unipro_pid_names[] = { "unipro-pid", NULL };
 static char * ara_vid_names[] = { "ara-vid", NULL };
 static char * ara_pid_names[] = { "ara-pid", NULL };
 static char * ara_stage_names[] = { "ara-stage", NULL };
+static char * start_symbol_names[] = { "start-sym", "sym", NULL };
 static char * section_elf_names[] = { "elf", NULL };
 static char * section_code_names[] = { "code", NULL };
 static char * section_data_names[] = { "data", NULL };
@@ -184,6 +186,10 @@ static struct optionx parse_table[] = {
     { 'A', ara_pid_names, "num", &ara_pid, DFLT_ARA_PID,
       DEFAULT_VAL, &store_hex, 0,
       "Ara Product ID"
+    },
+    { 'S', start_symbol_names, "text", &start_sym_name, 0,
+      OPTIONAL, &store_str, 0,
+      "Start-symbol name"
     },
 
     /* Section args */
@@ -331,7 +337,7 @@ bool handle_header_type(const int option, const char * optarg,
  */
 bool handle_section_elf(const int option, const char * optarg,
                         struct optionx * optx) {
-    return load_elf(optarg, &start_location, NULL);
+    return load_elf(optarg, &start_location, start_sym_name);
 }
 
 

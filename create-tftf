@@ -44,6 +44,7 @@ from ffff_element import FFFF_ELEMENT_STAGE2_FIRMWARE_PACKAGE, \
 from util import error, warning
 import io
 from elftools.elf.elffile import ELFFile
+from elftools.elf.enums import ENUM_SH_TYPE
 
 DEFAULT_ARA_BOOT_STAGE = 2
 DEFAULT_ARA_VID = 0
@@ -198,11 +199,23 @@ class ElfFileAction(argparse.Action):
                 assert(code_section is not None or data_section is not None)
                 sections += elf_sections
                 if namespace.start == 0:
-                    namespace.start = image['e_entry']
+                    namespace.entry = image['e_entry']
+                namespace.elf = values
         except IOError as e:
             error(option_string, " must be followed by an ELF image!")
         except Exception as e:
             error(e)
+
+
+def elf_get_symbol_addr(elf, sym):
+    with io.open(elf, 'rb') as elf_file:
+        image = ELFFile(elf_file)
+        for section in image.iter_sections():
+            if section['sh_type'] == 'SHT_SYMTAB':
+                for symbol in section.iter_symbols():
+                    if symbol.name == sym:
+                        return symbol.entry['st_value']
+    return None
 
 
 def balance_vidpid(vidpid, name):
@@ -442,6 +455,9 @@ def main():
                         help="The size of the generated TFTF header, "
                              "in bytes (512)")
 
+    parser.add_argument("--start-sym",
+                        help="Symbol name to use as entry point")
+
     args = parser.parse_args()
 
     # Sanity-check the arguments
@@ -454,8 +470,21 @@ def main():
     if args.name:
         tftf_header.firmware_package_name = args.name
     tftf_header.package_type = package_type(args.type)
-    if args.start != 0:
+    if args.start != 0 and args.start_sym != '':
+        error("Two entry points specified: 0x%x and %s." % (args.start,
+                                                            args.start_sym))
+        sys.exit(errno.EINVAL)
+    elif args.start != 0:
         tftf_header.start_location = args.start
+    elif args.start_sym != '':
+        if args.elf != None:
+            tftf_header.start_location = elf_get_symbol_addr(args.elf,
+                                                             args.start_sym)
+        else:
+            error("Entry point cannot be symbol when input is not ELF.")
+            sys.exit(errno.EINVAL)
+    elif args.entry != 0:
+        tftf_header.start_location = args.entry
     else:
         error("No entry point specified.")
         sys.exit(errno.EINVAL)

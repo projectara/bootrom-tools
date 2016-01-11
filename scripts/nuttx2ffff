@@ -135,6 +135,7 @@ for i in ${!mids[*]}; do
       --unipro-mfg=${mids[i]} \
       --unipro-pid=${pids[i]} \
       --elf ${NUTTX_IMAGE} \
+      --start-sym Reset_Handler \
       --out ${NUTTX_IMAGE}.tftf
 
     if [[ $? != 0 ]]; then

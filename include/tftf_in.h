@@ -169,10 +169,13 @@ tftf_header * new_tftf(const uint32_t header_size,
  * @param start_address Pointer to the TFTF start_address field. This will
  *        be set to the .elf file entrypoint (e_entry) if not already set
  *        by the "--start" parameter.
+ * @param start_symbol Name of the symbol to use for the TFTF start_address
+ *        field, or NULL indicating not to use one.
  *
  * @returns True if successful, false otherwise.
  */
-bool load_elf(const char * filename, uint32_t * start_address);
+bool load_elf(const char * filename, uint32_t * start_address,
+              const char *start_symbol);
 
 
 /**

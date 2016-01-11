@@ -331,7 +331,7 @@ bool handle_header_type(const int option, const char * optarg,
  */
 bool handle_section_elf(const int option, const char * optarg,
                         struct optionx * optx) {
-    return load_elf(optarg, &start_location);
+    return load_elf(optarg, &start_location, NULL);
 }
 
 

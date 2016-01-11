@@ -487,6 +487,102 @@ static Elf_Scn * elf_getscn_byname(Elf *elf, const char * name) {
 
 
 /**
+ * @brief Search an ELF file for a symbol table
+ *
+ * @param elf The open ELF object
+ * @param idx The section index at which to begin searching
+ *
+ * @returns A pointer to the symbol table section if successful, NULL otherwise.
+ */
+static Elf_Scn * elf_getsymtab(Elf *elf, uint32_t *idx) {
+    Elf_Scn *scn = NULL;
+    GElf_Shdr shdr;
+
+    scn = elf_getscn(elf, idx ? *idx : 0);
+    while (scn != NULL) {
+        gelf_getshdr(scn, &shdr);
+        if (shdr.sh_type == SHT_SYMTAB) {
+            return scn;
+        }
+
+        scn = elf_nextscn(elf, scn);
+        if (idx) {
+            *idx += 1;
+        }
+    }
+
+    return NULL;
+}
+
+
+/**
+ * @brief Search a single, particular ELF symbol table for a named symbol
+ *
+ * @param elf The open ELF object
+ * @param symtab The ELF symbol table section
+ * @param name The symbol name to find
+ *
+ * @returns The address to which the symbol points, 0 otherwise.
+ */
+static GElf_Addr elf_scn_getsymaddr_byname(Elf *elf, Elf_Scn *symtab,
+                                           const char * name) {
+    GElf_Shdr shdr;
+    Elf_Data *data;
+    uint32_t syms, i;
+    GElf_Sym sym;
+
+    if (gelf_getshdr(symtab, &shdr) == NULL || shdr.sh_type != SHT_SYMTAB) {
+        return 0;
+    }
+
+    data = elf_getdata(symtab, NULL);
+    if (data == NULL) {
+        return 0;
+    }
+
+    syms = shdr.sh_size / shdr.sh_entsize;
+
+    for(i=0; i<syms; i++) {
+        gelf_getsym(data, i, &sym);
+        if (strcmp(elf_strptr(elf, shdr.sh_link, sym.st_name), name) == 0) {
+            return sym.st_value;
+        }
+    }
+
+    return 0;
+}
+
+
+/**
+ * @brief Search an entire open ELF object for a named symbol
+ *
+ * @param elf THe open ELF object
+ * @param name The symbol name to find
+ *
+ * @returns The address to which the symbol points, 0 otherwise.
+ */
+static GElf_Addr elf_getsymaddr_byname(Elf *elf, const char * name) {
+    uint32_t symtab_idx = 0;
+    Elf_Scn *symtab;
+    GElf_Addr addr = 0;
+
+    symtab = elf_getsymtab(elf, &symtab_idx);
+
+    while(symtab != NULL) {
+        addr = elf_scn_getsymaddr_byname(elf, symtab, name);
+        if (addr) {
+            return addr;
+        }
+
+        symtab_idx++;
+        symtab = elf_getsymtab(elf, &symtab_idx);
+    }
+
+    return 0;
+}
+
+
+/**
  * @brief Add an ELF section to the TFTF section cache.
  *
  * @param scn The open elf section (e.g., .text, .data)
@@ -528,16 +624,21 @@ bool elf_add_section_cache_entry(Elf_Scn *scn, uint32_t type) {
  * @param start_address Pointer to the TFTF start_address field. This will
  *        be set to the .elf file entrypoint (e_entry) if not already set
  *        by the "--start" parameter.
+ * @param start_symbol Name of the symbol to use for the TFTF start_address
+ *        field, or NULL indicating not to use one.
  *
  * @returns True if successful, false otherwise.
  */
-bool load_elf(const char * filename, uint32_t * start_address) {
+bool load_elf(const char * filename, uint32_t * start_address,
+              const char *start_symbol) {
     bool success = false;
     int fd = -1;
     Elf *elf = NULL;
     Elf_Scn *scn = NULL;
     size_t shstrndx;
     int sections_created = 0;
+    GElf_Addr start_symbol_addr;
+    Elf32_Ehdr * ehdr = NULL;
 
     if (elf_version(EV_CURRENT) == EV_NONE) {
         fprintf(stderr, "ELF library initialization failed: %s\n",
@@ -573,7 +674,6 @@ bool load_elf(const char * filename, uint32_t * start_address) {
         success = elf_add_section_cache_entry(scn, TFTF_SECTION_RAW_CODE);
         if (success) {
             /* Extract entrypoint (e_entry) */
-            Elf32_Ehdr * ehdr = NULL;
 
             ehdr = elf32_getehdr(elf);
             if (ehdr != NULL) {
@@ -593,6 +693,21 @@ bool load_elf(const char * filename, uint32_t * start_address) {
         success = elf_add_section_cache_entry(scn, TFTF_SECTION_RAW_DATA);
         if (success) {
             sections_created++;
+        }
+    }
+
+    if (start_symbol && start_address) {
+        if (*start_address == ehdr->e_entry) {
+            start_symbol_addr = elf_getsymaddr_byname(elf, start_symbol);
+            if (start_symbol_addr) {
+                *start_address = start_symbol_addr;
+            }
+        }
+        else {
+            fprintf(stderr, "ERROR: explicit start address (0x%.8x) and \
+                    explicit start symbol (%s) both supplied\n",
+                    *start_address, start_symbol);
+            success = false;
         }
     }
 

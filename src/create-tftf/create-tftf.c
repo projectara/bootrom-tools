@@ -70,11 +70,12 @@ const char * output_dir = NULL;
 uint32_t    header_size = TFTF_HEADER_SIZE_DEFAULT;
 const char *fw_pkg_name = NULL;
 uint32_t    package_type = FFFF_ELEMENT_STAGE_3_FW;
-uint32_t    start_location;
+uint32_t    start_location = 0;
 uint32_t    unipro_mfg;
 uint32_t    unipro_pid;
 uint32_t    ara_vid;
 uint32_t    ara_pid;
+const char *elf_name = NULL;
 const char *start_sym_name = NULL;
 int         verbose_flag = false;
 int         map_flag = false;
@@ -114,8 +115,6 @@ int compress_flag = false;
 bool handle_header_size(const int option, const char * optarg,
         struct optionx * optx);
 bool handle_header_type(const int option, const char * optarg,
-        struct optionx * optx);
-bool handle_section_elf(const int option, const char * optarg,
         struct optionx * optx);
 bool handle_section_normal(const int option, const char * optarg,
         struct optionx * optx);
@@ -191,12 +190,12 @@ static struct optionx parse_table[] = {
       OPTIONAL, &store_str, 0,
       "Start-symbol name"
     },
-
-    /* Section args */
-    { 'E', section_elf_names, NULL, NULL, 0,
-      OPTIONAL, &handle_section_elf, 0,
+    { 'E', section_elf_names, "text", &elf_name, 0,
+      OPTIONAL, &store_str, 0,
       "The name of an input ELF image file (extracts -C, -D and -s)"
     },
+
+    /* Section args */
     { 'C', section_code_names, NULL, NULL, 0,
       OPTIONAL, &handle_section_normal, 0,
       "Code section [1]"
@@ -322,22 +321,6 @@ bool handle_header_type(const int option, const char * optarg,
         fprintf(stderr, "ERROR: Invalid --type: %s\n", optarg);
     }
     return success;
-}
-
-
-/**
- * @brief Callback to load an ELF file.
- *
- * @param option The option character (may be used to disambiguate a
- *        common function)
- * @param optarg The string from the argument parser
- * @param optx A pointer to the option descriptor
- *
- * @returns Returns true on success, false on failure
- */
-bool handle_section_elf(const int option, const char * optarg,
-                        struct optionx * optx) {
-    return load_elf(optarg, &start_location, start_sym_name);
 }
 
 
@@ -606,6 +589,8 @@ int main(int argc, char * argv[]) {
     } else {
         success = false;
     }
+
+    success = load_elf(elf_name, &start_location, start_sym_name);
 
     if (success) {
         /* Make sure we close off any under-construction section */

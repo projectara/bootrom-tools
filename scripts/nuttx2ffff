@@ -31,7 +31,7 @@
 #------------------------------------------------------------------------------
 #
 # Usage:
-#    nuttx2ffff {-v} [{--in=file} | {--build=name}] {-outdir=<dir>} {--help}
+#    nuttx2ffff {-v} [{--in=file} | {--build=name}] {--outdir=<dir>} {--help}
 #
 #    -v        Verbose mode on TFTF creation
 #    --help    Display usage
@@ -53,6 +53,8 @@ for arg in "$@" ; do    # arg will be each positional parameter
         nuttx_build="${arg#*=}"
     elif [[ ${arg} == --in=* ]]; then
         NUTTX_IMAGE="${arg#*=}"
+    elif [[ ${arg} == --outdir=* ]]; then
+        OUTDIR="${arg#*=}"
     elif [[ ${arg} == "--help" ]]; then   # Issue usage message
         help=true
      fi
@@ -61,7 +63,7 @@ done
 # Usage?
 if $help; then
 echo "Usage:
-   nuttx2ffff {-v} [{--in=file} | {--build=name}] {-outdir=<dir>} {--help}
+   nuttx2ffff {-v} [{--in=file} | {--build=name}] {--outdir=<dir>} {--help}
 
    -v        Verbose mode on TFTF creation
    --help    This message
@@ -89,6 +91,12 @@ if [ ! ${NUTTX_IMAGE} ]; then
         echo "nuttx image from default"
     fi
 fi
+
+if [ ! ${OUTDIR} ]; then
+    OUTDIR=$(dirname ${NUTTX_IMAGE})
+fi
+
+mkdir -p ${OUTDIR}
 
 case ${nuttx_build} in
     ara-bridge-debug-apbridgea)
@@ -144,7 +152,7 @@ for i in ${!mids[*]}; do
       --erase-size 0x800 \
       --name "Nuttx test build" \
       --s2f ${NUTTX_IMAGE}.tftf --eloc 0x2000 --egen 1 \
-      --out ${NUTTX_IMAGE}-${mids[i]}-${pids[i]}.ffff
+      --out ${NUTTX_IMAGE}-${bridge_names[i]}.ffff
 
 
     if [[ $? != 0 ]]; then
@@ -155,10 +163,11 @@ for i in ${!mids[*]}; do
     fi
 
     # Resize the FFFF to the Flash
-    truncate -s 2M ${NUTTX_IMAGE}-${mids[i]}-${pids[i]}.ffff
+    truncate -s 2M ${NUTTX_IMAGE}-${bridge_names[i]}.ffff
 
     # Cleanup intermediate files
-    mv ${NUTTX_IMAGE}.tftf $(dirname ${NUTTX_IMAGE})/$tftf_name
+    mv ${NUTTX_IMAGE}.tftf ${OUTDIR}/$tftf_name
+    mv ${NUTTX_IMAGE}-${bridge_names[i]}.ffff ${OUTDIR}
 done
 
 echo "Done"

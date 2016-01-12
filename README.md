@@ -391,7 +391,7 @@ Each element (`[<element_type> <file>] {<element_option>}`)is described with an 
 `{--build=name}`
 
 * `-v`: Verbose mode, in which the script will dump the contents of the FFFF headers, contained TFTF headers and TFTF sections in greater detail
-* `--build`: Which nuttx.bin image to use: ara-bridge-es2-debug-apbridgea | ara-bridge-es2-debug-generic | ara-svc-db3 | ara-bridge-es2-debug-bringup | ara-svc-bdb2a | ara-svc-sdb. (It can also take the full path to any of the above.) It defaults $NUTTXROOT.nuttx when --build is omitted.
+* `--build`: Which nuttx.bin image to use: ara-bridge-debug-apbridgea | ara-bridge-debug-generic | ara-bridge-debug-bringup. (It can also take the full path to any of the above.) It defaults $NUTTXROOT.nuttx when --build is omitted.
 
 Generates *nuttx.ffff* in the same directory as the source *nuttx* file.
 

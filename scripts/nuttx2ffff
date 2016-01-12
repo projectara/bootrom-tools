@@ -37,9 +37,8 @@
 #    --help    Display usage
 #    --in      Arbitrary path to a nuttx file
 #    --build   Which nuttx image to use:
-#               ara-bridge-es2-debug-apbridgea | ara-bridge-es2-debug-generic |
-#               (ara-svc-db3) | ara-bridge-es2-debug-bringup | ara-svc-bdb2a |
-#               ara-svc-sdb
+#               ara-bridge-debug-apbridgea | ara-bridge-debug-generic |
+#               ara-bridge-debug-bringup
 #    If neither --in or --build are specified, it will use the image in
 #    .../nuttx/nuttx
 #------------------------------------------------------------------------------
@@ -68,10 +67,8 @@ echo "Usage:
    --help    This message
    --in      Arbitrary path to a nuttx file
    --build   Which nuttx image to use:
-              ara-bridge-es2-debug-apbridgea | ara-bridge-es2-debug-generic |
-              ara-bridge-es2-debug-bringup | ara-svc-bdb2a | ara-svc-sdb |
-              ara-svc-db3 | ara-bridge-es3-debug-apbridgea |
-              ara-bridge-es3-debug-generic
+              ara-bridge-debug-apbridgea | ara-bridge-debug-generic |
+              ara-bridge-debug-bringup
    If neither --in or --build are specified, it will use the image in
    .../nuttx/nuttx
 "
@@ -81,8 +78,8 @@ fi
 if [ ! ${NUTTX_IMAGE} ]; then
     if [ ${nuttx_build} ]; then
         # Construct a canonical the path from the supplied build path or fragment
-        # (e.g., "ara-bridge-es2-debug-generic" or
-        # "~/nuttx/build/ara-bridge-es2-debug-generic").
+        # (e.g., "ara-bridge-debug-generic" or
+        # "~/nuttx/build/ara-bridge-debug-generic").
         nuttx_build=`basename ${nuttx_build}`
         NuttX_build=`readlink -f $NUTTXROOT/../build`
         NUTTX_IMAGE=$NuttX_build/$nuttx_build/image/nuttx
@@ -94,21 +91,15 @@ if [ ! ${NUTTX_IMAGE} ]; then
 fi
 
 case ${nuttx_build} in
-    ara-bridge-es2-debug-apbridgea | ara-bridge-es2-debug-generic)
-        mids=(0x0126)
-        pids=(0x1000)
-        ;;
-    ara-bridge-es2-debug-bringup)
-        mids=(0x0126)
-        pids=(0x1000)
-        ;;
-    ara-bridge-es3-debug-apbridgea)
-        mids=(0x0126)
-        pids=(0x1001)
-        ;;
-    ara-bridge-es3-debug-generic)
+    ara-bridge-debug-apbridgea)
         mids=(0x0126 0x0126)
-        pids=(0x1001 0x1002)
+        pids=(0x1000 0x1001)
+        bridge_names=(apb1-es2 apb1-es3)
+        ;;
+    ara-bridge-debug-generic | ara-bridge-debug-bringup)
+        mids=(0x0126 0x0126 0x0126 0x0126)
+        pids=(0x1000 0x1000 0x1001 0x1002)
+        bridge_names=(apb2-es2 gpb-es2 apb2-es3 gpb-es3)
         ;;
 esac
 

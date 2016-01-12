@@ -37,6 +37,7 @@ OBJ_DIR	= obj
 RANLIB	= ranlib
 RM	= rm
 ECHO	= echo
+INSTALL	= install
 
 ifeq ($(BOOTROM_SRCDIR),)
 BOOTROM_SRCDIR = $(HOME)/work/bootrom
@@ -47,9 +48,15 @@ COMMONOBJDIR = $(TOPDIR)/obj
 BINDIR       = $(TOPDIR)/bin
 IDIR         = $(TOPDIR)/include
 LIBDIR       = $(TOPDIR)/libs
+SCRIPTDIR	 = $(TOPDIR)/scripts
+INSTALLDIR	 ?= /usr/local
 
 SHARED_INCDIR = $(BOOTROM_SRCDIR)/common/shared_inc
 COMMON_INCDIRS = -I$(TOPDIR)/include -I$(SHARED_INCDIR)
+
+INSTALL_BINS = create-tftf create-ffff display-tftf display-ffff
+INSTALL_BINS += s2config sign-tftf
+INSTALL_SCRIPTS = nuttx2ffff
 
 $(ODIR)/%.o: %.c
 	mkdir -p $(dir $@)

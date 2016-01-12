@@ -124,8 +124,6 @@ fi
 #echo "Package ${NUTTX_IMAGE}/nuttx into nuttx.tftf:"
 #echo "start address: 0x$start"
 
-PATH=$(cd ..; pwd):$PATH
-
 for i in ${!mids[*]}; do
     create-tftf \
       $verbose \

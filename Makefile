@@ -77,7 +77,14 @@ $(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
 
 nothing:
 
-install:
+install: all
+	$(INSTALL) $(foreach BIN, $(INSTALL_BINS), $(BINDIR)/$(BIN)) \
+		$(foreach SCRIPT, $(INSTALL_SCRIPTS), $(SCRIPTDIR)/$(SCRIPT)) \
+		-t $(INSTALLDIR)/bin
+
+uninstall:
+	$(RM) $(foreach BIN, $(INSTALL_BINS), $(INSTALLDIR)/bin/$(BIN)) \
+		$(foreach SCRIPT, $(INSTALL_SCRIPTS), $(INSTALLDIR)/bin/$(SCRIPT))
 
 # clean the tree by dependencies on all of the xxx_clean dependencies declared above
 clean: $(foreach SDIR, $(SUBDIRS), $(SDIR)_clean)

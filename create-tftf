@@ -477,13 +477,13 @@ def main():
     if args.name:
         tftf_header.firmware_package_name = args.name
     tftf_header.package_type = package_type(args.type)
-    if args.start != 0 and args.start_sym != '':
+    if args.start != 0 and args.start_sym:
         error("Two entry points specified: 0x%x and %s." % (args.start,
                                                             args.start_sym))
         sys.exit(errno.EINVAL)
     elif args.start != 0:
         tftf_header.start_location = args.start
-    elif args.start_sym != '':
+    elif args.start_sym:
         if args.elf != None:
             tftf_header.start_location = elf_get_symbol_addr(args.elf,
                                                              args.start_sym)

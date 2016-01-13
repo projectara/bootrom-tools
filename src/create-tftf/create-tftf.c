@@ -259,7 +259,7 @@ static struct optionx parse_table[] = {
 
 
 /* The 1-char tags for all args */
-static char * all_args = "z:n:t:s:u:U:a:A:E:C:D:M:G:R:c:i:l:o:vm";
+static char * all_args = "z:n:t:s:u:U:a:A:S:E:H:C:D:M:G:R:c:i:l:o:vm";
 
 /**
  * The 1-char tags for each of the section-related args

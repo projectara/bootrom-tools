@@ -85,7 +85,7 @@ struct optionx {
     OptionCallback  callback;
 
     /* The number of times this arg was encountered */
-    int             count;/* # of times this arg was encountered */
+    int             count;
 
     /* (optional) Help string for this arguments   */
     const char *            help;

@@ -545,7 +545,6 @@ void display_binary_data(const uint8_t * blob, const size_t length,
         size_t start;
         char linebuf[256];
 
-
         /* Make missing indents print nicely */
         if (!indent) {
             indent = "";
@@ -555,7 +554,7 @@ void display_binary_data(const uint8_t * blob, const size_t length,
         if (show_all || (length <= (3 * max_on_line))) {
             /* Nominally a small blob */
             for (start = 0; start < length; start += max_on_line) {
-                size_t num_bytes = min(length, max_on_line);
+                size_t num_bytes = min(length - start, max_on_line);
                 printf("%s%s\n", indent, hexlify(&blob[start], num_bytes,
                                                linebuf, sizeof(linebuf)));
             }

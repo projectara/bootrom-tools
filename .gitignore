@@ -53,6 +53,7 @@ git-commit-template
 .gitignore
 .pydevproject
 *~
+\#Makefile\#
 
 # Debug files
 *.dSYM/

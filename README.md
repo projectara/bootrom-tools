@@ -230,6 +230,12 @@ If you use the 'C' version of the core tools, you will need to install these lib
 
     `sudo apt-get install libssl-dev`
 
+Required by ims-gen:
+
+* **SQLite** (See: https://iqbalnaved.wordpress.com/2014/07/10/how-to-install-sqlite-3-8-2-on-ubuntu-14-04-and-commands-for-creating-database-and-tables/)
+
+    `sudo apt-get install sqlite3 libsqlite3-dev`
+
 
 
 ## Appendix B: Environment

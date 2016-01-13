@@ -1,5 +1,8 @@
 TOPDIR := ${shell pwd}
 
+# Tweak to get this to build with just "make" or build.bsh
+MCL_CONFIG_DIR = $(TOPDIR)
+
 # Include build configuration
 include $(MCL_CONFIG_DIR)/defconfig
 include $(MCL_CONFIG_DIR)/config.mk

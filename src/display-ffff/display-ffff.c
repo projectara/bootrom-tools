@@ -134,6 +134,9 @@ int main(int argc, char * argv[]) {
                        success = write_ffff_map_file(romimage, argv[optind]);
                     }
                     romimage = free_ffff(romimage);
+                } else {
+                    fprintf(stderr, "ERROR: file given was not FFFF\n");
+                    program_status = PROGRAM_ERRORS;
                 }
             }
             putchar ('\n');

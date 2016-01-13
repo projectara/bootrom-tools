@@ -613,6 +613,7 @@ struct ffff * read_ffff_romimage(const char * ffff_file) {
                     /* Found the 1st header, search for the 2nd */
                     ffff_header * ffff_hdr2 = NULL;
 
+                    success = false;
                     for (offset = next_boundary(ffff_hdr->header_size,
                                                 ffff_hdr->erase_block_size);
                          offset < image_length;
@@ -620,10 +621,12 @@ struct ffff * read_ffff_romimage(const char * ffff_file) {
                         ffff_hdr2 = (ffff_header *)&romimage->blob[offset];
                         if (validate_ffff_header(ffff_hdr2, 0) == 0) {
                             romimage->ffff_hdrs[1] = ffff_hdr2;
+                            success = true;
                             break;
                         }
                     }
                 } else {
+                    success = false;
                     /* No valid header at location 0, search for the 2nd */
                     for (offset = next_boundary(FFFF_HEADER_SIZE_MIN,
                                                 FFFF_HEADER_SIZE_MIN);
@@ -632,6 +635,7 @@ struct ffff * read_ffff_romimage(const char * ffff_file) {
                         ffff_hdr = (ffff_header *)&romimage->blob[offset];
                         if (validate_ffff_header(ffff_hdr, offset) == 0) {
                             romimage->ffff_hdrs[0] = ffff_hdr;
+                            success = true;
                             break;
                         }
                     }
@@ -640,7 +644,11 @@ struct ffff * read_ffff_romimage(const char * ffff_file) {
         }
     }
 
-    return romimage;
+    if (success) {
+        return romimage;
+    } else {
+        return NULL;
+    }
 }
 
 

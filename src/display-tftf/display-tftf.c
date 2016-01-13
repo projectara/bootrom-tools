@@ -122,12 +122,24 @@ int main(int argc, char * argv[]) {
                 tftf_hdr = (tftf_header *)alloc_load_file(argv[optind],
                                                           &tftf_size);
                 if (tftf_hdr) {
+                    /* ...validate it... */
+                    success = valid_tftf_header(tftf_hdr);
+                    if (!success) {
+                        fprintf(stderr, "ERROR: Invalid TFTF header\n");
+                        program_status = PROGRAM_ERRORS;
+                        break;
+                    }
                     /* ...and print it out */
                     print_tftf_file(tftf_hdr, argv[optind]);
 
                     if (map_flag) {
                         /* ...and write out the map file */
                         success = write_tftf_map_file(tftf_hdr, argv[optind]);
+                        if (!success) {
+                            fprintf(stderr, "ERROR: Could not write TFTF mapfile\n");
+                            program_status = PROGRAM_ERRORS;
+                            break;
+                        }
                     }
                 }
             }

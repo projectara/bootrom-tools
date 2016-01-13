@@ -640,6 +640,10 @@ bool load_elf(const char * filename, uint32_t * start_address,
     GElf_Addr start_symbol_addr;
     Elf32_Ehdr * ehdr = NULL;
 
+    if (!filename) {
+        goto cleanup;
+    }
+
     if (elf_version(EV_CURRENT) == EV_NONE) {
         fprintf(stderr, "ELF library initialization failed: %s\n",
                 elf_errmsg(-1));

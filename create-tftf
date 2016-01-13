@@ -275,14 +275,15 @@ def validate_args(args, sections):
     if args.ara_stage < 1 or args.ara_stage > 3:
         error("--ara-stage is out of range")
         success = False
-    try:
-        unbalanced_ara_vid = args.ara_vid
-        unbalanced_ara_pid = args.ara_pid
-        args.ara_vid = balance_vidpid(unbalanced_ara_vid, "Ara VID")
-        args.ara_pid = balance_vidpid(unbalanced_ara_pid, "Ara PID")
-    except ValueError as e:
-        error(e)
-        success = False
+    unbalanced_ara_vid = args.ara_vid
+    unbalanced_ara_pid = args.ara_pid
+    if not args.no_hamming_balance:
+        try:
+            args.ara_vid = balance_vidpid(unbalanced_ara_vid, "Ara VID")
+            args.ara_pid = balance_vidpid(unbalanced_ara_pid, "Ara PID")
+        except ValueError as e:
+            error(e)
+            success = False
 
 
     if not args.out:
@@ -305,7 +306,7 @@ def main():
     Usage: create-tftf --start <num> --out <file> {--header-size <num>} \
            {--name <string>} {--unipro-mfg} {--unipro-pid} \
            {--ara-vid} {--ara-pid} {--ara-stage} {--elf <file>} \
-           {-v | --verbose} {--map} {--header-size}\
+           {-v | --verbose} {--map} {--header-size} {--no-hamming-balance} \
            [<section_type> <file> {--load <num>} --class <num>} --id <num>}]...
     Where:
         --start
@@ -334,6 +335,8 @@ def main():
             Display the TFTF header and a synopsis of each TFTF section
         --map
             Create a map file of the TFTF header and each TFTF section
+        --no-hamming-balance
+            Don't fix VID/PID with Hamming weight balancing
         <section_type>
             Specifies a file for a given type of section:
             --code        code section.
@@ -408,6 +411,10 @@ def main():
     parser.add_argument("--map", "-m",
                         action='store_true',
                         help="displays the field offsets")
+
+    parser.add_argument("--no-hamming-balance",
+                        action='store_true',
+                        help="Don't fix VID/PID with Hamming weight balancing")
 
     # String/file args
     parser.add_argument("--name",

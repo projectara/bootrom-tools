@@ -79,6 +79,7 @@ const char *elf_name = NULL;
 const char *start_sym_name = NULL;
 int         verbose_flag = false;
 int         map_flag = false;
+int         hamming_balance_flag = true;
 
 char outfile_name[MAXPATH];
 char outfile_pathname[MAXPATH];
@@ -124,6 +125,8 @@ bool handle_section_id(const int option, const char * optarg,
         struct optionx * optx);
 bool handle_section_load_address(const int option, const char * optarg,
         struct optionx * optx);
+bool handle_no_hamming_balance(const int option, const char * optarg,
+        struct optionx * optx);
 
 static char * header_size_names[] = { "header-size", NULL };
 static char * fw_pkg_name_names[] = { "type", NULL };
@@ -148,6 +151,7 @@ static char * output_filename_names[] = { "out", NULL };
 static char * output_dir_names[] = { "outdir", NULL };
 static char * verbose_flag_names[] = { "verbose", NULL };
 static char * map_flag_names[] = { "map", NULL };
+static char * no_hamming_balance_names[] = { "no-hamming-balance", NULL };
 
 char ** foo = header_size_names;
 
@@ -245,6 +249,10 @@ static struct optionx parse_table[] = {
     { 'm', map_flag_names, NULL, &map_flag, 0,
       DEFAULT_VAL | STORE_TRUE, &store_flag, 0,
       "Create a map file of the TFTF header and each TFTF section"
+    },
+    { 'H', no_hamming_balance_names, NULL, &hamming_balance_flag, 0,
+      DEFAULT_VAL | STORE_FALSE, &store_flag, 0,
+      "Turn off Hamming-weight balancing of Ara VID and PID"
     },
     { 0, NULL, NULL, NULL, 0, 0, NULL, 0 , NULL}
 };
@@ -556,8 +564,17 @@ bool validate_args(void) {
          * to copy the 1s compliment of the lower 16 bits into the upper
          * 16 bits.
          */
-        success = balance_vidpid(&ara_vid, "ara_vid") &&
-                  balance_vidpid(&ara_pid, "ara_pid");
+        /**
+         * Further workaround for shipping ES2 modules:
+         * The ES2 version of the bootrom hard-codes non-balanced values.  Emit
+         * them if the flag says to do so.
+         */
+        if (hamming_balance_flag) {
+            success = balance_vidpid(&ara_vid, "ara_vid") &&
+                      balance_vidpid(&ara_pid, "ara_pid");
+        } else {
+            success = true;
+        }
     }
 
     return success;

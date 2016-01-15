@@ -287,7 +287,7 @@ def validate_args(args, sections):
 
 
     if not args.out:
-        args.out = 'ara:{:08x}:{:08x}:{:08x}:{:08x}:{:02x}.tftf'.format(
+        args.out = 'ara_{:08x}_{:08x}_{:08x}_{:08x}_{:02x}.tftf'.format(
                    args.unipro_mfg, args.unipro_pid, unbalanced_ara_vid,
                    unbalanced_ara_pid, args.ara_stage)
 

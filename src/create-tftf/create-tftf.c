@@ -545,7 +545,7 @@ bool validate_args(void) {
         /* Invent a default filename if needed */
         if (!output_filename) {
             snprintf(outfile_name, sizeof(outfile_name),
-                     "ara:%08x:%08x:%08x:%08x:%02x.tftf",
+                     "ara_%08x_%08x_%08x_%08x_%02x.tftf",
                        unipro_mfg, unipro_pid, ara_vid,
                        ara_pid, boot_stage(package_type));
             output_filename = outfile_name;

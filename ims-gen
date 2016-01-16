@@ -125,7 +125,7 @@ def print_cms(cms_buf, output_format, outfile):
         print("CMS {0:s}.{1:s}.{2:s}.{3:s}.{4:s}.{5:s}".
               format(binascii.hexlify(cms_buf[0:4]),
                      binascii.hexlify(cms_buf[4:8]),
-                     binascii.hexlify(cms_buf[8:11]),
+                     binascii.hexlify(cms_buf[8:12]),
                      binascii.hexlify(cms_buf[12:16]),
                      binascii.hexlify(cms_buf[16:20]),
                      binascii.hexlify(cms_buf[20:24])), file=outfile)
@@ -181,7 +181,7 @@ def print_ims(ims_buf, ep_uid, ep_uid_es3, output_format, outfile):
               "{6:s}.{7:s}.{8:s}".
               format(binascii.hexlify(ims_buf[0:4]),
                      binascii.hexlify(ims_buf[4:8]),
-                     binascii.hexlify(ims_buf[8:11]),
+                     binascii.hexlify(ims_buf[8:12]),
                      binascii.hexlify(ims_buf[12:16]),
                      binascii.hexlify(ims_buf[16:20]),
                      binascii.hexlify(ims_buf[20:24]),
@@ -201,7 +201,7 @@ def print_ims(ims_buf, ep_uid, ep_uid_es3, output_format, outfile):
               "{6:s}.{7:s}".
               format(binascii.hexlify(sha256[0:4]),
                      binascii.hexlify(sha256[4:8]),
-                     binascii.hexlify(sha256[8:11]),
+                     binascii.hexlify(sha256[8:12]),
                      binascii.hexlify(sha256[12:16]),
                      binascii.hexlify(sha256[16:20]),
                      binascii.hexlify(sha256[20:24]),

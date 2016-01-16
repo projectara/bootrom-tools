@@ -31,23 +31,29 @@
 #include <string.h>
 #include "crypto.h"
 
+
+
 /**
  * (Yes it's uncommon to include a C file, but this is how MIRACL provided
  * a wrapper). The SHA256 wrappers provided/used are:
- *      shs256_init (Initialize the SHA hash)
- *      shs256_process (Add data to the SHA hash)
- *      shs256_hash (Finalize the SHA hash and return the digest)
+ *      MCL_HASH256_init (Initialize the SHA hash)
+ *      MCL_HASH256_process (Add data to the SHA hash)
+ *      MCL_HASH256_hash (Finalize the SHA hash and return the digest)
  */
 #include "../vendors/MIRACL/bootrom.c"
+#undef unsign32     /* (benign unconditional define in bootrom.c) */
+#include "mcl_arch.h"
+#include "mcl_hash.h"
 
-static sha256 shctx;
+
+static mcl_hash256 shctx;
 
 
 /**
  * @brief Initialize the SHA hash
  */
 void hash_start(void) {
-    shs256_init(&shctx);
+    MCL_HASH256_init(&shctx);
 }
 
 
@@ -61,7 +67,7 @@ void hash_update(const uint8_t *data, const size_t datalen) {
     size_t i;
 
     for (i = 0; i < datalen; i++) {
-        shs256_process(&shctx, data[i]);
+        MCL_HASH256_process(&shctx, data[i]);
     }
 }
 
@@ -72,7 +78,7 @@ void hash_update(const uint8_t *data, const size_t datalen) {
  * @param digest Pointer to the digest buffer
  */
 void hash_final(uint8_t * digest) {
-    shs256_hash(&shctx,(char*)digest);
+    MCL_HASH256_hash(&shctx,(char*)digest);
 }
 
 

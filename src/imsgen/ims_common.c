@@ -72,10 +72,11 @@
 
 /* The PRNG seed is stored in this buffer */
 uint8_t  prng_seed_buffer[EVP_MAX_MD_SIZE];
-uint32_t prng_seed_length;
+mcl_octet prng_seed = {0, sizeof(prng_seed_buffer), prng_seed_buffer};
+
 
 /* Cryptographically Secure Random Number Generator */
-csprng   rng;
+csprng  rng;        /* Generic */
 
 
 /* SHA256 working variable */
@@ -90,7 +91,7 @@ typedef struct {
 #define IMS_SIZE            35
 #define IMS_HAMMING_SIZE    32
 #define IMS_HAMMING_WEIGHT  (IMS_HAMMING_SIZE * 8 / 2)
-uint8_t  ims[IMS_SIZE];
+uint8_t  ims[IMS_SIZE];     /* TODO: convert to an octet for consistency? */
 
 /* Endpoint Unique ID (EP_UID) working set */
 uint8_t  ep_uid_buf[EP_UID_SIZE];
@@ -98,7 +99,7 @@ mcl_octet ep_uid = {0, sizeof(ep_uid_buf), ep_uid_buf};
 
 
 /* Hash value used in calculating EPSK, MPDK ERRK */
-uint8_t  y2[Y2_SIZE];
+uint8_t  y2[Y2_SIZE];       /* TODO: convert to an octet for consistency? */
 
 /* Scratch octet for generating terms to feed sha256 */
 uint8_t  scratch_buf[128];
@@ -141,6 +142,40 @@ mcl_chunk q_ff[MCL_HFLEN][MCL_BS];
 MCL_rsa_private_key rsa_private;
 MCL_rsa_public_key  rsa_public;
 
+static int get_prng_seed(const char * prng_seed_file,
+                  const char * prng_seed_string);
+
+
+/**
+ * @brief Perform any common IMS initialization
+ *
+ * @param prng_seed_file Filename from which to read the seed
+ * @param prng_seed_string Raw seed string
+ *
+ * @returns Zero if successful, errno otherwise.
+ */
+int ims_common_init(const char * prng_seed_file,
+                    const char * prng_seed_string) {
+    int status = 0;
+
+    /* Initialize the cryptographically strong random number generators */
+    status = get_prng_seed(prng_seed_file, prng_seed_string);
+    if (status == 0) {
+        MCL_RAND_seed(&rng, prng_seed.len, prng_seed.val);
+    }
+
+    return status;
+}
+
+
+/**
+ * @brief Perform any common IMS de-initialization
+ */
+void ims_common_deinit(void) {
+    /* De-initialize the cryptographically strong random number generators */
+    MCL_RAND_clean(&rng);
+}
+
 
 /**
  * @brief Parse a raw seed string
@@ -153,8 +188,8 @@ MCL_rsa_public_key  rsa_public;
  *
  * @returns Zero if successful, errno otherwise.
  */
-int get_prng_seed(const char * prng_seed_file,
-                  const char * prng_seed_string) {
+static int get_prng_seed(const char * prng_seed_file,
+                         const char * prng_seed_string) {
     int status = 0;
     uint8_t raw_seed_buffer[DEFAULT_PRNG_SEED_LENGTH];
     size_t raw_seed_buffer_length;
@@ -184,8 +219,8 @@ int get_prng_seed(const char * prng_seed_file,
     if (!prng_seed_string || (raw_seed_buffer_length < 1)) {
         errno = EINVAL;
     } else {
-        hash_it(prng_seed_string, raw_seed_buffer_length, prng_seed_buffer);
-        prng_seed_length = SHA256_HASH_DIGEST_SIZE;
+        hash_it(prng_seed_string, raw_seed_buffer_length, prng_seed.val);
+        prng_seed.len = SHA256_HASH_DIGEST_SIZE;
     }
 
     return errno;
@@ -201,14 +236,14 @@ int get_prng_seed(const char * prng_seed_file,
  * @param digest_x Pointer to the output digest buffer ("X" above)
  * @param hash_y Pointer to the input digest ("Y" above)
  * @param extend_byte The extension byte ("b" above)
- * @param extend_count The numnnber of exension bytes to concatenate ("n" above)
+ * @param extend_count The number of extension bytes to concatenate ("n" above)
  */
 void sha256_concat(uint8_t * digest_x,
                    uint8_t * hash_y,
                    const uint8_t extend_byte,
                    uint32_t extend_count) {
     /* Scratch octet for generating terms to feed sha256 */
-    uint8_t scratch_buf[128];
+    uint8_t scratch_buf[256];
     mcl_octet scratch = {0, sizeof(scratch_buf), scratch_buf};
 
     MCL_OCT_jbytes(&scratch, hash_y, SHA256_HASH_DIGEST_SIZE);
@@ -256,7 +291,7 @@ void calculate_epuid_es3(uint8_t * ims_value,
 
     memcpy(ep_uid->val, ep_uid_calc, EP_UID_SIZE);
     ep_uid->len = EP_UID_SIZE;
-    /*****/display_binary_data(ep_uid->val, ep_uid->len, true, "epu_id ");
+    //*****/display_binary_data(ep_uid->val, ep_uid->len, true, "epu_id ");
 }
 
 
@@ -318,17 +353,14 @@ void calculate_y2(uint8_t * ims_value, uint8_t * y2) {
     /**
      *  Y2 = sha256(IMS[0:31] xor copy(0x5a, 32))
      */
-    MCL_OCT_jbytes(&scratch, ims, IMS_HAMMING_SIZE);
+    MCL_OCT_jbytes(&scratch, ims_value, IMS_HAMMING_SIZE);
     MCL_OCT_xorbyte(&scratch, 0x5a);
     hash_it(scratch.val, scratch.len, y2);
-    /*****/display_binary_data(y2, sizeof(y2), true, "y2 ");
 }
 
 
 /**
- * @brief Calculate the EPSK and EPVK
- *
- * Calculate the Endpoint Primary Signing Keys (EPSK)
+ * @brief Calculate the Endpoint Primary Signing Key (EPSK)
  *
  * @param y2 A pointer to the Y2 term used by all
  * @param epsk A pointer to the output EPSK variable
@@ -359,12 +391,10 @@ void calc_epsk(uint8_t * y2, mcl_octet * epsk) {
 
 
 /**
- * @brief Calculate the EPSK and EPVK
- *
- * Calculate the Endpoint Primary Verification Key (EPVK)
+ * @brief Calculate the Endpoint Primary Verification Key (EPVK)
  *
  * @param epsk A pointer to the input EPSK variable
- * @param epsk A pointer to the output EPVK variable
+ * @param epvk A pointer to the output EPVK variable
  */
 void calc_epvk(mcl_octet * epsk, mcl_octet * epvk) {
     int status;
@@ -381,9 +411,7 @@ void calc_epvk(mcl_octet * epsk, mcl_octet * epvk) {
 
 
 /**
- * @brief Calculate the ESSK
- *
- * Calculate the Endpoint Secondary Signing Key (ESSK)
+ * @brief Calculate the Endpoint Secondary Signing Key (ESSK)
  *
  * @param y2 A pointer to the Y2 term used by all
  * @param essk A pointer to the output ESSK variable
@@ -402,13 +430,10 @@ void calc_essk(uint8_t * y2, mcl_octet * essk) {
 
 
 /**
- * @brief Calculate the ESVK
+ * @brief Calculate the Endpoint Secondary Verification Key (ESVK)
  *
- * Calculate the Endpoint Secondary Verification Key (ESVK)
- *
- * @param y2 A pointer to the Y2 term used by all
  * @param essk A pointer to the input ESSK variable
- * @param essk A pointer to the output ESVK variable
+ * @param esvk A pointer to the output ESVK variable
  */
 void calc_esvk(mcl_octet * essk, mcl_octet * esvk) {
     int status;
@@ -476,10 +501,95 @@ void calc_errk_pq_bias_odd(uint8_t * y2,
     sha256_concat(&errk_q->val[96], z3, 0x08, 32);
     errk_q->len = SHA256_HASH_DIGEST_SIZE;
 
+#if 0
     /* Force ERRK_P, ERRK_Q to be odd */
-    errk_p->val[0] |= 0x01;
-    errk_q->val[0] |= 0x01;
+    errk_p->val[0] |= 0x03;//0x01;
+    errk_q->val[0] |= 0x03;//0x01;
+#endif
 }
+
+
+#ifdef IMS_SAMPLE_COMPATABILITY
+/**
+ * @brief Convert a P/Q octet into an FF, forced to be odd
+ *
+ * @param ff The output ff
+ * @param octet The input octet
+ * @param n size of FF in MCL_BIGs
+ */
+void odd_ff_from_octet(mcl_chunk ff[][MCL_BS],
+                       mcl_octet * octet,
+                       int n) {
+    uint8_t lsb = octet->val[0];
+
+    /* Force the octet to be odd 3 mod 4 */
+    octet->val[0] |= 0x03;
+
+    /* pack it into an FF */
+    MCL_FF_fromOctet_C25519(ff, octet, n);
+
+    octet->val[0] = lsb;
+}
+#else  /* IMS_SAMPLE_COMPATABILITY */
+/**
+ * @brief Perform an MCL_FF_fromOctet, reversing the byte order of the octet
+ *
+ * @param digest_x Pointer to the output digest buffer ("X" above)
+ * @param hash_y Pointer to the input digest ("Y" above)
+ * @param extend_byte The extension byte ("b" above)
+ * @param extend_count The number of exension bytes to concatenate ("n" above)
+ */
+void MCL_FF_fromOctetRev(mcl_chunk x[][MCL_BS], mcl_octet *S, int n) {
+    /* Scratch octet */
+    static uint8_t scratch_buf[1024];
+    static mcl_octet scratch = {0, sizeof(scratch_buf), scratch_buf};
+    int i, j;
+
+    for (i = 0, j = S->len - 1; i < S->len; i++, j--) {
+        scratch_buf[i] = S->val[j];
+    }
+    scratch.len = S->len;
+    MCL_FF_fromOctet_C25519(x, &scratch, n);
+}
+
+
+/**
+ * @brief Ensure that an FF number is odd 3 mod 4
+ *
+ * NOTE: This is lifted from MCL_RSA_KEY_PAIR.
+ *
+ * @param ff The number to make odd
+ * @param n size of FF in MCL_BIGs
+ */
+void make_ff_odd_C25519(mcl_chunk ff[][MCL_BS], int n) {
+    /* Ensure that the FF is odd 3 mod 4 */
+    while (MCL_FF_lastbits_C25519(ff, 2) != 3) {
+        MCL_FF_inc_C25519(ff, 1, n);
+    }
+}
+
+
+/**
+ * @brief Convert a P/Q octet into an FF, forced to be odd
+ *
+ * @param ff The output ff
+ * @param octet The input octet
+ * @param n size of FF in MCL_BIGs
+ */
+void odd_ff_from_octet(mcl_chunk ff[][MCL_BS],
+                       mcl_octet * octet,
+                       int n) {
+    uint8_t lsb = octet->val[0];
+
+    /* Force the octet to be odd 3 mod 4 */
+    octet->val[0] |= 0x03;
+
+    /* pack it into an FF */
+    MCL_FF_fromOctetRev(ff, octet, n);
+
+    octet->val[0] = lsb;
+}
+#endif /* IMS_SAMPLE_COMPATABILITY */
 
 
 /**
@@ -496,6 +606,11 @@ void calc_errk_pq_bias_odd(uint8_t * y2,
 void rsa_secret(MCL_rsa_private_key *PRIV,
                 MCL_rsa_public_key *PUB,
                 sign32 e) { /* IEEE1363 A16.11/A16.12 more or less */
+    /**
+     * Note: PRIV FF's are[MCL_FFLEN/2][MCL_NLEN] = [4][5]
+     * internal chunks are[MCL_HFLEN][MCL_BS]     = [4][5]
+     * so no size mismatch occurs.
+     */
     mcl_chunk t[MCL_HFLEN][MCL_BS];
     mcl_chunk p1[MCL_HFLEN][MCL_BS];
     mcl_chunk q1[MCL_HFLEN][MCL_BS];
@@ -526,6 +641,15 @@ void rsa_secret(MCL_rsa_private_key *PRIV,
     MCL_FF_norm_C25519(PRIV->dq, MCL_HFLEN);
 
     MCL_FF_invmodp_C25519(PRIV->c, PRIV->p, PRIV->q, MCL_HFLEN);
+    /*****/printf("\nRSA_SECRET\n");
+    /*****/printf("pub.e %x\n", PUB->e);
+    /*****/print_ff("pub.n ", PUB->n, MCL_FFLEN);
+    /*****/print_ff("priv.p ", PRIV->p, MCL_HFLEN);
+    /*****/print_ff("priv.q ", PRIV->q, MCL_HFLEN);
+    /*****/print_ff("priv.dp ", PRIV->dp, MCL_HFLEN);
+    /*****/print_ff("priv.dq ", PRIV->dq, MCL_HFLEN);
+    /*****/print_ff("priv.c  ", PRIV->c, MCL_HFLEN);
+    /*****/printf("\n");
 
     return;
 }
@@ -542,6 +666,7 @@ void rsa_secret(MCL_rsa_private_key *PRIV,
  * @param f The FF number to print
  * @param n @param n size of FF in MCL_BIGs
  */
+#define MSB_FIRST
 void print_ff(char * title, mcl_chunk ff[][MCL_BS], int n) {
     static uint8_t buf[2048];
     static mcl_octet temp = {0, sizeof(buf), buf};
@@ -551,5 +676,11 @@ void print_ff(char * title, mcl_chunk ff[][MCL_BS], int n) {
     }
 
     MCL_FF_toOctet_C25519(&temp, ff, n);
+#ifdef MSB_FIRST
+    printf("(msb) %s", title);
+    MCL_OCT_output(&temp);
+    printf("\n");
+#else
     display_binary_data(temp.val, temp.len, true, title);
+#endif
 }

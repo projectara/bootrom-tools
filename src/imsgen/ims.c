@@ -78,34 +78,7 @@ mcl_chunk erpk_mod_ff[MCL_HFLEN][MCL_BS];
 mcl_chunk erpk_e[MCL_HFLEN][MCL_BS];
 mcl_chunk erpk_d[MCL_HFLEN][MCL_BS];
 
-
-
-/**
- * @brief Generate an FF num for the maximum starting ERRK_P or ERRK_Q
- *
- * Because we don't want to overflow the ERRK P &Q bias calculations, we
- * must ensure that the pre-bias P and Q are no bigger than 2^1024 - (1 + 8192)
- */
-void calc_errk_max_pq(void) {
-    uint8_t  errk_max_pq_buf[ERRK_PQ_SIZE];
-    mcl_octet errk_max_pq = {0, sizeof(errk_max_pq_buf), errk_max_pq_buf};
-    int i;
-
-    /* Define the maximal number (2^1024 - 1) as a constant octet */
-    for (i = 0; i < errk_max_pq.max; i++) {
-        errk_max_pq.val[i] = 0xff;
-    }
-
-    /* Convert the octet into an FF */
-    MCL_FF_fromOctet_C25519(errk_max_pq_ff, &errk_max_pq, MCL_HFLEN);
-
-    /* Decrement the FF by our threshold. Since we'll be checking in a loop
-     * as we continue to increase the bias (and thus P & Q), we can get
-     * greedy and stop at (2^1024 - 1) - 2 (i.e., the last increment) instead
-     * of (2^1024 - 1) - 8192
-     */
-    MCL_FF_dec_C25519(errk_max_pq_ff, 2, MCL_HFLEN);
-}
+void calc_errk_max_pq(void);
 
 
 /**
@@ -131,11 +104,7 @@ int ims_init(const char * prng_seed_file,
     mcl_octet * seed = NULL;
 
     /* Seed the PRNG */
-    status = get_prng_seed(prng_seed_file, prng_seed_string);
-    if (status != 0) {
-        goto ims_init_err;
-    }
-    MCL_RAND_seed(&rng, prng_seed_length, prng_seed_buffer);
+    status = ims_common_init(prng_seed_file, prng_seed_string);
 
     /* Open the key database */
     status = db_init(database_name);
@@ -169,6 +138,36 @@ void ims_deinit(void) {
 
     /* Close the key database */
     db_deinit();
+
+    ims_common_deinit();
+}
+
+
+/**
+ * @brief Generate an FF num for the maximum starting ERRK_P or ERRK_Q
+ *
+ * Because we don't want to overflow the ERRK P &Q bias calculations, we
+ * must ensure that the pre-bias P and Q are no bigger than 2^1024 - (1 + 8192)
+ */
+void calc_errk_max_pq(void) {
+    uint8_t  errk_max_pq_buf[ERRK_PQ_SIZE];
+    mcl_octet errk_max_pq = {0, sizeof(errk_max_pq_buf), errk_max_pq_buf};
+    int i;
+
+    /* Define the maximal number (2^1024 - 1) as a constant octet */
+    for (i = 0; i < errk_max_pq.max; i++) {
+        errk_max_pq.val[i] = 0xff;
+    }
+
+    /* Convert the octet into an FF */
+    MCL_FF_fromOctet_C25519(errk_max_pq_ff, &errk_max_pq, MCL_HFLEN);
+
+    /* Decrement the FF by our threshold. Since we'll be checking in a loop
+     * as we continue to increase the bias (and thus P & Q), we can get
+     * greedy and stop at (2^1024 - 1) - 2 (i.e., the last increment) instead
+     * of (2^1024 - 1) - 8192
+     */
+    MCL_FF_dec_C25519(errk_max_pq_ff, 2, MCL_HFLEN);
 }
 
 
@@ -275,33 +274,39 @@ static int calc_errk(uint8_t * y2,
      */
     calc_errk_pq_bias_odd(y2, ims, &errk_p, &errk_q);
 
+#if 1
+    /* Force ERRK_P, ERRK_Q to be odd 3 mod 4 */
+    odd_ff_from_octet(p_ff, &errk_p, MCL_HFLEN);
+    odd_ff_from_octet(q_ff, &errk_q, MCL_HFLEN);
+#endif
+    /*****/printf("Lower byte of P 0x%02x, Q 0x%02x\n", MCL_FF_lastbits_C25519(p_ff, 8), MCL_FF_lastbits_C25519(q_ff, 8));
+    /*****/printf("Lower bits of P 0x%x, Q 0x%x\n", MCL_FF_lastbits_C25519(p_ff, 2), MCL_FF_lastbits_C25519(q_ff, 2));
+
     /**
      * Bias ERRK_P & ERRK_Q separately so that they are both prime.
      * We do this by testing them for primality, and if they aren't, then add
      * 2 and test again. Give up when we've swept all 4k possibilities for each
      * without finding a prime number.
      */
-    MCL_FF_fromOctet_C25519(p_ff, &errk_p, MCL_HFLEN); /* Convert P to an FF */
-    MCL_FF_norm_C25519(p_ff, MCL_HFLEN);
+    //MCL_FF_fromOctet_C25519(p_ff, &errk_p, MCL_HFLEN); /* Convert P to an FF */
+    MCL_FF_copy_C25519(priv_key.p, p_ff, MCL_HFLEN);
     for (p_bias = 0; p_bias < 8192; p_bias += 2) {
-        if (MCL_FF_comp_C25519(p_ff, errk_max_pq_ff, MCL_HFLEN) == 1) {
+        if (MCL_FF_comp_C25519(priv_key.p, errk_max_pq_ff, MCL_HFLEN) == 1) {
             /* The sum of P + P_bias will overflow */
             /*****/printf("P would overflow\n");
             break;
         }
         /* Check if P is prime */
-        if (MCL_FF_prime_C25519(p_ff, &rng, MCL_HFLEN) == 1) {
-            /*****/printf("  calc_errk: p %u\n", p_bias);
+        if (MCL_FF_prime_C25519(priv_key.p, &rng, MCL_HFLEN) == 1) {
            /*
              * Always start with the base value of Q, since the inner loop
-             * modifies it. Since we need to work with FFs we must convert
-             * from mcl_octets anyway, so converting from the errk_q octet
-             * guarantees we're using the original.
+             * modifies it.
              */
-            MCL_FF_fromOctet_C25519(q_ff, &errk_q, MCL_HFLEN);
-            MCL_FF_norm_C25519(q_ff, MCL_HFLEN);
+            //MCL_FF_fromOctet_C25519(q_ff, &errk_q, MCL_HFLEN);
+            MCL_FF_copy_C25519(priv_key.q, q_ff, MCL_HFLEN);
+
             for (q_bias = 0 ; q_bias < 8192 ; q_bias += 2) {
-                if (MCL_FF_comp_C25519(q_ff, errk_max_pq_ff, MCL_HFLEN) == 1) {
+                if (MCL_FF_comp_C25519(priv_key.q, errk_max_pq_ff, MCL_HFLEN) == 1) {
                     /* The sum of Q + Q_bias will overflow */
                     /*****/printf("Q would overflow\n");
                     break;
@@ -322,15 +327,15 @@ static int calc_errk(uint8_t * y2,
                 }
 #endif
                 /* Check if Q is prime */
-                if (MCL_FF_prime_C25519(q_ff, &rng, MCL_HFLEN) == 1) {
+                if (MCL_FF_prime_C25519(priv_key.q, &rng, MCL_HFLEN) == 1) {
                     /*****/printf("  calc_errk: p %u q %u\n", p_bias, q_bias);
                     goto SUCCESS;
                 }
-                MCL_FF_inc_C25519(q_ff, 2, MCL_HFLEN);
+                MCL_FF_inc_C25519(priv_key.q, 2, MCL_HFLEN);
             }
         }
         /* If the Q loop ends, no Q + Q_bias was prime, so try next P */
-        MCL_FF_inc_C25519(p_ff, 2, MCL_HFLEN);
+        MCL_FF_inc_C25519(priv_key.p, 2, MCL_HFLEN);
     }
     /**
      * No valid P_bias and Q_bias combo was found within 8192, discard this
@@ -349,6 +354,7 @@ SUCCESS:
     ims[33] = (uint8_t)(pq_bias >> 8);
     ims[34] = (uint8_t)(pq_bias >> 16);
     /*****/printf("pq_bias %x, p_bias %x, q_bias %x\n", pq_bias, p_bias, q_bias);
+    /*****/display_binary_data(ims, IMS_SIZE, true, "ims: ");
 
     /**
      * Generate the private exponent.
@@ -361,10 +367,10 @@ SUCCESS:
      *   - priv_key.dq  decrypting exponent mod (q-1)
      *   - priv_key.c   1/p mod q
      */
-    MCL_FF_copy_C25519(priv_key.p, p_ff, MCL_HFLEN);
-    MCL_FF_copy_C25519(priv_key.q, q_ff, MCL_HFLEN);
-    /*****/print_ff("p(bias)  ", p_ff, MCL_HFLEN);
-    /*****/print_ff("q(bias)  ", q_ff, MCL_HFLEN);
+    //MCL_FF_copy_C25519(priv_key.p, p_ff, MCL_HFLEN);
+    //MCL_FF_copy_C25519(priv_key.q, q_ff, MCL_HFLEN);
+    /*****/print_ff("p(bias)  ", priv_key.p, MCL_HFLEN);
+    /*****/print_ff("q(bias)  ", priv_key.q, MCL_HFLEN);
     rsa_secret(&priv_key, &pub_key, ERPK_EXPONENT);
 
     /* Convert the calculated FF nums back into octets for later storage */
@@ -394,6 +400,7 @@ int ims_generate(void) {
             ims_generate_candidate(ims);
             calculate_epuid_es3(ims, &ep_uid);
          } while (db_ep_uid_exists(&ep_uid));
+        /*****/display_binary_data(ep_uid.val, ep_uid.len, true, "epu_id ");
 
         /* Calculate "Y2", used in generating EPSK, MPDK, ERRK, EPCK, ERGS */
         calculate_y2(ims, y2);

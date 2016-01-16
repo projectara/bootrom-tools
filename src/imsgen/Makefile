@@ -63,7 +63,7 @@ INC_DIRS := -I. $(COMMON_INCDIRS) -I $(MCL_INCDIR)
 EXTRA_LIBS := -lcrypto -lsqlite3
 
 _LIBS = -lcommon
-_LIBDEPS = libcommon.a 
+_LIBDEPS = libcommon.a
 LIBDEPS = $(patsubst %,$(LIBDIR)/%,$(_LIBDEPS))
 
 OBJ = $(ODIR)/ims_common.o $(ODIR)/ims.o $(ODIR)/imsgen.o $(ODIR)/crypto.o $(ODIR)/db.o

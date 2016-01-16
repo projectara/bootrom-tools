@@ -79,6 +79,7 @@ uchar Y_0[16];		/**< GCM Internal State */
 unsign32 lenA[2];	/**< GCM 64-bit length of header */
 unsign32 lenC[2];	/**< GCM 64-bit length of ciphertext */
 int status;		/**< GCM Status */
+mcl_aes a;			/**< Internal Instance of AES cipher */
 } mcl_gcm;
 
 /* AES-GCM functions */

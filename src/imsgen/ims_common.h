@@ -36,6 +36,8 @@
 #ifndef _IMS_COMMON_H
 #define _IMS_COMMON_H
 
+#define IMS_SAMPLE_COMPATABILITY
+
 /* MSb mask for a byte */
 #define BYTE_MASK_MSB               0x80
 
@@ -47,7 +49,7 @@ uint8_t  prng_seed_buffer[EVP_MAX_MD_SIZE];
 uint32_t prng_seed_length;
 
 /* Cryptographically Secure Random Number Generator */
-csprng   rng;
+csprng  rng;        /* Generic */
 
 
 /* IMS working set */
@@ -106,18 +108,24 @@ MCL_rsa_public_key  rsa_public;
 
 
 /**
- * @brief Parse a raw seed string
- *
- * Allocates a buffer for the seed string and points the prng_seed mcl_octet
- * at it
+ * @brief Perform any common IMS initialization
  *
  * @param prng_seed_file Filename from which to read the seed
  * @param prng_seed_string Raw seed string
  *
  * @returns Zero if successful, errno otherwise.
  */
-int get_prng_seed(const char * prng_seed_file,
-                  const char * prng_seed_string);
+int ims_common_init(const char * prng_seed_file,
+                    const char * prng_seed_string);
+
+
+/**
+ * @brief Perform any common IMS de-initialization
+ */
+void ims_common_deinit(void);
+
+
+void MCL_FF_fromOctetRev(mcl_chunk x[][MCL_BS],mcl_octet *S,int n);
 
 
 /**
@@ -220,6 +228,38 @@ void calc_esvk(mcl_octet * essk, mcl_octet * esvk);
 
 
 /**
+ * @brief Calculate the Endpoint Rsa pRivate Key (ERRK) P & Q factors
+ *
+ * Calculates the ERRK_P & ERRK_Q, up to and including the bias-to-odd
+ * step (i.e., that which can be extracted from IMS[0:31]).
+ *
+ *
+ * @param y2 A pointer to the Y2 term used by all
+ * @param ims A pointer to the ims (the upper 3 bytes will be modified)
+ * @param erpk_mod A pointer to a buffer to store the modulus for ERPK
+ * @param errk_d A pointer to a buffer to store the  ERPK decryption exponent
+ *
+ * @returns Zero if successful, errno otherwise.
+ */
+void calc_errk_pq_bias_odd(uint8_t * y2,
+                           uint8_t * ims,
+                           mcl_octet * errk_p,
+                           mcl_octet * errk_q);
+
+
+/**
+ * @brief Convert a P/Q octet into an FF, forced to be odd
+ *
+ * @param ff The output ff
+ * @param octet The input octet
+ * @param n size of FF in MCL_BIGs
+ */
+void odd_ff_from_octet(mcl_chunk ff[][MCL_BS],
+                       mcl_octet * octet,
+                       int n);
+
+
+/**
  * @brief Calculate the private decryption exponent
  *
  * NOTE: This is largely copied from MCL_RSA_KEY_PAIR and retains its syntax
@@ -253,6 +293,8 @@ void calc_errk_pq_unbiased(uint8_t * y2,
                            uint8_t * ims,
                            mcl_octet * erpk_p,
                            mcl_octet * errk_q);
+
+
 /**
  * @brief print out an FF variable
  *

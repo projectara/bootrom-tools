@@ -570,6 +570,7 @@ void display_binary_data(const uint8_t * blob, const size_t length,
             printf("%s%s\n", indent, hexlify(&blob[start], max_on_line,
                                              linebuf, sizeof(linebuf)));
         }
+        printf("\n");
     }
 }
 

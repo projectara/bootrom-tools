@@ -165,7 +165,7 @@ int main(int argc, char * argv[]) {
         } else {
             /* Generate N IMS values */
             for (count = 0; count < num_ims; count++) {
-                /*****/printf("imsgen: IMS %d/%d\n", count, num_ims);
+                /*****/printf("imsgen: IMS %d/%d\n", count + 1, num_ims);
                 if (ims_generate() != 0) {
                     fprintf(stderr,
                             "ERROR: created only %u of %u IMS values\n",

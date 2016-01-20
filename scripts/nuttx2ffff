@@ -140,7 +140,7 @@ for i in ${!mids[*]}; do
         exit 1
     fi
 
-    tftf_name=$(printf "ara:%.8x:%.8x:%.8x:%.8x:02.tftf" ${mids[i]} ${pids[i]} \
+    tftf_name=$(printf "ara_%.8x_%.8x_%.8x_%.8x_02.tftf" ${mids[i]} ${pids[i]} \
                 0 0)
 
     create-ffff \

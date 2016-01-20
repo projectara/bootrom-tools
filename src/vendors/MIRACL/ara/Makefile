@@ -1,7 +1,7 @@
-TOPDIR := ${shell pwd}
+_TOPDIR := ${shell pwd}
 
 # Tweak to get this to build with just "make" or build.bsh
-MCL_CONFIG_DIR = $(TOPDIR)
+MCL_CONFIG_DIR = $(_TOPDIR)
 
 # Include build configuration
 include $(MCL_CONFIG_DIR)/defconfig
@@ -86,21 +86,21 @@ CFLAGS+= -D MCL_CHUNK=$(MCL_CHUNK) -D MCL_CHOICE=$(MCL_CHOICE) \
 
 # Decorator for functions
 ifeq ($(CONFIG_DECORATOR),y)
-  include $(TOPDIR)/Decorator.mk
+  include $(_TOPDIR)/Decorator.mk
   CFLAGS+= $(DRFLAGS)
 endif
 
 # library src files directory 
-LIB_DIR=$(TOPDIR)/src/lib
+LIB_DIR=$(_TOPDIR)/src/lib
 
 # benchmark src files directory
-BENCH_DIR=$(TOPDIR)/src/benchmark
+BENCH_DIR=$(_TOPDIR)/src/benchmark
 
 # test src files directory
-TEST_DIR=$(TOPDIR)/src/tests
+TEST_DIR=$(_TOPDIR)/src/tests
 
 # Crypto library source
-include $(TOPDIR)/Sources.mk
+include $(_TOPDIR)/Sources.mk
 LIBCURVE_OBJS  := $(LIBCURVE_SRC:$(LIB_DIR)/%.c=$(OUTBUILD)/%.o)
 LIBCORE_OBJS := $(LIBCORE_SRC:$(LIB_DIR)/%.c=$(OUTBUILD)/%.o)
 STEST_OBJS  := $(STEST_SRC:$(TEST_DIR)/%.c=$(OUTBUILD)/%.o)

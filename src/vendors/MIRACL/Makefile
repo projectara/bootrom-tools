@@ -12,6 +12,7 @@
 # 3. Neither the name of the copyright holder nor the names of its
 # contributors may be used to endorse or promote products derived from this
 # software without specific prior written permission.
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
 # THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -24,60 +25,28 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #------------------------------------------------------------------------------
-# ...<root>/src/Makefile
+# ...<root>/src/vendors/MIRACL/Makefile
 
 include $(TOPDIR)/Makefile.inc
 
-# Sub-directories
-SUBDIRS   = common create-tftf display-tftf sign-tftf create-ffff display-ffff \
-            s2config vendors/MIRACL imsgen
-COMMONDIR = ${shell pwd}/common
+# MIRACL library support
 
-all: $(SUBDIRS)
+EXE_NAME = foo
+EXE      = $(MCL_LIBDIR)/$(EXE_NAME)
 
-.PHONY: all nothing depend clean distclean
+.PHONY: clean makemiracl
 
-# SDIR_template <SubDir>
-# recursively make <SubDir>
-define SDIR_template0
-$(1): force_look
-	$(MAKE) -C $(1) TOPDIR="$(TOPDIR)" COMMONDIR="$(COMMONDIR)"
-endef
-
-# SDIR_template <SubDir> <Target>
-# recursively make <Target> in <SubDir>
-define SDIR_template
-$(1)_$(2):
-	$(MAKE) -C $(1) $(2) TOPDIR="$(TOPDIR)" COMMONDIR="$(COMMONDIR)"
-endef
-
-# create generic dependencies for all subdirs
-# create-tftf:
-# 	make -C create-tftf
-#  :
-# create-ffff:
-# 	make -C create-ffff
-$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template0,$(SDIR))))
-
-# create targeted dependencies for all subdirs. e.g.:
-# create-tftf_clean:
-# 	make -C create-tftf clean
-#  :
-# create-ffff_clean:m
-# 	make -C create-ffff clean
-$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
-
-#create-tftf/create-tftf:
-#	make -C create-tftf
-
-nothing:
-
-install:
-
-# clean the tree by dependencies on all of the xxx_clean dependencies declared above
-clean: $(foreach SDIR, $(SUBDIRS), $(SDIR)_clean)
+makemiracl:
+	@ echo Compiling MIRACL/ara
+	cd ara; bash ./build.bsh 64; cd ..
 
 
-force_look :
-	true
+
+-include $(OBJ:.o=.d)
+
+clean:
+	rm -f $(OBJ) $(EXE)
+
+distclean:
+	rm -f $(OBJ) $(EXE)
 

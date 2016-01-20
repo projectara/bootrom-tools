@@ -473,39 +473,45 @@ void calc_errk_pq_bias_odd(uint8_t * y2,
     /**
      *  Y2 = sha256(IMS[0:31] xor copy(0x5a, 32))  // (provided)
      *  Z3 = sha256(Y2 || copy(0x03, 32))
+     *   :
+     */
+    sha256_concat(z3, y2, 0x03, 32);
+
+    /**
+     *   :
      *  ERRK_P[0:31] = sha256(Z3 || copy(0x01, 32))
      *  ERRK_P[32:63] = sha256(Z3 || copy(0x02, 32))
      *  ERRK_P[64:95] = sha256(Z3 || copy(0x03, 32))
      *  ERRK_P[96:127] = sha256(Z3 || copy(0x41, 32))
-     *  ERRK_Q[0:31] = sha256(Z3 || copy(0x05, 32))
-     *  ERRK_Q[32:63] = sha256(Z3 || copy(0x06, 32))
-     *  ERRK_Q[64:95] = sha256(Z3 || copy(0x07, 32))
-     *  ERRK_Q[96:127] = sha256(Z3 || copy(0x8, 32))
-     *  ERRK_P[0] |= 0x01                          // force P, Q to be odd
-     *  ERRK_Q[0] |= 0x01
+     *   :
      */
-    /* calc. Z3 */
-    sha256_concat(z3, y2, 0x03, 32);
-
-    /* calc. ERRK_P */
     sha256_concat(&errk_p->val[0],  z3, 0x01, 32);
     sha256_concat(&errk_p->val[32], z3, 0x02, 32);
     sha256_concat(&errk_p->val[64], z3, 0x03, 32);
     sha256_concat(&errk_p->val[96], z3, 0x04, 32);
     errk_p->len = SHA256_HASH_DIGEST_SIZE;
 
-    /* calc. ERRK_Q */
+    /**
+     *   :
+     *  ERRK_Q[0:31] = sha256(Z3 || copy(0x05, 32))
+     *  ERRK_Q[32:63] = sha256(Z3 || copy(0x06, 32))
+     *  ERRK_Q[64:95] = sha256(Z3 || copy(0x07, 32))
+     *  ERRK_Q[96:127] = sha256(Z3 || copy(0x8, 32))
+     *   :
+     */
     sha256_concat(&errk_q->val[0],  z3, 0x05, 32);
     sha256_concat(&errk_q->val[32], z3, 0x06, 32);
     sha256_concat(&errk_q->val[64], z3, 0x07, 32);
     sha256_concat(&errk_q->val[96], z3, 0x08, 32);
     errk_q->len = SHA256_HASH_DIGEST_SIZE;
 
-#if 0
-    /* Force ERRK_P, ERRK_Q to be odd */
-    errk_p->val[0] |= 0x03;//0x01;
-    errk_q->val[0] |= 0x03;//0x01;
-#endif
+    /**
+     *   :
+     *  ERRK_P[0] |= 0x03		// force P, Q to be odd (3 mod 4)
+     *  ERRK_Q[0] |= 0x03
+     */
+    errk_p->val[0] |= 0x03;
+    errk_q->val[0] |= 0x03;
 }
 
 
@@ -521,9 +527,6 @@ void odd_ff_from_octet(mcl_chunk ff[][MCL_BS],
                        mcl_octet * octet,
                        int n) {
     uint8_t lsb = octet->val[0];
-
-    /* Force the octet to be odd 3 mod 4 */
-    octet->val[0] |= 0x03;
 
     /* pack it into an FF */
     MCL_FF_fromOctet_C25519(ff, octet, n);
@@ -580,9 +583,6 @@ void odd_ff_from_octet(mcl_chunk ff[][MCL_BS],
                        mcl_octet * octet,
                        int n) {
     uint8_t lsb = octet->val[0];
-
-    /* Force the octet to be odd 3 mod 4 */
-    octet->val[0] |= 0x03;
 
     /* pack it into an FF */
     MCL_FF_fromOctetRev(ff, octet, n);

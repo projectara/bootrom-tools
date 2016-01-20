@@ -274,13 +274,6 @@ static int calc_errk(uint8_t * y2,
      */
     calc_errk_pq_bias_odd(y2, ims, &errk_p, &errk_q);
 
-#if 1
-    /* Force ERRK_P, ERRK_Q to be odd 3 mod 4 */
-    odd_ff_from_octet(p_ff, &errk_p, MCL_HFLEN);
-    odd_ff_from_octet(q_ff, &errk_q, MCL_HFLEN);
-#endif
-    /*****/printf("Lower byte of P 0x%02x, Q 0x%02x\n", MCL_FF_lastbits_C25519(p_ff, 8), MCL_FF_lastbits_C25519(q_ff, 8));
-    /*****/printf("Lower bits of P 0x%x, Q 0x%x\n", MCL_FF_lastbits_C25519(p_ff, 2), MCL_FF_lastbits_C25519(q_ff, 2));
 
     /**
      * Bias ERRK_P & ERRK_Q separately so that they are both prime.
@@ -288,25 +281,24 @@ static int calc_errk(uint8_t * y2,
      * 2 and test again. Give up when we've swept all 4k possibilities for each
      * without finding a prime number.
      */
-    //MCL_FF_fromOctet_C25519(p_ff, &errk_p, MCL_HFLEN); /* Convert P to an FF */
-    MCL_FF_copy_C25519(priv_key.p, p_ff, MCL_HFLEN);
+    MCL_FF_fromOctet_C25519(p_ff, &errk_p, MCL_HFLEN); /* Convert P to an FF */
     for (p_bias = 0; p_bias < 8192; p_bias += 2) {
-        if (MCL_FF_comp_C25519(priv_key.p, errk_max_pq_ff, MCL_HFLEN) == 1) {
+        if (MCL_FF_comp_C25519(p_ff, errk_max_pq_ff, MCL_HFLEN) == 1) {
             /* The sum of P + P_bias will overflow */
             /*****/printf("P would overflow\n");
             break;
         }
         /* Check if P is prime */
-        if (MCL_FF_prime_C25519(priv_key.p, &rng, MCL_HFLEN) == 1) {
+        if (MCL_FF_prime_C25519(p_ff, &rng, MCL_HFLEN) == 1) {
            /*
              * Always start with the base value of Q, since the inner loop
              * modifies it.
              */
-            //MCL_FF_fromOctet_C25519(q_ff, &errk_q, MCL_HFLEN);
-            MCL_FF_copy_C25519(priv_key.q, q_ff, MCL_HFLEN);
+            MCL_FF_fromOctet_C25519(q_ff, &errk_q, MCL_HFLEN);
+            //MCL_FF_copy_C25519(priv_key.q, q_ff, MCL_HFLEN);
 
             for (q_bias = 0 ; q_bias < 8192 ; q_bias += 2) {
-                if (MCL_FF_comp_C25519(priv_key.q, errk_max_pq_ff, MCL_HFLEN) == 1) {
+                if (MCL_FF_comp_C25519(q_ff, errk_max_pq_ff, MCL_HFLEN) == 1) {
                     /* The sum of Q + Q_bias will overflow */
                     /*****/printf("Q would overflow\n");
                     break;
@@ -327,15 +319,15 @@ static int calc_errk(uint8_t * y2,
                 }
 #endif
                 /* Check if Q is prime */
-                if (MCL_FF_prime_C25519(priv_key.q, &rng, MCL_HFLEN) == 1) {
+                if (MCL_FF_prime_C25519(q_ff, &rng, MCL_HFLEN) == 1) {
                     /*****/printf("  calc_errk: p %u q %u\n", p_bias, q_bias);
                     goto SUCCESS;
                 }
-                MCL_FF_inc_C25519(priv_key.q, 2, MCL_HFLEN);
+                MCL_FF_inc_C25519(q_ff, 2, MCL_HFLEN);
             }
         }
         /* If the Q loop ends, no Q + Q_bias was prime, so try next P */
-        MCL_FF_inc_C25519(priv_key.p, 2, MCL_HFLEN);
+        MCL_FF_inc_C25519(p_ff, 2, MCL_HFLEN);
     }
     /**
      * No valid P_bias and Q_bias combo was found within 8192, discard this
@@ -367,8 +359,8 @@ SUCCESS:
      *   - priv_key.dq  decrypting exponent mod (q-1)
      *   - priv_key.c   1/p mod q
      */
-    //MCL_FF_copy_C25519(priv_key.p, p_ff, MCL_HFLEN);
-    //MCL_FF_copy_C25519(priv_key.q, q_ff, MCL_HFLEN);
+    MCL_FF_copy_C25519(priv_key.p, p_ff, MCL_HFLEN);
+    MCL_FF_copy_C25519(priv_key.q, q_ff, MCL_HFLEN);
     /*****/print_ff("p(bias)  ", priv_key.p, MCL_HFLEN);
     /*****/print_ff("q(bias)  ", priv_key.q, MCL_HFLEN);
     rsa_secret(&priv_key, &pub_key, ERPK_EXPONENT);

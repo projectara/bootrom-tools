@@ -245,26 +245,13 @@ static int calc_errk(uint8_t * y2,
      *  ERRK_Q[96:127] = sha256(Z3 || copy(0x8, 32))
      *  ERRK_P[0] |= 0x01                          // force P, Q to be odd
      *  ERRK_Q[0] |= 0x01
-     *  <ensure ERRK_P & ERRK_Q are within 8192 of being prime>
-     *  ERPK_MOD = ERRK_Q * ERRK_P                 // generate modulus for ERPK
-     *  ERPK_E = 65537                             // public exponent
-     *  ERRK_D = RSA_secret(ERRK_P, ERK_Q, ERPK_E) // Private decrypt exponent
-     *                                             // (unused in IMS creation)
+     *    :
      */
     calc_errk_pq_bias_odd(y2, ims, &errk_p, &errk_q);
 
     /* Convert P & Q to FF format */
     MCL_FF_fromOctet_C25519(p_ff, &errk_p, MCL_HFLEN);
     MCL_FF_fromOctet_C25519(q_ff, &errk_q, MCL_HFLEN);
-
-#if 1
-    /* Force ERRK_P, ERRK_Q to be odd 3 mod 4 */
-    odd_ff_from_octet(p_ff, &errk_p, MCL_HFLEN);
-    odd_ff_from_octet(q_ff, &errk_q, MCL_HFLEN);
-#endif
-    /*****/printf("Lower byte of P 0x%02x, Q 0x%02x\n", MCL_FF_lastbits_C25519(p_ff, 8), MCL_FF_lastbits_C25519(q_ff, 8));
-    /*****/printf("Lower bits of P 0x%x, Q 0x%x\n", MCL_FF_lastbits_C25519(p_ff, 2), MCL_FF_lastbits_C25519(q_ff, 2));
-
 
 
     /* Extract the P & Q bias from IMS[32:34] */
@@ -279,7 +266,12 @@ static int calc_errk(uint8_t * y2,
     /*****/printf("add (p,q) += (pbias,qbias)\n");
 
     /**
-     * Generate the private exponent.
+     * Generate the public and private exponents
+     *   :
+     *  ERPK_MOD = ERRK_Q * ERRK_P                 // generate modulus for ERPK
+     *  ERPK_E = 65537                             // public exponent
+     *  ERRK_D = RSA_secret(ERRK_P, ERK_Q, ERPK_E) // Private decrypt exponent
+     *
      * On return, the structs are set to the following:
      *   - pub_key.n    ERRPK_MOD (p * q)
      *   - pub_key.e    ERPK_EXPONENT (65537)
@@ -291,9 +283,7 @@ static int calc_errk(uint8_t * y2,
      */
     MCL_FF_copy_C25519(rsa_private.p, p_ff, MCL_HFLEN);
     MCL_FF_copy_C25519(rsa_private.q, q_ff, MCL_HFLEN);
-    /*****/printf("copied PQ to rsaprivate. rsa_secret...\n");
     rsa_secret(&rsa_private, &rsa_public, ERPK_EXPONENT);
-    /*****/printf("rsa_secret returned...\n");
 
     /* Convert the calculated FF nums back into octets for later use */
     MCL_FF_toOctet_C25519(erpk_mod, rsa_public.n, MCL_HFLEN);

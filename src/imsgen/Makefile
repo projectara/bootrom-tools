@@ -90,4 +90,3 @@ $(EXETEST): $(OBJTEST) $(LIBDEPS)
 clean:
 	rm -f $(OBJ) $(EXE)
 
-

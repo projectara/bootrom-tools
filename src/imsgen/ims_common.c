@@ -497,7 +497,7 @@ void calc_errk_pq_bias_odd(uint8_t * y2,
      * delivered to Toshiba or the correct production form.
      */
     if (ims_sample_compatibility) {
-        odd_mod_bitmask = 0x03;
+        odd_mod_bitmask = ODD_3_MOD_4_BITMASK;
         pq_len = SHA256_HASH_DIGEST_SIZE;
     } else {
         odd_mod_bitmask = ODD_MOD_BITMASK(ODD_MOD_PRODUCTION);

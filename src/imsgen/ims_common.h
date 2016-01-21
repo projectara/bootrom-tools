@@ -86,10 +86,14 @@ uint8_t  ims[IMS_SIZE];
  * (ODD_MOD - 1) bits with 1, and stepping by ODD_MOD. Because we force the
  * bottom bits to be 1, we discount them from the bias, increasing our step
  * size and search limit.
+ *
+ * ODD_3_MOD_4_BITMASK is a special case for use in backward-compatibility
+ * with the first 100 samples generated.
  */
 #define ODD_MOD_SAMPLE              2
 #define ODD_MOD_PRODUCTION          4
 #define ODD_MOD_BITMASK(odd_mod)    ((odd_mod) - 1)
+#define ODD_3_MOD_4_BITMASK         0x03
 
 /* Endpoint Unique ID (EP_UID) working set */
 #define EP_UID_SIZE         8

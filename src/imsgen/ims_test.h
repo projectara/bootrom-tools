@@ -80,7 +80,7 @@ void ims_deinit(void);
  *
  * @returns Zero if all tested IMS values verify, errno otherwise.
  */
-int test_ims_set(const char * ims_filename, int num_ims,
+int test_ims_set(const char * ims_filename, uint32_t num_ims,
                  bool ims_sample_compatibility);
 
 #endif /* !_IMS_TEST_H */

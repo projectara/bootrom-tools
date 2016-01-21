@@ -323,12 +323,64 @@ static int calc_errk(uint8_t * y2,
  *
  * @returns Zero if successful, -1 otherwise.
  */
+int test_rsa_sign_roundtrip(MCL_rsa_private_key * private_key,
+                            MCL_rsa_public_key * public_key,
+                            csprng * rng) {
+    int status = 0;
+    char * test_string = "Hello world";
+    static char m[MCL_RFS];
+    //static char e[MCL_RFS];
+    static char c[MCL_RFS];
+    static char s[MCL_RFS];
+    static char ml[MCL_RFS];
+    mcl_octet M={0, sizeof(m), m};
+    //mcl_octet E={0, sizeof(e), e};
+    mcl_octet S={0,sizeof(s),s};
+    mcl_octet C={0, sizeof(c), c};
+    mcl_octet ML={0, sizeof(ml), ml};
+
+    /* Create the message M */
+    MCL_OCT_jstring(&M, test_string);
+    /* PKCS V1.5 padding of a message prior to RSA signature */
+    if (MCL_PKCS15_RSA2048(MCL_HASH_TYPE_RSA, &M, &C) != 1) {
+        fprintf(stderr, "Unable to pad message prior to RSA signature\n");
+        status = -1;
+    } else {
+        /* create signature in S */
+        MCL_RSA_DECRYPT_RSA2048(private_key, &C, &S);
+
+        /* Verify the signature */
+        MCL_RSA_ENCRYPT_RSA2048(public_key, &S, &ML);
+        if (MCL_OCT_comp(&C,&ML)) {
+          status = 0;
+        } else {
+          printf("Signature is INVALID\r\n");
+          printf("Signature= ");
+          MCL_OCT_output(&S);
+          printf("\r\n");
+          status = -1;
+        }
+    }
+    return status;
+}
+
+
+/**
+ * @brief Test that the RSA-2048 encrypt-decrypt works
+ *
+ * Encrypt a string with the public key and decrypt it with the private key.
+ * This code is borrowed from MIRACL's ...MIRACL/src/tests/test_rsa.c
+ *
+ * @param private_key A pointer to the RSA private key
+ * @param public_key A pointer to the RSA public key
+ *
+ * @returns Zero if successful, -1 otherwise.
+ */
 int test_rsa_roundtrip(MCL_rsa_private_key * private_key,
                        MCL_rsa_public_key * public_key,
                        csprng * rng) {
     int status = 0;
     int test_len;
-    csprng RNG;
     char * test_string = "Hello world";
     static char m[MCL_RFS];
     static char e[MCL_RFS];
@@ -380,7 +432,7 @@ int test_rsa_roundtrip(MCL_rsa_private_key * private_key,
  *
  * @returns Zero if successful, -1 otherwise.
  */
-int test_ecc_roundtrip(bool primary) {
+int test_ecc_sign_roundtrip(bool primary) {
     int status = -1;
     int mcl_status;
     int i;
@@ -518,15 +570,62 @@ int test_ims(uint8_t * ims, bool ims_sample_compatibility) {
     }
 
     /**
-     * Verify RSA encrypt-decrypt and primary and secondary signing work
+     * Verify RSA and primary and secondary ECC signing work
      */
     if (status == 0) {
-        /*status =*/ test_rsa_roundtrip(&rsa_private, &rsa_public, &rng);
-        /*status =*/ test_ecc_roundtrip(true);
-        /*status =*/ test_ecc_roundtrip(false);
+        status = test_rsa_sign_roundtrip(&rsa_private, &rsa_public, &rng);
+    }
+    if (status == 0) {
+        status = test_ecc_sign_roundtrip(true);
+    }
+    if (status == 0) {
+        status = test_ecc_sign_roundtrip(false);
     }
 
     return status;
+}
+
+
+/**
+ * @brief Read and verify an IMS value
+ *
+ * @param ims_fd The file descriptor of the IMS file
+ * @param index Which IMS value to verify (zero-based)
+ * @param sample_compatibility_mode If true, generate IMS values that are
+ *        compatible with the original (incorrect) 100 sample values sent
+ *        to Toshiba 2016/01/14. If false, generate the IMS value using
+ *        the correct form.
+ *
+ * @returns Zero if the IMS value verified, errno or -1 otherwise.
+ */
+int read_verify_ims(const int ims_fd, const uint32_t index,
+                 bool sample_compatibility_mode) {
+    off_t offset;
+    int status;
+
+    offset = index * IMS_LINE_SIZE;
+    printf("IMS[%u]\n", index);
+    status = ims_read(ims_fd, offset, ims);
+    if (status == 0) {
+        status = test_ims(ims, sample_compatibility_mode);
+    }
+
+    return status;
+}
+
+
+/**
+ * @brief Generate a cryptographically good 32-bit random number
+ *
+ * @returns 32 bits.
+ */
+uint32_t rand32(void) {
+    uint32_t r;
+
+    r = (MCL_RAND_byte(&rng) << 24) |
+        (MCL_RAND_byte(&rng) << 16) |
+        (MCL_RAND_byte(&rng) << 8) |
+        MCL_RAND_byte(&rng);
 }
 
 
@@ -546,22 +645,26 @@ int test_ims(uint8_t * ims, bool ims_sample_compatibility) {
  *
  * @returns Zero if all tested IMS values verify, errno or -1 otherwise.
  */
-int test_ims_set(const char * ims_filename, int num_ims,
+int test_ims_set(const char * ims_filename, uint32_t num_ims,
                  bool sample_compatibility_mode) {
     int status = 0;
-    int fd;
-    int i;
-    int index;
+    int ims_fd;
+    uint32_t i;
+    uint32_t j;
+    uint32_t index;
+    uint32_t r;
+    bool unique;
     off_t offset;
     int num_available_ims;
+    int * test_set = NULL;
     struct stat ims_stat = {0};
 
-    fd = open(ims_filename, O_RDONLY);
+    ims_fd = open(ims_filename, O_RDONLY);
     if (open(ims_filename, O_RDONLY) == -1) {
         fprintf(stderr, "ERROR: Can't open IMS file '%s'\n", ims_filename);
         status = errno;
     } else {
-        if (fstat(fd, &ims_stat) != 0) {
+        if (fstat(ims_fd, &ims_stat) != 0) {
             fprintf(stderr, "ERROR: Can't find IMS file '%s'\n", ims_filename);
             status = errno;
         } else {
@@ -569,7 +672,8 @@ int test_ims_set(const char * ims_filename, int num_ims,
             num_available_ims = ims_stat.st_size / (IMS_LINE_SIZE);
             if (num_ims > num_available_ims) {
                 fprintf(stderr, "Warning: IMS file only contains %d entr%s\n",
-                        num_available_ims, (num_available_ims == 1)? "y" : "ies");
+                        num_available_ims,
+                        (num_available_ims == 1)? "y" : "ies");
                 num_ims = num_available_ims;
             }
 
@@ -578,25 +682,54 @@ int test_ims_set(const char * ims_filename, int num_ims,
                             " (compatible with initial 100 IMS samples)" :
                             "");
 
-            /* Randomly draw <num_ims> IMS values from the IMS file and verify them */
-            for (i = 0; (i < num_ims) && (status == 0); i++) {
-                if (num_ims >= num_available_ims) {
-                    /* Sequentially scan all IMS */
-                    index = i;
-                } else {
-                    /* Randomly draw IMS */
-                    index = random() % num_available_ims;
+            if (num_ims >= num_available_ims) {
+                /* Sequentially scan all IMS */
+                for (i = 0; (i < num_ims) && (status == 0); i++) {
+                    status = read_verify_ims(ims_fd, i,
+                                             sample_compatibility_mode);
                 }
-                offset = index * IMS_LINE_SIZE;
-                printf("IMS[%u]\n", index);
-                status = ims_read(fd, offset, ims);
-                if (status == 0) {
-                    status = test_ims(ims, sample_compatibility_mode);
+            } else {
+                /* Randomly draw and verify N IMS values from the IMS file */
+                test_set = calloc(num_ims, sizeof(*test_set));
+                if (test_set) {
+                    /* Randomly draw N unique IMS values */
+                    /* Create a set of unique indices */
+                    for (i = 0; (i < num_ims) && (status == 0); i++) {
+                        do {
+                            unique = true;
+                            /* Draw a random index and check for uniqueness */
+                            r = rand32() % num_available_ims;
+                            for (j = 0; j < i; j++) {
+                                if (r == test_set[j]) {
+                                    /* Duplicate, draw again */
+                                    unique = false;
+                                    break;
+                                }
+                            }
+                        } while (!unique);
+                        test_set[i] = r;
+                    }
+                    /* Process the set of unique indices */
+                    for (i = 0; (i < num_ims) && (status == 0); i++) {
+                        status = read_verify_ims(ims_fd, test_set[i],
+                                                 sample_compatibility_mode);
+                    }
+                    free(test_set);
+                } else {
+                    /* Draw N IMS values, with some risk of duplication */
+                    fprintf(stderr,
+                            "Warning: random sampling may have duplicates\n");
+                    for (i = 0; (i < num_ims) && (status == 0); i++) {
+                        /* Randomly draw IMS */
+                        status = read_verify_ims(ims_fd,
+                                                 rand32() % num_available_ims,
+                                                 sample_compatibility_mode);
+                     }
                 }
             }
         }
 
-        close (fd);
+        close (ims_fd);
     }
 
     return status;

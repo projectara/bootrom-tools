@@ -37,6 +37,9 @@
 #include "mcl_oct.h"
 #include "db.h"
 
+/* Uncomment the following define to enable DB diagnostic messages */
+/*#define DB_DEBUGMSG*/
+
 #define HOLD_DB_OPEN
 
 static sqlite3 *db;
@@ -99,11 +102,13 @@ int db_add_keyset(mcl_octet * ep_uid,
     char ep_uid_hex[32];
     sqlite3_stmt *stmt;
 
-    /*****/printf("db_add_keyset:\n");
-    /*****/display_binary_data(ep_uid->val, ep_uid->len, true, "ep_uid   ");
-    /*****/display_binary_data(epvk->val, epvk->len, true, "epvk     ");
-    /*****/display_binary_data(esvk->val, esvk->len, true, "esvk     ");
-    /*****/display_binary_data(erpk_mod->val, erpk_mod->len, true, "erpk_mod ");
+#ifdef DB_DEBUGMSG
+    printf("db_add_keyset:\n");
+    display_binary_data(ep_uid->val, ep_uid->len, true, "ep_uid   ");
+    display_binary_data(epvk->val, epvk->len, true, "epvk     ");
+    display_binary_data(esvk->val, esvk->len, true, "esvk     ");
+    display_binary_data(erpk_mod->val, erpk_mod->len, true, "erpk_mod ");
+#endif
     status = sqlite3_prepare_v2(db, insert_stmt, -1, &stmt, NULL);
     if (status != SQLITE_OK) {
         fprintf(stderr, "db_add_keyset: prepare failed: %s\n",
@@ -216,22 +221,30 @@ int db_get_keyset(mcl_octet * ep_uid,
         /* Search the result for the ep_uid */
         step = sqlite3_step(stmt);
         if (step == SQLITE_ROW) {
-            /*****/printf("db_get_keyset:\n");
-            /*****/display_binary_data(ep_uid->val, ep_uid->len, true, "ep_uid   ");
+#ifdef DB_DEBUGMSG
+            printf("db_get_keyset:\n");
+            display_binary_data(ep_uid->val, ep_uid->len, true, "ep_uid   ");
+#endif
             /* fetch the desired columns */
             if (epvk) {
                 if (db_get_blob(stmt, 1, epvk)) {
-                    /*****/display_binary_data(epvk->val, epvk->len, true, "epvk     ");
+#ifdef DB_DEBUGMSG
+                    display_binary_data(epvk->val, epvk->len, true, "epvk     ");
+#endif
                 }
             }
             if (esvk) {
                 if (db_get_blob(stmt, 2, esvk)) {
-                    /*****/display_binary_data(esvk->val, esvk->len, true, "esvk     ");
+#ifdef DB_DEBUGMSG
+                    display_binary_data(esvk->val, esvk->len, true, "esvk     ");
+#endif
                 }
             }
             if (erpk_mod) {
                 if (db_get_blob(stmt, 3, erpk_mod)) {
-                    /*****/display_binary_data(erpk_mod->val, erpk_mod->len, true, "erpk_mod ");
+#ifdef DB_DEBUGMSG
+                    display_binary_data(erpk_mod->val, erpk_mod->len, true, "erpk_mod ");
+#endif
                 }
             }
         }

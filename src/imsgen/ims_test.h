@@ -73,9 +73,14 @@ void ims_deinit(void);
  *
  * @param ims_filename The name of the IMS input file
  * @param num_ims The number of IMS values to test
+ * @param ims_sample_compatibility If true, generate IMS values that are
+ *        compatible with the original (incorrect) 100 sample values sent
+ *        to Toshiba 2016/01/14. If false, generate the IMS value using
+ *        the correct form.
  *
  * @returns Zero if all tested IMS values verify, errno otherwise.
  */
-int test_ims_set(const char * ims_filename, int num_ims);
+int test_ims_set(const char * ims_filename, int num_ims,
+                 bool ims_sample_compatibility);
 
 #endif /* !_IMS_TEST_H */

@@ -62,12 +62,17 @@ int ims_init(const char * prng_seed_file,
  * @brief Generate an IMS value
  *
  * Generates a unique IMS value, storing it in the IMS output file and
- * the generated EPVK, ERPK and ESVK certificates in the certificate
+ * the generated EPVK, ERPK and ESVK keys in the key
  * database.
+ *
+ * @param ims_sample_compatibility If true, generate IMS values that are
+ *        compatible with the original (incorrect) 100 sample values sent
+ *        to Toshiba 2016/01/14. If false, generate the IMS value using
+ *        the correct form.
  *
  * @returns Zero if successful, errno otherwise.
  */
-int ims_generate(void);
+int ims_generate(bool ims_sample_compatibility);
 
 
 /**

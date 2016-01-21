@@ -61,12 +61,14 @@
 
 
 /* Parsing args */
+static int      sample_compatibility_mode = 0;
 static int      num_ims;
 static char *   database_name;
 static char *   ims_filename;
 static char *   prng_seed_filename;
 static char *   prng_seed_string;
 
+static char *   sample_compatibility_mode_names[] = { "compatibility", NULL };
 static char *   num_ims_names[] = { "num", "num-ims", NULL };
 static char *   database_name_names[] = { "db", "database", NULL };
 static char *   ims_filename_names[] = { "out", "ims", NULL };
@@ -76,6 +78,12 @@ static char *   prng_seed_string_names[] = { "seed", NULL };
 
 /* Parsing table */
 static struct optionx parse_table[] = {
+    { 'n', num_ims_names, NULL,
+      &num_ims, 0, REQUIRED, &store_hex, false,
+      "The number of IMS values to generate" },
+    { 'c', sample_compatibility_mode_names, NULL,
+      &sample_compatibility_mode, 0, STORE_TRUE, NULL, false,
+      "100-IMS sample backward compatibility" },
     { 's', prng_seed_filename_names, NULL,
       &prng_seed_filename, 0, OPTIONAL, &store_str, false,
       "The file containing the PRNG seed string" },
@@ -88,13 +96,10 @@ static struct optionx parse_table[] = {
     { 'd', database_name_names, NULL,
       &database_name, 0, REQUIRED, &store_str, false,
       "The name of the certificate database" },
-    { 'n', num_ims_names, NULL,
-      &num_ims, 0, REQUIRED, &store_hex, false,
-      "The number of IMS values to generate" },
-    { 0, NULL, NULL, NULL, 0, 0, NULL, 0, NULL }
+     { 0, NULL, NULL, NULL, 0, 0, NULL, 0, NULL }
 };
 
-static char all_args[] = "s:o:d:n:";
+static char all_args[] = "s:o:d:n:c";
 
 
 /**
@@ -156,8 +161,11 @@ int main(int argc, char * argv[]) {
         program_status = PROGRAM_ERROR;
     }
 
-
     if (program_status == PROGRAM_SUCCESS) {
+        printf("Generate %d IMS values%s\n", num_ims,
+                sample_compatibility_mode?
+                        " (compatible with initial 100 IMS samples)" :
+                        "");
         /* Open the DB, IMS file, etc.  */
         if (ims_init(prng_seed_filename, prng_seed_string, ims_filename, database_name) != 0) {
             fprintf(stderr, "ERROR: IMS generation initialization failed\n");
@@ -165,8 +173,8 @@ int main(int argc, char * argv[]) {
         } else {
             /* Generate N IMS values */
             for (count = 0; count < num_ims; count++) {
-                /*****/printf("imsgen: IMS %d/%d\n", count + 1, num_ims);
-                if (ims_generate() != 0) {
+                printf("IMS %d/%d\n", count + 1, num_ims);
+                if (ims_generate(sample_compatibility_mode) != 0) {
                     fprintf(stderr,
                             "ERROR: created only %u of %u IMS values\n",
                             count, num_ims);
@@ -180,6 +188,5 @@ int main(int argc, char * argv[]) {
         }
     }
 
-    /*****/printf("imsgen: done\n");
     return program_status;
 }

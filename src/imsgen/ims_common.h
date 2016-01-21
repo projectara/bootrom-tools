@@ -36,7 +36,22 @@
 #ifndef _IMS_COMMON_H
 #define _IMS_COMMON_H
 
-#define IMS_SAMPLE_COMPATABILITY
+/**
+ * If enabled, the following define will check RSA coefficients P & Q
+ * for factorability by the ERPK exponent ("e" or 65537). This is used
+ * by MIRACL in their MCL_RSA_KEY_PAIR function and was not in the
+ * ERRK_P + ERRK_Q calculations specified.
+ */
+#define RSA_PQ_FACTORABILITY
+
+/**
+ * If enabled, the following define adds the constraint that the encoded
+ * RSA P+Q bias values in IMS[32:34] must have an equal number of 1 and
+ * zero bits (i.e., a Hamming weight of 12 - see IMS_PQ_BIAS_HAMMING_WEIGHT
+ * below).
+ */
+#define IMS_PQ_BIAS_HAMMING_BALANCED
+
 
 /* MSb mask for a byte */
 #define BYTE_MASK_MSB               0x80
@@ -53,10 +68,28 @@ csprng  rng;        /* Generic */
 
 
 /* IMS working set */
-#define IMS_SIZE            35
-#define IMS_HAMMING_SIZE    32
-#define IMS_HAMMING_WEIGHT  (IMS_HAMMING_SIZE * 8 / 2)
+#define IMS_SIZE                    35
+#define IMS_HAMMING_SIZE            32
+#define IMS_PQ_BIAS_SIZE            (IMS_SIZE - IMS_HAMMING_SIZE)
+#define IMS_HAMMING_WEIGHT          (IMS_HAMMING_SIZE * 8 / 2)
+#define IMS_PQ_BIAS_HAMMING_WEIGHT  (IMS_PQ_BIAS_SIZE * 8 / 2)
 uint8_t  ims[IMS_SIZE];
+
+/**
+ * 24-bit P&Q bias field, divided evenly into 12 bit fields for each of P & Q bias
+ */
+#define IMS_BIAS_BITS       ((IMS_SIZE - IMS_HAMMING_SIZE) * 8)
+#define P_Q_BIAS_BITS       (IMS_BIAS_BITS / 2)
+
+/**
+ * When searching for P & Q primality, ensure it is odd by ORing the bottom
+ * (ODD_MOD - 1) bits with 1, and stepping by ODD_MOD. Because we force the
+ * bottom bits to be 1, we discount them from the bias, increasing our step
+ * size and search limit.
+ */
+#define ODD_MOD_SAMPLE              2
+#define ODD_MOD_PRODUCTION          4
+#define ODD_MOD_BITMASK(odd_mod)    ((odd_mod) - 1)
 
 /* Endpoint Unique ID (EP_UID) working set */
 #define EP_UID_SIZE         8
@@ -194,14 +227,14 @@ void calc_epsk(uint8_t * y2, mcl_octet * epsk);
 
 
 /**
- * @brief Calculate the EPSK and EPVK
- *
- * Calculate the Endpoint Primary Verification Key (EPVK)
+ * @brief Calculate the Endpoint Primary Verification Key (EPVK)
  *
  * @param epsk A pointer to the input EPSK variable
- * @param epsk A pointer to the output EPVK variable
+ * @param epvk A pointer to the output EPVK variable
+ *
+ * @returns Zero if successful, MIRACL status otherwise (EPVK didn't validate)
  */
-void calc_epvk(mcl_octet * epsk, mcl_octet * epvk);
+int calc_epvk(mcl_octet * epsk, mcl_octet * epvk);
 
 
 /**
@@ -216,15 +249,14 @@ void calc_essk(uint8_t * y2, mcl_octet * essk);
 
 
 /**
- * @brief Calculate the ESVK
+ * @brief Calculate the Endpoint Secondary Verification Key (ESVK)
  *
- * Calculate the Endpoint Secondary Verification Key (ESVK)
- *
- * @param y2 A pointer to the Y2 term used by all
  * @param essk A pointer to the input ESSK variable
- * @param essk A pointer to the output ESVK variable
+ * @param esvk A pointer to the output ESVK variable
+ *
+ * @returns Zero if successful, MIRACL status otherwise (ESVK didn't validate)
  */
-void calc_esvk(mcl_octet * essk, mcl_octet * esvk);
+int calc_esvk(mcl_octet * essk, mcl_octet * esvk);
 
 
 /**
@@ -236,28 +268,53 @@ void calc_esvk(mcl_octet * essk, mcl_octet * esvk);
  *
  * @param y2 A pointer to the Y2 term used by all
  * @param ims A pointer to the ims (the upper 3 bytes will be modified)
- * @param erpk_mod A pointer to a buffer to store the modulus for ERPK
- * @param errk_d A pointer to a buffer to store the  ERPK decryption exponent
+ * @param erpk_p A pointer to a buffer to store the ERRK P coefficient
+ * @param errk_q A pointer to a buffer to store the ERPK Q coefficient
+ * @param ims_sample_compatibility If true, generate IMS values that are
+ *        compatible with the original (incorrect) 100 sample values sent
+ *        to Toshiba 2016/01/14. If false, generate the IMS value using
+ *        the correct form.
  *
  * @returns Zero if successful, errno otherwise.
  */
 void calc_errk_pq_bias_odd(uint8_t * y2,
                            uint8_t * ims,
                            mcl_octet * errk_p,
-                           mcl_octet * errk_q);
+                           mcl_octet * errk_q,
+                           bool ims_sample_compatibility);
 
 
 /**
- * @brief Convert a P/Q octet into an FF, forced to be odd
+ * @brief Convert a big-endian octet into an FF
  *
  * @param ff The output ff
  * @param octet The input octet
  * @param n size of FF in MCL_BIGs
  */
-void odd_ff_from_octet(mcl_chunk ff[][MCL_BS],
-                       mcl_octet * octet,
-                       int n);
+void ff_from_big_endian_octet(mcl_chunk ff[][MCL_BS],
+                              mcl_octet * octet,
+                              int n);
 
+
+/**
+ * @brief Reverse the byte order of a buffer
+ *
+ * @param buf
+ * @param length
+ */
+void reverse_buf(uint8_t *buf, size_t length);
+
+
+/**
+ * @brief Convert a little-endian octet into an FF
+ *
+ * @param ff The output ff
+ * @param octet The input octet
+ * @param n size of FF in MCL_BIGs
+ */
+void ff_from_little_endian_octet(mcl_chunk ff[][MCL_BS],
+                                 mcl_octet * octet,
+                                 int n);
 
 /**
  * @brief Calculate the private decryption exponent
@@ -269,30 +326,15 @@ void odd_ff_from_octet(mcl_chunk ff[][MCL_BS],
  * @param PRIV Pointer to private key (P & Q must be filled in)
  * @param PUB Pointer to public key (blank)
  * @param e Constant public exponent FF instance
+ * @param ims_sample_compatibility If true, generate IMS values that are
+ *        compatible with the original (incorrect) 100 sample values sent
+ *        to Toshiba 2016/01/14. If false, generate the IMS value using
+ *        the correct form.
  */
 void rsa_secret(MCL_rsa_private_key *PRIV,
                 MCL_rsa_public_key *PUB,
-                sign32 e);
-
-
-/**
- * @brief Calculate the Endpoint Rsa pRivate Key (ERRK) P & Q factors
- *
- * Calculates the ERRK_P & ERRK_Q, without any of the bias calculations
- * (i.e., that which can be extracted from IMS[0:31]).
- *
- *
- * @param y2 A pointer to the Y2 term used by all
- * @param ims A pointer to the ims (the upper 3 bytes will be modified)
- * @param erpk_mod A pointer to a buffer to store the modulus for ERPK
- * @param errk_d A pointer to a buffer to store the  ERPK decryption exponent
- *
- * @returns Zero if successful, errno otherwise.
- */
-void calc_errk_pq_unbiased(uint8_t * y2,
-                           uint8_t * ims,
-                           mcl_octet * erpk_p,
-                           mcl_octet * errk_q);
+                sign32 e,
+                bool ims_sample_compatibility);
 
 
 /**

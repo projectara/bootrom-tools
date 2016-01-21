@@ -56,6 +56,7 @@
 #include "util.h"
 #include "mcl_arch.h"
 #include "mcl_oct.h"
+#include "mcl_big.h"
 #include "mcl_ecdh.h"
 #include "mcl_rand.h"
 #include "mcl_rsa.h"
@@ -63,6 +64,9 @@
 #include "db.h"
 #include "ims_common.h"
 #include "ims.h"
+
+/* Uncomment the following define to enable IMS diagnostic messages */
+/*#define IMS_DEBUGMSG*/
 
 /* MSb mask for a byte */
 #define BYTE_MASK_MSB               0x80
@@ -291,7 +295,6 @@ void calculate_epuid_es3(uint8_t * ims_value,
 
     memcpy(ep_uid->val, ep_uid_calc, EP_UID_SIZE);
     ep_uid->len = EP_UID_SIZE;
-    //*****/display_binary_data(ep_uid->val, ep_uid->len, true, "epu_id ");
 }
 
 
@@ -334,7 +337,6 @@ void calculate_epuid(uint8_t * ims_value,
 
     memcpy(ep_uid->val, ep_uid_calc, EP_UID_SIZE);
     ep_uid->len = EP_UID_SIZE;
-    /*****/display_binary_data(ep_uid->val, ep_uid->len, true, "epu_id(correct) ");
 }
 
 
@@ -386,7 +388,9 @@ void calc_epsk(uint8_t * y2, mcl_octet * epsk) {
            scratch_hash,
            (EPSK_SIZE - SHA256_HASH_DIGEST_SIZE));
     epsk->len = EPSK_SIZE;
-    /*****/display_binary_data(epsk->val, epsk->len, true, "epsk ");
+#ifdef IMS_DEBUGMSG
+    display_binary_data(epsk->val, epsk->len, true, "epsk ");
+#endif
 }
 
 
@@ -395,9 +399,11 @@ void calc_epsk(uint8_t * y2, mcl_octet * epsk) {
  *
  * @param epsk A pointer to the input EPSK variable
  * @param epvk A pointer to the output EPVK variable
+ *
+ * @returns Zero if successful, MIRACL status otherwise (EPVK didn't validate)
  */
-void calc_epvk(mcl_octet * epsk, mcl_octet * epvk) {
-    int status;
+int calc_epvk(mcl_octet * epsk, mcl_octet * epvk) {
+    int status = 0;
 
     /* Generate the corresponding EPVK public key, an Ed488-Goldilocks ECC */
     MCL_ECP_KEY_PAIR_GENERATE_C488(NULL, epsk, epvk);
@@ -405,8 +411,10 @@ void calc_epvk(mcl_octet * epsk, mcl_octet * epvk) {
     if (status != 0) {
         printf("EPVK is invalid!\r\n");
     }
-    /*****/printf("epvk size %d\n",epvk->len);
-    /*****/display_binary_data(epvk->val, epvk->len, true, "epvk ");
+#ifdef IMS_DEBUGMSG
+    display_binary_data(epvk->val, epvk->len, true, "epvk ");
+#endif
+    return status;
 }
 
 
@@ -419,13 +427,16 @@ void calc_epvk(mcl_octet * epsk, mcl_octet * epvk) {
 void calc_essk(uint8_t * y2, mcl_octet * essk) {
     int status;
 
+
     /**
      *  Y2 = sha256(IMS[0:31] xor copy(0x5a, 32))  // (provided)
      *  EPSK[0:31] = sha256(Y2 || copy(0x01, 32))
      */
     sha256_concat(essk->val, y2, 0x01, 32);
     essk->len = SHA256_HASH_DIGEST_SIZE;
-    /*****/display_binary_data(essk->val, essk->len, true, "essk ");
+#ifdef IMS_DEBUGMSG
+    display_binary_data(essk->val, essk->len, true, "essk ");
+#endif
 }
 
 
@@ -434,9 +445,11 @@ void calc_essk(uint8_t * y2, mcl_octet * essk) {
  *
  * @param essk A pointer to the input ESSK variable
  * @param esvk A pointer to the output ESVK variable
+ *
+ * @returns Zero if successful, MIRACL status otherwise (ESVK didn't validate)
  */
-void calc_esvk(mcl_octet * essk, mcl_octet * esvk) {
-    int status;
+int calc_esvk(mcl_octet * essk, mcl_octet * esvk) {
+    int status = 0;
 
     /* Generate the corresponding EPVK public key, a djb25519 ECC */
     MCL_ECP_KEY_PAIR_GENERATE_C25519(NULL, essk, esvk);
@@ -444,8 +457,10 @@ void calc_esvk(mcl_octet * essk, mcl_octet * esvk) {
     if (status != 0) {
         printf("EPVK is invalid!\r\n");
     }
-    /*****/printf("esvk->len %d\n", esvk->len);
-    /*****/display_binary_data(esvk->val, esvk->len, true, "esvk ");
+#ifdef IMS_DEBUGMSG
+    display_binary_data(esvk->val, esvk->len, true, "esvk ");
+#endif
+    return status;
 }
 
 
@@ -458,17 +473,36 @@ void calc_esvk(mcl_octet * essk, mcl_octet * esvk) {
  *
  * @param y2 A pointer to the Y2 term used by all
  * @param ims A pointer to the ims (the upper 3 bytes will be modified)
- * @param erpk_mod A pointer to a buffer to store the modulus for ERPK
- * @param errk_d A pointer to a buffer to store the  ERPK decryption exponent
+ * @param erpk_p A pointer to a buffer to store the ERRK P coefficient
+ * @param errk_q A pointer to a buffer to store the ERPK Q coefficient
+ * @param ims_sample_compatibility If true, generate IMS values that are
+ *        compatible with the original (incorrect) 100 sample values sent
+ *        to Toshiba 2016/01/14. If false, generate the IMS value using
+ *        the correct form.
  *
  * @returns Zero if successful, errno otherwise.
  */
 void calc_errk_pq_bias_odd(uint8_t * y2,
                            uint8_t * ims,
                            mcl_octet * errk_p,
-                           mcl_octet * errk_q) {
+                           mcl_octet * errk_q,
+                           bool ims_sample_compatibility) {
     int status = 0;
     uint8_t z3[SHA256_HASH_DIGEST_SIZE];
+    uint8_t odd_mod_bitmask;
+    int pq_len;
+
+    /**
+     * Define constants based on compatibility with the original 100 IMS samples
+     * delivered to Toshiba or the correct production form.
+     */
+    if (ims_sample_compatibility) {
+        odd_mod_bitmask = 0x03;
+        pq_len = SHA256_HASH_DIGEST_SIZE;
+    } else {
+        odd_mod_bitmask = ODD_MOD_BITMASK(ODD_MOD_PRODUCTION);
+        pq_len = ERRK_PQ_SIZE;
+    }
 
     /**
      *  Y2 = sha256(IMS[0:31] xor copy(0x5a, 32))  // (provided)
@@ -489,7 +523,7 @@ void calc_errk_pq_bias_odd(uint8_t * y2,
     sha256_concat(&errk_p->val[32], z3, 0x02, 32);
     sha256_concat(&errk_p->val[64], z3, 0x03, 32);
     sha256_concat(&errk_p->val[96], z3, 0x04, 32);
-    errk_p->len = SHA256_HASH_DIGEST_SIZE;
+    errk_p->len = pq_len;
 
     /**
      *   :
@@ -503,93 +537,103 @@ void calc_errk_pq_bias_odd(uint8_t * y2,
     sha256_concat(&errk_q->val[32], z3, 0x06, 32);
     sha256_concat(&errk_q->val[64], z3, 0x07, 32);
     sha256_concat(&errk_q->val[96], z3, 0x08, 32);
-    errk_q->len = SHA256_HASH_DIGEST_SIZE;
+    errk_q->len = pq_len;
 
-    /**
-     *   :
-     *  ERRK_P[0] |= 0x03		// force P, Q to be odd (3 mod 4)
-     *  ERRK_Q[0] |= 0x03
-     */
-    errk_p->val[0] |= 0x03;
-    errk_q->val[0] |= 0x03;
+    /* Force P, Q to be suitably odd */
+    errk_p->val[0] |= odd_mod_bitmask;
+    errk_q->val[0] |= odd_mod_bitmask;
 }
 
 
-#ifdef IMS_SAMPLE_COMPATABILITY
 /**
- * @brief Convert a P/Q octet into an FF, forced to be odd
+ * @brief Convert a big-endian octet into an FF
  *
  * @param ff The output ff
  * @param octet The input octet
  * @param n size of FF in MCL_BIGs
  */
-void odd_ff_from_octet(mcl_chunk ff[][MCL_BS],
-                       mcl_octet * octet,
-                       int n) {
-    uint8_t lsb = octet->val[0];
-
+void ff_from_big_endian_octet(mcl_chunk ff[][MCL_BS],
+                              mcl_octet * octet,
+                              int n) {
     /* pack it into an FF */
     MCL_FF_fromOctet_C25519(ff, octet, n);
-
-    octet->val[0] = lsb;
-}
-#else  /* IMS_SAMPLE_COMPATABILITY */
-/**
- * @brief Perform an MCL_FF_fromOctet, reversing the byte order of the octet
- *
- * @param digest_x Pointer to the output digest buffer ("X" above)
- * @param hash_y Pointer to the input digest ("Y" above)
- * @param extend_byte The extension byte ("b" above)
- * @param extend_count The number of exension bytes to concatenate ("n" above)
- */
-void MCL_FF_fromOctetRev(mcl_chunk x[][MCL_BS], mcl_octet *S, int n) {
-    /* Scratch octet */
-    static uint8_t scratch_buf[1024];
-    static mcl_octet scratch = {0, sizeof(scratch_buf), scratch_buf};
-    int i, j;
-
-    for (i = 0, j = S->len - 1; i < S->len; i++, j--) {
-        scratch_buf[i] = S->val[j];
-    }
-    scratch.len = S->len;
-    MCL_FF_fromOctet_C25519(x, &scratch, n);
 }
 
 
 /**
- * @brief Ensure that an FF number is odd 3 mod 4
+ * @brief Convert a big-endian octet into an FF
  *
- * NOTE: This is lifted from MCL_RSA_KEY_PAIR.
+ * This is a version of MCL_FF_fromOctet that doesn't run off the end
+ * of the octet AND loads the octed in big-endian order
  *
- * @param ff The number to make odd
- * @param n size of FF in MCL_BIGs
+ * @param x The output ff
+ * @param w The input octet
+ * @param n size of x in MCL_BIGs
  */
-void make_ff_odd_C25519(mcl_chunk ff[][MCL_BS], int n) {
-    /* Ensure that the FF is odd 3 mod 4 */
-    while (MCL_FF_lastbits_C25519(ff, 2) != 3) {
-        MCL_FF_inc_C25519(ff, 1, n);
+void MCL_FF_fromOctet_local(mcl_chunk x[][MCL_BS],mcl_octet *w,int n)
+{
+    int i;
+    int src_len = w->len;
+
+    for (i=0;i<n;i++)
+    {
+        if (src_len > 0)
+        {
+            /* Copy what we can, up to the end of the octet */
+            MCL_BIG_fromBytesLen_C25519(x[i], &(w->val[i * MCL_MODBYTES]), src_len);
+            src_len -= MCL_MODBYTES;
+        }
+        else
+        {
+            /* Zero-pad the remainder */
+            MCL_BIG_zero_C25519(x[i]);
+        }
     }
 }
 
 
 /**
- * @brief Convert a P/Q octet into an FF, forced to be odd
+ * @brief Reverse the byte order of a buffer
+ *
+ * @param buf
+ * @param length
+ */
+void reverse_buf(uint8_t *buf, size_t length) {
+    uint8_t * front = buf;
+    uint8_t * rear = &buf[length - 1];
+    uint8_t   temp;
+
+    while (front < rear) {
+        temp = *front;
+        *front++ = *rear;
+        *rear-- = temp;
+    }
+}
+
+
+/**
+ * @brief Convert a little-endian octet into an FF
  *
  * @param ff The output ff
  * @param octet The input octet
  * @param n size of FF in MCL_BIGs
  */
-void odd_ff_from_octet(mcl_chunk ff[][MCL_BS],
-                       mcl_octet * octet,
-                       int n) {
-    uint8_t lsb = octet->val[0];
+void ff_from_little_endian_octet(mcl_chunk ff[][MCL_BS],
+                                 mcl_octet * octet,
+                                 int n) {
+    static uint8_t scratch_buf[1024];
+    mcl_octet scratch = {0, sizeof(scratch_buf), scratch_buf};
+    int i, j;
 
-    /* pack it into an FF */
-    MCL_FF_fromOctetRev(ff, octet, n);
+    /* Make a scratch copy of the octet with the byte order reversed */
+    for (i = 0, j = octet->len - 1; i < octet->len; i++, j--) {
+        scratch_buf[i] = octet->val[j];
+    }
+    scratch.len = octet->len;
 
-    octet->val[0] = lsb;
-}
-#endif /* IMS_SAMPLE_COMPATABILITY */
+    /* Convert the big-endian scratch octet into an FF */
+    MCL_FF_fromOctet_local(ff, &scratch, n);
+ }
 
 
 /**
@@ -602,10 +646,15 @@ void odd_ff_from_octet(mcl_chunk ff[][MCL_BS],
  * @param PRIV Pointer to private key (P & Q must be filled in)
  * @param PUB Pointer to public key (blank)
  * @param e Constant public exponent FF instance
+ * @param ims_sample_compatibility If true, generate IMS values that are
+ *        compatible with the original (incorrect) 100 sample values sent
+ *        to Toshiba 2016/01/14. If false, generate the IMS value using
+ *        the correct form.
  */
 void rsa_secret(MCL_rsa_private_key *PRIV,
                 MCL_rsa_public_key *PUB,
-                sign32 e) { /* IEEE1363 A16.11/A16.12 more or less */
+                sign32 e,
+                bool ims_sample_compatibility) { /* IEEE1363 A16.11/A16.12 more or less */
     /**
      * Note: PRIV FF's are[MCL_FFLEN/2][MCL_NLEN] = [4][5]
      * internal chunks are[MCL_HFLEN][MCL_BS]     = [4][5]
@@ -617,6 +666,13 @@ void rsa_secret(MCL_rsa_private_key *PRIV,
 
     MCL_FF_copy_C25519(p1, PRIV->p, MCL_HFLEN);
     MCL_FF_copy_C25519(q1, PRIV->q, MCL_HFLEN);
+#ifdef RSA_PQ_FACTORABILITY
+    if (ims_sample_compatibility) {
+        /* in MCL_RSA_KEY_PAIR, p1 = P-1, q1 = Q -1 */
+        MCL_FF_dec_C25519(p1,1,MCL_HFLEN);
+        MCL_FF_dec_C25519(q1,1,MCL_HFLEN);
+    }
+#endif
 
     /* Calc. ERPK_MOD (PUB.N), ERPK_E */
     MCL_FF_mul_C25519(PUB->n, PRIV->p, PRIV->q, MCL_HFLEN);
@@ -641,15 +697,6 @@ void rsa_secret(MCL_rsa_private_key *PRIV,
     MCL_FF_norm_C25519(PRIV->dq, MCL_HFLEN);
 
     MCL_FF_invmodp_C25519(PRIV->c, PRIV->p, PRIV->q, MCL_HFLEN);
-    /*****/printf("\nRSA_SECRET\n");
-    /*****/printf("pub.e %x\n", PUB->e);
-    /*****/print_ff("pub.n ", PUB->n, MCL_FFLEN);
-    /*****/print_ff("priv.p ", PRIV->p, MCL_HFLEN);
-    /*****/print_ff("priv.q ", PRIV->q, MCL_HFLEN);
-    /*****/print_ff("priv.dp ", PRIV->dp, MCL_HFLEN);
-    /*****/print_ff("priv.dq ", PRIV->dq, MCL_HFLEN);
-    /*****/print_ff("priv.c  ", PRIV->c, MCL_HFLEN);
-    /*****/printf("\n");
 
     return;
 }
@@ -677,7 +724,7 @@ void print_ff(char * title, mcl_chunk ff[][MCL_BS], int n) {
 
     MCL_FF_toOctet_C25519(&temp, ff, n);
 #ifdef MSB_FIRST
-    printf("(msb) %s", title);
+    printf("(msb) %s\n", title);
     MCL_OCT_output(&temp);
     printf("\n");
 #else

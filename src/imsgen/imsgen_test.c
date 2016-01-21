@@ -61,12 +61,14 @@
 
 
 /* Parsing args */
+static int      sample_compatibility_mode = 0;
 static int      num_ims;
 static char *   database_name;
 static char *   ims_filename;
 static char *   prng_seed_filename;
 static char *   prng_seed_string;
 
+static char *   sample_compatibility_mode_names[] = { "compatibility", NULL };
 static char *   num_ims_names[] = { "num", "num-ims", NULL };
 static char *   database_name_names[] = { "db", "database", NULL };
 static char *   ims_filename_names[] = { "in", "ims", NULL };
@@ -91,10 +93,13 @@ static struct optionx parse_table[] = {
     { 'n', num_ims_names, NULL,
       &num_ims, 0, REQUIRED, &store_hex, false,
       "The number of IMS values to test" },
+    { 'c', sample_compatibility_mode_names, NULL,
+      &sample_compatibility_mode, 0, STORE_TRUE, NULL, false,
+      "100-IMS sample backward compatibility" },
     { 0, NULL, NULL, NULL, 0, 0, NULL, 0, NULL }
 };
 
-static char all_args[] = "s:i:n:d:";
+static char all_args[] = "s:i:n:d:c";
 
 
 /**
@@ -141,7 +146,6 @@ int main(int argc, char * argv[]) {
     int program_status = PROGRAM_SUCCESS;
     uint32_t count;
 
-    /*****/printf("imsgen_test+\n");
     /* Parse the command line arguments */
     parse_tbl = new_argparse(parse_table, argv[0], NULL, NULL, "<file>...", NULL);
     if (parse_tbl) {
@@ -159,28 +163,23 @@ int main(int argc, char * argv[]) {
     }
 
 
-    /*****/printf("imsgen_test: testing proper\n");
     if (program_status == PROGRAM_SUCCESS) {
         /* Open the DB, IMS file, etc.  */
-        /*****/printf("imsgen_test: ims_init\n");
         if (ims_init(prng_seed_filename, prng_seed_string, database_name) != 0) {
             fprintf(stderr, "ERROR: IMS generation initialization failed\n");
             program_status = PROGRAM_ERROR;
         } else {
             /* Test N IMS values */
-            /*****/printf("imsgen_test: test_ims_set\n");
-            status = test_ims_set(ims_filename, num_ims);
+            status = test_ims_set(ims_filename, num_ims, sample_compatibility_mode);
             if (status != 0) {
                 fprintf(stderr, "ERROR: Failed IMS verification (err %d)\n", status);
                 program_status = PROGRAM_ERROR;
             }
 
             /* Close the DB, IMS file */
-            /*****/printf("imsgen_test: ims_deinit\n");
             ims_deinit();
         }
     }
 
-    /*****/printf("imsgen_test-\n");
     return program_status;
 }

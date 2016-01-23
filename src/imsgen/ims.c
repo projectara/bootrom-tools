@@ -428,7 +428,7 @@ SUCCESS:
     rsa_secret(&priv_key, &pub_key, ERPK_EXPONENT, ims_sample_compatibility);
 
     /* Convert the calculated FF nums back into octets for later storage */
-    MCL_FF_toOctet_C25519(erpk_mod, pub_key.n, MCL_HFLEN);
+    MCL_FF_toOctet_C25519(erpk_mod, pub_key.n, MCL_FFLEN);
 
     return status;
 }

@@ -133,7 +133,7 @@ mcl_octet errk_p = {0, sizeof(errk_pbuf), errk_pbuf};
 uint8_t errk_qbuf[ERRK_PQ_SIZE];
 mcl_octet errk_q = {0, sizeof(errk_qbuf), errk_qbuf};
 
-uint8_t  erpk_mod_buf[ERRK_PQ_SIZE];
+uint8_t  erpk_mod_buf[ERRK_PQ_SIZE*2];
 mcl_octet erpk_mod = {0, sizeof(erpk_mod_buf), erpk_mod_buf};
 
 uint8_t  errk_d_buf[RSA2048_PUBLIC_KEY_SIZE];

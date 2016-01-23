@@ -306,7 +306,7 @@ static int calc_errk(uint8_t * y2,
     rsa_secret(&rsa_private, &rsa_public, ERPK_EXPONENT, ims_sample_compatibility);
 
     /* Convert the calculated FF nums back into octets for later use */
-    MCL_FF_toOctet_C25519(erpk_mod, rsa_public.n, MCL_HFLEN);
+    MCL_FF_toOctet_C25519(erpk_mod, rsa_public.n, MCL_FFLEN);
 
     return status;
 }

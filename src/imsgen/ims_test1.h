@@ -33,8 +33,8 @@
  *
  */
 
-#ifndef _IMS_TEST_H
-#define _IMS_TEST_H
+#ifndef _IMS_TEST1_H
+#define _IMS_TEST1_H
 
 
 
@@ -65,22 +65,28 @@ void ims_deinit(void);
 
 
 /**
- * @brief Test a representative sample of IMS values
+ * @brief Test signing
  *
- * Reads a random sampling of N IMS values, extracts the key values
- * from them and verifies that sample text can be encrypted-decrypted
- * with them.
+ * Signs a file with the different keys extracted from an IMS.
  *
- * @param ims_filename The name of the IMS input file
- * @param num_ims The number of IMS values to test
- * @param ims_sample_compatibility If true, generate IMS values that are
+ * Note that if ims_binascii is non-null, ims_filename and ims_index are
+ * ignored. If ims_value is null, we use ims_filename and ims_index.
+ *
+ * @param message_filename The name of the message file to sign
+ * @param ims_value (optional) The binascii string representation of the IMS
+ * @param ims_filename (optional) The name of the IMS input file
+ * @param ims_index (optional) Which IMS value to use from ims_filename
+ * @param sample_compatibility_mode If true, generate IMS values that are
  *        compatible with the original (incorrect) 100 sample values sent
  *        to Toshiba 2016/01/14. If false, generate the IMS value using
  *        the correct form.
  *
- * @returns Zero if all tested IMS values verify, errno otherwise.
+ * @returns Zero if all tested IMS values verify, errno or -1 otherwise.
  */
-int test_ims_set(const char * ims_filename, uint32_t num_ims,
-                 bool ims_sample_compatibility);
+int test_ims_signing(const char * message_filename,
+                     const char * ims_binascii,
+                     const char * ims_filename,
+                     const int    ims_index,
+                     bool sample_compatibility_mode);
 
-#endif /* !_IMS_TEST_H */
+#endif /* !_IMS_TEST1_H */

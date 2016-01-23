@@ -80,4 +80,20 @@ int db_add_keyset(mcl_octet * ep_uid,
                   mcl_octet * esvk,
                   mcl_octet * erpk_mod);
 
+
+/**
+ * @brief Fetch the set of keys associated with an EP_UID
+ *
+ * @param ep_uid The EndPoint Unique ID, to look up
+ * @param epsk (Optional) the EPSK to retrieve
+ * @param essk (Optional) the ESSK to retrieve
+ * @param erpk_mod (Optional) the modulus for ERPK to retrieve
+ *
+ * @returns Zero if successful, errno otherwise.
+ */
+int db_get_keyset(mcl_octet * ep_uid,
+                  mcl_octet * epvk,
+                  mcl_octet * esvk,
+                  mcl_octet * erpk_mod);
+
 #endif /* !_DATABASE_H */

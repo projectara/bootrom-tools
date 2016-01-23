@@ -33,8 +33,15 @@
  *
  */
 
-#ifndef _IMS_TEST_H
-#define _IMS_TEST_H
+#ifndef _IMS_TEST2_H
+#define _IMS_TEST2_H
+
+/* The types of keys to expect */
+#define KEYTYPE_EPSK    0
+#define KEYTYPE_ESSK    1
+#define KEYTYPE_ERRK    2
+
+
 
 
 
@@ -65,22 +72,27 @@ void ims_deinit(void);
 
 
 /**
- * @brief Test a representative sample of IMS values
+ * @brief Test verification
  *
- * Reads a random sampling of N IMS values, extracts the key values
- * from them and verifies that sample text can be encrypted-decrypted
- * with them.
+ * Verifies a file with the different keys extracted by ims_test1.
  *
- * @param ims_filename The name of the IMS input file
- * @param num_ims The number of IMS values to test
- * @param ims_sample_compatibility If true, generate IMS values that are
+ * @param message_filename The name of the message file to verify
+ * @param ep_uid_filename The name of the file containing the EP_UID
+ * @param database_filename The filename of the key database
+ * @param signature_filename The name of the file containing the signature
+ * @param key_type The type of the signature (KEYTYPE_EPSK, KEYTYPE_ESSK or
+ *        KEYTYPE_ERRK)
+ * @param sample_compatibility_mode If true, generate IMS values that are
  *        compatible with the original (incorrect) 100 sample values sent
- *        to Toshiba 2016/01/14. If false, generate the IMS value using
- *        the correct form.
+ *        to Toshiba 2016/01/14. If false, use the correct form.
  *
- * @returns Zero if all tested IMS values verify, errno otherwise.
+ * @returns Zero if all tested IMS values verify, errno or -1 otherwise.
  */
-int test_ims_set(const char * ims_filename, uint32_t num_ims,
-                 bool ims_sample_compatibility);
+int test_ims_verify(const char * message_filename,
+                    const char * ep_uid_filename,
+                    const char * database_filename,
+                    const char * signature_filename,
+                    const int key_type,
+                    bool sample_compatibility_mode);
 
-#endif /* !_IMS_TEST_H */
+#endif /* !_IMS_TEST2_H */

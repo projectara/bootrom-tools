@@ -183,7 +183,7 @@ static int db_get_blob(sqlite3_stmt *stmt,
             success = true;
         } else {
             /* Octet buffer too small */
-            fprintf(stderr, "db_get_blob: octet too small:\n");
+            fprintf(stderr, "db_get_blob: octet too small (%d vs %d):\n", octet->max, length);
         }
     }
 

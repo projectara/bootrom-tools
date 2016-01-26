@@ -475,7 +475,7 @@ int ims_generate(bool ims_sample_compatibility) {
             /* Calculate EPSK/EPVK and  ESSK/ESVK from the confirmed-valid IMS */
             calc_epsk(y2, &epsk);
             epvk_status = calc_epvk(&epsk, &epvk);
-            calc_essk(y2, &essk);
+            calc_essk(y2, &essk, ims_sample_compatibility);
             esvk_status = calc_esvk(&essk, &esvk);
             /**
              * For the first 100 samples, we didn't check epvk or esvk

@@ -423,16 +423,36 @@ int calc_epvk(mcl_octet * epsk, mcl_octet * epvk) {
  *
  * @param y2 A pointer to the Y2 term used by all
  * @param essk A pointer to the output ESSK variable
+ * @param ims_sample_compatibility If true, generate IMS values that are
+ *        compatible with the original (incorrect) 100 sample values sent
+ *        to Toshiba 2016/01/14. If false, generate the IMS value using
+ *        the correct form.
  */
-void calc_essk(uint8_t * y2, mcl_octet * essk) {
+void calc_essk(uint8_t * y2, mcl_octet * essk,
+               bool ims_sample_compatibility) {
+    uint8_t z2[SHA256_HASH_DIGEST_SIZE];
+    uint8_t scratch_hash[SHA256_HASH_DIGEST_SIZE];
     int status;
 
 
-    /**
-     *  Y2 = sha256(IMS[0:31] xor copy(0x5a, 32))  // (provided)
-     *  EPSK[0:31] = sha256(Y2 || copy(0x01, 32))
-     */
-    sha256_concat(essk->val, y2, 0x01, 32);
+    if (ims_sample_compatibility) {
+        /**
+         *  Y2 = sha256(IMS[0:31] xor copy(0x5a, 32))  // (provided)
+         *  EPSK[0:31] = sha256(Y2 || copy(0x01, 32))
+         */
+        sha256_concat(essk->val, y2, 0x01, 32);
+    } else {
+        /**
+         *  Y2 = sha256(IMS[0:31] xor copy(0x5a, 32))  // (provided)
+         *  Z2 = sha256(Y2 || copy(0x02, 32))
+         *  ESSK[0:31] = sha256(Z2 || copy(0x01, 32))
+         */
+        sha256_concat(z2, y2, 0x02, 32);
+        sha256_concat(scratch_hash, z2, 0x01, 32);
+
+        memcpy(essk->val, scratch_hash, SHA256_HASH_DIGEST_SIZE);
+        essk->len = SHA256_HASH_DIGEST_SIZE;
+    }
     essk->len = SHA256_HASH_DIGEST_SIZE;
 #ifdef IMS_DEBUGMSG
     display_binary_data(essk->val, essk->len, true, "essk ");

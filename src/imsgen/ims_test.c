@@ -520,7 +520,7 @@ int test_ims(uint8_t * ims, bool ims_sample_compatibility) {
     int status = 0;
     static uint8_t  epvk_buf_db[EPVK_SIZE];
     static uint8_t  esvk_buf_db[ESVK_SIZE];
-    static uint8_t  erpk_mod_buf_db[ERRK_PQ_SIZE];
+    static uint8_t  erpk_mod_buf_db[ERRK_PQ_SIZE*2];
     mcl_octet epvk_db = {0, sizeof(epvk_buf_db), epvk_buf_db};
     mcl_octet esvk_db = {0, sizeof(esvk_buf_db), esvk_buf_db};
     mcl_octet erpk_mod_db = {0, sizeof(erpk_mod_buf_db), erpk_mod_buf_db};
@@ -538,7 +538,7 @@ int test_ims(uint8_t * ims, bool ims_sample_compatibility) {
     /* Calculate ERRK/ERPK, EPSK/EPVK and  ESSK/ESVK */
     calc_epsk(y2, &epsk);
     calc_epvk(&epsk, &epvk);
-    calc_essk(y2, &essk);
+    calc_essk(y2, &essk, ims_sample_compatibility);
     calc_esvk(&essk, &esvk);
     calc_errk(y2, ims, &erpk_mod, &errk_d, ims_sample_compatibility);
 

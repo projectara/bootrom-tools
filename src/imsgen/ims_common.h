@@ -242,14 +242,17 @@ int calc_epvk(mcl_octet * epsk, mcl_octet * epvk);
 
 
 /**
- * @brief Calculate the ESSK
- *
- * Calculate the Endpoint Secondary Signing Key (ESSK)
+ * @brief Calculate the Endpoint Secondary Signing Key (ESSK)
  *
  * @param y2 A pointer to the Y2 term used by all
  * @param essk A pointer to the output ESSK variable
+ * @param ims_sample_compatibility If true, generate IMS values that are
+ *        compatible with the original (incorrect) 100 sample values sent
+ *        to Toshiba 2016/01/14. If false, generate the IMS value using
+ *        the correct form.
  */
-void calc_essk(uint8_t * y2, mcl_octet * essk);
+void calc_essk(uint8_t * y2, mcl_octet * essk,
+               bool ims_sample_compatibility);
 
 
 /**

@@ -581,38 +581,6 @@ void ff_from_big_endian_octet(mcl_chunk ff[][MCL_BS],
 
 
 /**
- * @brief Convert a big-endian octet into an FF
- *
- * This is a version of MCL_FF_fromOctet that doesn't run off the end
- * of the octet AND loads the octed in big-endian order
- *
- * @param x The output ff
- * @param w The input octet
- * @param n size of x in MCL_BIGs
- */
-void MCL_FF_fromOctet_local(mcl_chunk x[][MCL_BS],mcl_octet *w,int n)
-{
-    int i;
-    int src_len = w->len;
-
-    for (i=0;i<n;i++)
-    {
-        if (src_len > 0)
-        {
-            /* Copy what we can, up to the end of the octet */
-            MCL_BIG_fromBytesLen_C25519(x[i], &(w->val[i * MCL_MODBYTES]), src_len);
-            src_len -= MCL_MODBYTES;
-        }
-        else
-        {
-            /* Zero-pad the remainder */
-            MCL_BIG_zero_C25519(x[i]);
-        }
-    }
-}
-
-
-/**
  * @brief Reverse the byte order of a buffer
  *
  * @param buf
@@ -652,7 +620,7 @@ void ff_from_little_endian_octet(mcl_chunk ff[][MCL_BS],
     scratch.len = octet->len;
 
     /* Convert the big-endian scratch octet into an FF */
-    MCL_FF_fromOctet_local(ff, &scratch, n);
+    MCL_FF_fromOctet_C25519(ff, &scratch, n);
  }
 
 
@@ -718,6 +686,15 @@ void rsa_secret(MCL_rsa_private_key *PRIV,
 
     MCL_FF_invmodp_C25519(PRIV->c, PRIV->p, PRIV->q, MCL_HFLEN);
 
+#ifdef IMS_DEBUGMSG
+    print_ff("public.n", PUB->n, MCL_FFLEN);
+    printf("public.e\n%08x\n\n", PUB->e);
+    print_ff("private.p", PRIV->p, MCL_HFLEN);
+    print_ff("private.q", PRIV->q, MCL_HFLEN);
+    print_ff("private.dp", PRIV->dp, MCL_HFLEN);
+    print_ff("private.dq", PRIV->dq, MCL_HFLEN);
+    print_ff("private.c", PRIV->c, MCL_HFLEN);
+#endif
     return;
 }
 
@@ -744,7 +721,7 @@ void print_ff(char * title, mcl_chunk ff[][MCL_BS], int n) {
 
     MCL_FF_toOctet_C25519(&temp, ff, n);
 #ifdef MSB_FIRST
-    printf("(msb) %s\n", title);
+    printf("%s\n", title);
     MCL_OCT_output(&temp);
     printf("\n");
 #else

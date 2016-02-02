@@ -242,7 +242,7 @@ Required by ims-gen:
 The bootrom-tools require the following environment variables be set
 in order to function:
 
-* `export NUTXROOT=<root of your NuttX tree, typ. “~/nuttx”>`
+* `export NUTTXROOT=<root of your NuttX tree, typ. “~/nuttx”>`
 * `export PATH=$PATH:<bootrom-tools>/scripts:<bootrom-tools>`
 
 If you are using the 'C' tools, your PATH would instead be:

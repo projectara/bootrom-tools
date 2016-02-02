@@ -175,7 +175,7 @@ tftf_header * new_tftf(const uint32_t header_size,
  * @returns True if successful, false otherwise.
  */
 bool load_elf(const char * filename, uint32_t * start_address,
-              const char *start_symbol);
+              const char *start_symbol, const char * s2lcfg_filename);
 
 
 /**

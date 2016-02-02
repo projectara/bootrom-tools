@@ -613,6 +613,75 @@ bool elf_add_section_cache_entry(Elf_Scn *scn, uint32_t type) {
     return success;
 }
 
+/**
+ * @brief Add an ELF section to the TFTF section cache /w data from other file
+ *
+ * @param scn The open elf section (e.g., .text, .data)
+ * @param type The corresponding section_type for the cache
+ * @param filename name of the file where the real data come from
+ *
+ * @returns A pointer to the section if successful, NULL otherwise.
+ */
+bool elf_add_section_cache_entry_with_data(Elf_Scn *scn,
+                                           uint32_t type,
+                                           const char *filename) {
+    bool success = false;
+    GElf_Shdr shdr;
+    Elf_Data *data = NULL;
+    bool data_valid = false;
+    size_t n = 0;
+
+    /* Get the associated ELF Section Header */
+    if (gelf_getshdr(scn, &shdr) != &shdr) {
+        fprintf(stderr, "getshdr(shstrndx) failed: %s\n",elf_errmsg(-1));
+        return false;
+    }
+
+    data = elf_getdata(scn, data);
+    if (data == NULL) {
+        fprintf(stderr, "failed to get data for .s2lcfg from ELF\n");
+        return false;
+    }
+
+    /* extra space to detect if the file size can fit */
+    uint8_t buf[data->d_size * 2];
+    size_t bytes_read;
+    FILE *fp;
+
+    if (filename != NULL) {
+        fp = fopen(filename, "r");
+        if (fp == NULL) {
+            fprintf(stderr, "failed to open file %s\n", filename);
+        } else {
+            bytes_read = fread(buf, 1, sizeof(buf), fp);
+            if (bytes_read > data->d_size) {
+                fprintf(stderr, "failed to read from %s\n", filename);
+            } else if (bytes_read > data->d_size) {
+                fprintf(stderr, "config file %s is too big\n", filename);
+            } else {
+                data_valid = true;
+            }
+            fclose(fp);
+        }
+    }
+
+    if (!data_valid) {
+        /**
+         * If there is no s2lconfig data available, always generate the
+         * section as all zero. This is to make sure any residue in the
+         * workram is wiped
+         */
+        memset(buf, 0, data->d_size);
+    }
+
+    success = (section_cache_entry_open(type, NULL) == 0) &&
+        section_cache_entry_set_blob(buf, data->d_size);
+    section_cache[current_section].section.section_load_address =
+        (uint32_t)shdr.sh_addr;
+    section_cache_entry_close();
+    return success;
+}
+
 
 /**
  * @brief Parse a .elf file into the section cache
@@ -630,7 +699,7 @@ bool elf_add_section_cache_entry(Elf_Scn *scn, uint32_t type) {
  * @returns True if successful, false otherwise.
  */
 bool load_elf(const char * filename, uint32_t * start_address,
-              const char *start_symbol) {
+              const char *start_symbol, const char * s2lcfg_filename) {
     bool success = false;
     int fd = -1;
     Elf *elf = NULL;
@@ -688,6 +757,16 @@ bool load_elf(const char * filename, uint32_t * start_address,
                 fprintf(stderr, "ERROR: elf32_getehdr failed\n");
             }
 
+            sections_created++;
+        }
+    }
+
+    scn = elf_getscn_byname(elf, ".s2lcfg");
+    if (scn != NULL) {
+        success = elf_add_section_cache_entry_with_data(scn,
+                                                        TFTF_SECTION_RAW_DATA,
+                                                        s2lcfg_filename);
+        if (success) {
             sections_created++;
         }
     }

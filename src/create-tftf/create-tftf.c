@@ -76,6 +76,7 @@ uint32_t    unipro_pid;
 uint32_t    ara_vid;
 uint32_t    ara_pid;
 const char *elf_name = NULL;
+const char *s2lcfg_name = NULL;
 const char *start_sym_name = NULL;
 int         verbose_flag = false;
 int         map_flag = false;
@@ -139,6 +140,7 @@ static char * ara_pid_names[] = { "ara-pid", NULL };
 static char * ara_stage_names[] = { "ara-stage", NULL };
 static char * start_symbol_names[] = { "start-sym", "sym", NULL };
 static char * section_elf_names[] = { "elf", NULL };
+static char * section_s2lcfg_names[] = { "s2lcfg", NULL };
 static char * section_code_names[] = { "code", NULL };
 static char * section_data_names[] = { "data", NULL };
 static char * section_manifest_names[] = { "manifest", NULL };
@@ -197,6 +199,10 @@ static struct optionx parse_table[] = {
     { 'E', section_elf_names, "text", &elf_name, 0,
       OPTIONAL, &store_str, 0,
       "The name of an input ELF image file (extracts -C, -D and -s)"
+    },
+    { 'X', section_s2lcfg_names, "text", &s2lcfg_name, 0,
+      OPTIONAL, &store_str, 0,
+      "The name of an input S2L config data file"
     },
 
     /* Section args */
@@ -259,7 +265,7 @@ static struct optionx parse_table[] = {
 
 
 /* The 1-char tags for all args */
-static char * all_args = "z:n:t:s:u:U:a:A:S:E:H:C:D:M:G:R:c:i:l:o:vm";
+static char * all_args = "z:n:t:s:u:U:a:A:S:E:X:H:C:D:M:G:R:c:i:l:o:vm";
 
 /**
  * The 1-char tags for each of the section-related args
@@ -607,7 +613,7 @@ int main(int argc, char * argv[]) {
         success = false;
     }
 
-    success = load_elf(elf_name, &start_location, start_sym_name);
+    success = load_elf(elf_name, &start_location, start_sym_name, s2lcfg_name);
 
     if (success) {
         /* Make sure we close off any under-construction section */

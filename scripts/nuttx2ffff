@@ -29,19 +29,26 @@
 #------------------------------------------------------------------------------
 # Package a nuttx image into an ffff
 #------------------------------------------------------------------------------
-#
-# Usage:
-#    nuttx2ffff {-v} [{--in=file} | {--build=name}] {--outdir=<dir>} {--help}
-#
-#    -v        Verbose mode on TFTF creation
-#    --help    Display usage
-#    --in      Arbitrary path to a nuttx file
-#    --build   Which nuttx image to use:
-#               ara-bridge-debug-apbridgea | ara-bridge-debug-generic |
-#               ara-bridge-debug-bringup
-#    If neither --in or --build are specified, it will use the image in
-#    .../nuttx/nuttx
-#------------------------------------------------------------------------------
+
+function usage ()
+{
+    echo "Usage:
+   ${0} {-v} [{--in=file} | {--build=name}] {--outdir=<dir>} {--help}
+
+   -v        Verbose mode on TFTF creation
+   --help    This message
+   --in      Arbitrary path to a nuttx file, in ELF format
+   --build   Which nuttx image to use:
+              ara-bridge-debug-apbridgea | ara-bridge-debug-generic |
+              ara-bridge-debug-bringup
+   --outdir  Output directory for the FFFF file.
+             If missing, the same directory as the NuttX image is used.
+   If neither --in or --build are specified, it will use the image in
+   \$NUTTXROOT/nuttx.
+"
+    exit 1
+
+}
 
 verbose=
 nuttx_build=
@@ -62,19 +69,7 @@ done
 
 # Usage?
 if $help; then
-echo "Usage:
-   nuttx2ffff {-v} [{--in=file} | {--build=name}] {--outdir=<dir>} {--help}
-
-   -v        Verbose mode on TFTF creation
-   --help    This message
-   --in      Arbitrary path to a nuttx file
-   --build   Which nuttx image to use:
-              ara-bridge-debug-apbridgea | ara-bridge-debug-generic |
-              ara-bridge-debug-bringup
-   If neither --in or --build are specified, it will use the image in
-   .../nuttx/nuttx
-"
-    exit 1
+    usage
 fi
 
 if [ ! ${NUTTX_IMAGE} ]; then

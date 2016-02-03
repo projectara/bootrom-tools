@@ -49,13 +49,19 @@ function usage ()
 }
 
 TOSHIBA_MIPI_MID=0x0126
-
-verbose=
+verbose=n
 target=
 help=false
+
+function vecho () {
+    if [ ${verbose} = y ]; then
+        echo $@
+    fi
+}
+
 for arg in "$@" ; do    # arg will be each positional parameter
     if [[ ${arg} == "-v" ]]; then
-        verbose=${arg}
+        verbose=y
     elif [[ ${arg} == --target=* ]]; then
         target="${arg#*=}"
     elif [[ ${arg} == --in=* ]]; then
@@ -74,20 +80,19 @@ fi
 
 # Argument sanitizing and validation
 if [ ! ${target} ]; then
-    echo Missing mandatory --target option.
-    usage
+    >&2 echo Error: missing mandatory --target option.
+    >&2 usage
 fi
 case $target in
     apb) ;;
     gpb) ;;
     *)
-        echo Invalid target: $target
-        usage
+        >&2 echo Invalid target: $target
+        >&2 usage
 esac
 
 if [ ! ${NUTTX_IMAGE} ]; then
     NUTTX_IMAGE=$NUTTXROOT/nuttx
-    echo "nuttx image from default"
 fi
 
 if [ ! ${OUTDIR} ]; then
@@ -108,19 +113,17 @@ case ${target} in
 esac
 
 if [ ! -f ${NUTTX_IMAGE} ]; then
-    echo "Error: Can't find ${NUTTX_IMAGE}"
+    >&2 echo "Error: Can't find ${NUTTX_IMAGE}"
     exit 1
 fi
-
-#echo
-#echo "Package ${NUTTX_IMAGE}/nuttx into nuttx.tftf:"
-#echo "start address: 0x$start"
 
 tftf_tmp=$(mktemp --suffix=.tftf)
 ffff_name=$(basename ${NUTTX_IMAGE})-${target}.ffff
 ffff_file=${OUTDIR}/${ffff_name}
 
-echo "Packaging ${NUTTX_IMAGE} for ${target_long} into ${ffff_file}"
+vecho "NuttX image: ${NUTTX_IMAGE}"
+vecho "Output FFFF: ${ffff_file}"
+vecho "FFFF Target: ${target_long}"
 
 create-tftf \
     $verbose \
@@ -131,10 +134,10 @@ create-tftf \
     --unipro-pid=${pid} \
     --elf ${NUTTX_IMAGE} \
     --start-sym Reset_Handler \
-    --out ${tftf_tmp}
+    --out ${tftf_tmp} &>/dev/null
 
 if [[ $? != 0 ]]; then
-    echo "There were problems creating the TFTF"
+    echo "Can't create the TFTF"
     exit 1
 fi
 
@@ -147,11 +150,11 @@ create-ffff \
     --erase-size 0x800 \
     --name "Nuttx test build" \
     --s2f ${tftf_tmp} --eloc 0x2000 --egen 1 \
-    --out ${ffff_file}
+    --out ${ffff_file} &>/dev/null
 
 
 if [[ $? != 0 ]]; then
-    echo "There were problems creating the FFFF"
+    >&2 echo "Error: can't create the FFFF"
     # Cleanup intermediate files
     rm ${tftf_tmp}
     exit 1
@@ -163,6 +166,6 @@ rm ${tftf_tmp}
 # Resize the FFFF to the Flash
 truncate -s 2M ${ffff_file}
 
-echo "Done"
+vecho "Done"
 
 

@@ -38,9 +38,7 @@ function usage ()
    -v        Verbose mode on TFTF creation
    --help    This message
    --in      Arbitrary path to a nuttx file, in ELF format
-   --build   Which nuttx image to use:
-              ara-bridge-debug-apbridgea | ara-bridge-debug-generic |
-              ara-bridge-debug-bringup
+   --target  \"apb\" for APBridge targets, \"gpb\" for GPBridge
    --outdir  Output directory for the FFFF file.
              If missing, the same directory as the NuttX image is used.
    If neither --in or --build are specified, it will use the image in
@@ -50,14 +48,16 @@ function usage ()
 
 }
 
+TOSHIBA_MIPI_MID=0x0126
+
 verbose=
-nuttx_build=
+target=
 help=false
 for arg in "$@" ; do    # arg will be each positional parameter
     if [[ ${arg} == "-v" ]]; then
         verbose=${arg}
-    elif [[ ${arg} == --build=* ]]; then
-        nuttx_build="${arg#*=}"
+    elif [[ ${arg} == --target=* ]]; then
+        target="${arg#*=}"
     elif [[ ${arg} == --in=* ]]; then
         NUTTX_IMAGE="${arg#*=}"
     elif [[ ${arg} == --outdir=* ]]; then
@@ -72,19 +72,22 @@ if $help; then
     usage
 fi
 
+# Argument sanitizing and validation
+if [ ! ${target} ]; then
+    echo Missing mandatory --target option.
+    usage
+fi
+case $target in
+    apb) ;;
+    gpb) ;;
+    *)
+        echo Invalid target: $target
+        usage
+esac
+
 if [ ! ${NUTTX_IMAGE} ]; then
-    if [ ${nuttx_build} ]; then
-        # Construct a canonical the path from the supplied build path or fragment
-        # (e.g., "ara-bridge-debug-generic" or
-        # "~/nuttx/build/ara-bridge-debug-generic").
-        nuttx_build=`basename ${nuttx_build}`
-        NuttX_build=`readlink -f $NUTTXROOT/../build`
-        NUTTX_IMAGE=$NuttX_build/$nuttx_build/image/nuttx
-        echo "nuttx image from --build"
-    else
-        NUTTX_IMAGE=$NUTTXROOT/nuttx
-        echo "nuttx image from default"
-    fi
+    NUTTX_IMAGE=$NUTTXROOT/nuttx
+    echo "nuttx image from default"
 fi
 
 if [ ! ${OUTDIR} ]; then
@@ -93,21 +96,16 @@ fi
 
 mkdir -p ${OUTDIR}
 
-case ${nuttx_build} in
-    ara-bridge-debug-apbridgea)
-        mids=(0x0126 0x0126)
-        pids=(0x1000 0x1001)
-        bridge_names=(apb1-es2 apb1-es3)
+case ${target} in
+    apb)
+        target_long="ES3 APBridge"
+        pid=0x1001
         ;;
-    ara-bridge-debug-generic | ara-bridge-debug-bringup)
-        mids=(0x0126 0x0126 0x0126 0x0126)
-        pids=(0x1000 0x1000 0x1001 0x1002)
-        bridge_names=(apb2-es2 gpb-es2 apb2-es3 gpb-es3)
+    gpb)
+        target_long="ES3 GPBridge"
+        pid=0x1002
         ;;
 esac
-
-echo "Packaging ${NUTTX_IMAGE}"
-
 
 if [ ! -f ${NUTTX_IMAGE} ]; then
     echo "Error: Can't find ${NUTTX_IMAGE}"
@@ -118,52 +116,52 @@ fi
 #echo "Package ${NUTTX_IMAGE}/nuttx into nuttx.tftf:"
 #echo "start address: 0x$start"
 
-for i in ${!mids[*]}; do
-    create-tftf \
-      $verbose \
-      --header-size 0x200 \
-      --type s2fw \
-      --name "NuttX S3FW-as-S2FW" \
-      --unipro-mfg=${mids[i]} \
-      --unipro-pid=${pids[i]} \
-      --elf ${NUTTX_IMAGE} \
-      --start-sym Reset_Handler \
-      --out ${NUTTX_IMAGE}.tftf
+tftf_tmp=$(mktemp --suffix=.tftf)
+ffff_name=$(basename ${NUTTX_IMAGE})-${target}.ffff
+ffff_file=${OUTDIR}/${ffff_name}
 
-    if [[ $? != 0 ]]; then
-        echo "There were problems creating the TFTF"
-        exit 1
-    fi
+echo "Packaging ${NUTTX_IMAGE} for ${target_long} into ${ffff_file}"
 
-    tftf_name=$(printf "ara_%.8x_%.8x_%.8x_%.8x_02.tftf" ${mids[i]} ${pids[i]} \
-                0 0)
+create-tftf \
+    $verbose \
+    --header-size 0x200 \
+    --type s2fw \
+    --name "NuttX S3FW-as-S2FW" \
+    --unipro-mfg=${TOSHIBA_MIPI_MID} \
+    --unipro-pid=${pid} \
+    --elf ${NUTTX_IMAGE} \
+    --start-sym Reset_Handler \
+    --out ${tftf_tmp}
 
-    create-ffff \
-      $verbose \
-      --header-size 0x1000 \
-      --generation 1  \
-      --flash-capacity 0x40000 \
-      --image-length 0x40000 \
-      --erase-size 0x800 \
-      --name "Nuttx test build" \
-      --s2f ${NUTTX_IMAGE}.tftf --eloc 0x2000 --egen 1 \
-      --out ${NUTTX_IMAGE}-${bridge_names[i]}.ffff
+if [[ $? != 0 ]]; then
+    echo "There were problems creating the TFTF"
+    exit 1
+fi
+
+create-ffff \
+    $verbose \
+    --header-size 0x1000 \
+    --generation 1  \
+    --flash-capacity 0x40000 \
+    --image-length 0x40000 \
+    --erase-size 0x800 \
+    --name "Nuttx test build" \
+    --s2f ${tftf_tmp} --eloc 0x2000 --egen 1 \
+    --out ${ffff_file}
 
 
-    if [[ $? != 0 ]]; then
-        echo "There were problems creating the FFFF"
-        # Cleanup intermediate files
-        rm ${NUTTX_IMAGE}.tftf
-        exit 1
-    fi
-
-    # Resize the FFFF to the Flash
-    truncate -s 2M ${NUTTX_IMAGE}-${bridge_names[i]}.ffff
-
+if [[ $? != 0 ]]; then
+    echo "There were problems creating the FFFF"
     # Cleanup intermediate files
-    mv ${NUTTX_IMAGE}.tftf ${OUTDIR}/$tftf_name
-    mv ${NUTTX_IMAGE}-${bridge_names[i]}.ffff ${OUTDIR}
-done
+    rm ${tftf_tmp}
+    exit 1
+fi
+
+# Cleanup intermediate files
+rm ${tftf_tmp}
+
+# Resize the FFFF to the Flash
+truncate -s 2M ${ffff_file}
 
 echo "Done"
 

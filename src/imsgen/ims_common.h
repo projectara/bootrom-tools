@@ -56,9 +56,6 @@
 /* MSb mask for a byte */
 #define BYTE_MASK_MSB               0x80
 
-/* No. of bits in a byte */
-#define BITS_PER_BYTE               8
-
 /* The maximum number of bytes to read from a prng_seed_file */
 #define DEFAULT_PRNG_SEED_LENGTH    128
 
@@ -69,10 +66,6 @@ uint32_t prng_seed_length;
 /* Cryptographically Secure Random Number Generator */
 csprng  rng;        /* Generic */
 
-/* Endpoint Unique ID (EP_UID) */
-mcl_octet ep_uid;
-
-
 
 /* IMS working set */
 #define IMS_SIZE                    35
@@ -81,14 +74,6 @@ mcl_octet ep_uid;
 #define IMS_HAMMING_WEIGHT          (IMS_HAMMING_SIZE * 8 / 2)
 #define IMS_PQ_BIAS_HAMMING_WEIGHT  (IMS_PQ_BIAS_SIZE * 8 / 2)
 uint8_t  ims[IMS_SIZE];
-
-/**
- * Because IMS values are stored as binary ascii text with trailing newlines,
- * define contants for how much to read and how far to seek when reading an
- * IMS file.
- */
-#define IMS_BINASCII_SIZE   (IMS_SIZE * BITS_PER_BYTE)
-#define IMS_LINE_SIZE       (IMS_BINASCII_SIZE + 1)
 
 /**
  * 24-bit P&Q bias field, divided evenly into 12 bit fields for each of P & Q bias
@@ -371,32 +356,5 @@ void rsa_secret(MCL_rsa_private_key *PRIV,
  * @param n @param n size of FF in MCL_BIGs
  */
 void print_ff(char * title, mcl_chunk ff[][MCL_BS], int n);
-
-
-/**
- * @brief Parse an IMS as an ASCII binarray string
- *
- * Reads the IMS value as a signle line binary array string, MSB-to-LSB
- *
- * @param binascii_buf The string to parse
- * @param ims Where to store the parsed IMS value
- *
- * @returns Zero if successful, errno otherwise.
- */
-int ims_parse(const char * binascii_buf, uint8_t ims[IMS_SIZE]);
-
-
-/**
- * @brief Read an IMS from a file as an ASCII binarray string
- *
- * Reads the IMS value as a single line binary array string, MSB-to-LSB
- *
- * @param fd The file to read
- * @param offset Where in the file from which to read
- * @param ims The IMS value to load
- *
- * @returns Zero if successful, errno otherwise.
- */
-int ims_read(int fd, off_t offset, uint8_t * ims);
 
 #endif /* !_IMS_COMMON_H */

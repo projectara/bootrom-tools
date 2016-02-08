@@ -55,12 +55,6 @@ EXE      = $(BINDIR)/$(EXE_NAME)
 EXETEST_NAME = imsgen_test
 EXETEST      = $(BINDIR)/$(EXETEST_NAME)
 
-EXETEST1_NAME = imsgen_test1
-EXETEST1      = $(BINDIR)/$(EXETEST1_NAME)
-
-EXETEST2_NAME = imsgen_test2
-EXETEST2      = $(BINDIR)/$(EXETEST2_NAME)
-
 COMMON_NAMES := \
   $(COMMONDIR)/parse_support.c \
   $(COMMONDIR)/util.c
@@ -72,40 +66,23 @@ _LIBS = -lcommon
 _LIBDEPS = libcommon.a
 LIBDEPS = $(patsubst %,$(LIBDIR)/%,$(_LIBDEPS))
 
-COMMONTESTOBJ = $(ODIR)/ims_common.o $(ODIR)/ims_io.o $(ODIR)/ims_test_core.o $(ODIR)/crypto.o $(ODIR)/db.o
-OBJ      = $(ODIR)/imsgen.o $(ODIR)/ims_common.o $(ODIR)/ims.o $(ODIR)/crypto.o $(ODIR)/db.o
-OBJTEST  = $(ODIR)/imsgen_test.o $(ODIR)/ims_test.o $(COMMONTESTOBJ)
-OBJTEST1 = $(ODIR)/imsgen_test1.o $(ODIR)/ims_test1.o $(COMMONTESTOBJ)
-OBJTEST2 = $(ODIR)/imsgen_test2.o $(ODIR)/ims_test2.o $(COMMONTESTOBJ)
+OBJ = $(ODIR)/ims_common.o $(ODIR)/ims.o $(ODIR)/imsgen.o $(ODIR)/crypto.o $(ODIR)/db.o
+OBJTEST = $(ODIR)/ims_common.o $(ODIR)/ims_test.o $(ODIR)/imsgen_test.o $(ODIR)/crypto.o $(ODIR)/db.o
 
 CFLAGS += -DC99 -DMCL_CHUNK=64 -DMCL_FFLEN=8
 
 .PHONY: all clean exe
 
-all: $(EXE) $(EXETEST) $(EXETEST1) $(EXETEST2)
+all: $(EXE) $(EXETEST)
 
-# IMS Generator
 $(EXE): $(OBJ) $(LIBDEPS)
 	mkdir -p $(ODIR) $(BINDIR)
 	@ echo Compiling exe $<
 	$(CC) $(CFLAGS) $^ $(MCL_OBJ) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -L$(MCL_LIBDIR) $(_MCL_LIBS) -o $@
 
-# Bringup IMS test
 $(EXETEST): $(OBJTEST) $(LIBDEPS)
 	mkdir -p $(ODIR) $(BINDIR)
-	@ echo Compiling $(EXETEST_NAME) $<
-	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -L$(MCL_LIBDIR) $(_MCL_LIBS) -o $@
-
-# Official IMS test, part 1 (signs a file with keys from an IMS and saves the signatures)
-$(EXETEST1): $(OBJTEST1) $(LIBDEPS)
-	mkdir -p $(ODIR) $(BINDIR)
-	@ echo Compiling $(EXETEST1_NAME) $<
-	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -L$(MCL_LIBDIR) $(_MCL_LIBS) -o $@
-
-# Official IMS test, part 2 (verifies a file with the keys saved in part 1)
-$(EXETEST2): $(OBJTEST2) $(LIBDEPS)
-	mkdir -p $(ODIR) $(BINDIR)
-	@ echo Compiling $(EXETEST2_NAME) $<
+	@ echo Compiling exetest $<
 	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -L$(MCL_LIBDIR) $(_MCL_LIBS) -o $@
 
 -include $(OBJ:.o=.d)

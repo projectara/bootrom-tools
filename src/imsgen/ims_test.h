@@ -45,7 +45,7 @@
  *
  * @param prng_seed_file Filename from which to read the seed
  * @param prng_seed_string Raw seed string
- * @param database_name (optional) The name of the key database
+ * @param database_name The name of the certificate database
  *
  * @note One and only 1 of prng_seed_file and prng_seed_string must be used.
  *

@@ -295,8 +295,10 @@ bool parse_args(int argc, char * const argv[], const char *optstring,
                 usage(parse_table);
             } else {
                 parser_invalid_arg = true;
-                fprintf(stderr, "%s: unrecognized option '%s'\n\n",
+                fprintf(stderr, "%s: unrecognized option '%s'\n",
                         basename(argv[0]), offending_arg);
+                fprintf(stderr, "%s: use --help to get more information\n",
+                        basename(argv[0]));
                 parser_help = true;
                 usage(parse_table);
             }

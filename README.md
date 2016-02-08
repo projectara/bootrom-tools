@@ -320,7 +320,7 @@ At least one section must be given via `--code`/`--elf`, `--data`, or `--manifes
 --signature-algorithm `<string>`
 --format [standard | es3]
 {--passin [`pass:<passphrase> | stdin | prompt]`}
-{--no-retry}
+{--retry}
 {--check}
 {-v}
 `<tftf-file>`...
@@ -333,10 +333,10 @@ At least one section must be given via `--code`/`--elf`, `--data`, or `--manifes
 * `--passin pass:<string>`: Use the specified string as the passphrase
 * `--passin stdin`: Read the passphrase from standard input
 * `--passin prompt`: Prompt for password (this is default behaviour). You can use ^C to exit this if needed
-* `--no-retry`: If `-passin prompt' is specified, exit with an error status if the password is invalid. If not specified, then it will re-prompt for a valid password.
-* `--check`: Check that the parameters are sound, that the specified TFTF file exists, and that the password is correct, but do not modify the TFTF file. (Optional)
+* `--retry`: If `-passin prompt' is specified, exit with an error status if the password is invalid. If not specified, then it will re-prompt for a valid password.
+* `--check`:
 * `-v`: Verbose mode
-* `<tftf-file>...`: One or more TFTF files to sign
+* `<tftf-file>...`: One or more TFTF files to display
 
 ### create-ffff
 **create-ffff**

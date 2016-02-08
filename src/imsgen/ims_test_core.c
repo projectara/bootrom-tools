@@ -187,7 +187,7 @@ void calculate_keys(uint8_t ims[IMS_SIZE],
     /* Calculate ERRK/ERPK, EPSK/EPVK and  ESSK/ESVK */
     calc_epsk(y2, &epsk);
     calc_epvk(&epsk, &epvk);
-    calc_essk(y2, &essk);
+    calc_essk(y2, &essk, ims_sample_compatibility);
     calc_esvk(&essk, &esvk);
     calc_errk(y2, ims, &erpk_mod, &errk_d, ims_sample_compatibility);
 }

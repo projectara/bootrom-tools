@@ -246,7 +246,7 @@ int read_octets(const char * fname, mcl_octet * octet, int num_octets) {
                 octet->len = bytes_read;
                 if (bytes_read != bytes_to_read) {
                     fprintf(stderr, "ERROR: Problems reading %s, got %d/%d (err %d)\n",
-                            fname, (int)bytes_read, bytes_to_read, errno);
+                            fname, (int)bytes_read, (int)bytes_to_read, errno);
                     status = errno;
                 }
             }

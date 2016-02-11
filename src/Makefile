@@ -30,7 +30,7 @@ include $(TOPDIR)/Makefile.inc
 
 # Sub-directories
 SUBDIRS   = common create-tftf display-tftf sign-tftf create-ffff display-ffff \
-            s2config vendors/MIRACL imsgen
+            s2config imsgen
 COMMONDIR = ${shell pwd}/common
 
 all: $(SUBDIRS)

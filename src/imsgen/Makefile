@@ -43,6 +43,16 @@ MCL_CFLAGS   = -DC99
 MCL_OBJ      = $(MCL_LIBDIR)/mcl_ecdhC25519.o $(MCL_LIBDIR)/mcl_ecdhC448.o
 MCL_OBJTEST  = $(MCL_LIBDIR)/mcl_ecdhC25519.o $(MCL_LIBDIR)/mcl_ecdhC448.o $(MCL_LIBDIR)/mcl_rsaRSA2048.o
 
+###MCL_LIBDIR   = $(MCL_DIR)/bin
+###MCL_ODIR     = $(MCL_DIR)/bin
+##MCL_CFLAGS   = -DC99
+##
+# This cluster of lines set up the MIRACL library build
+APP_MCL_CONFIG_DIR = $(TOPDIR)/src/imsgen/MIRACL_cfg
+OUTROOT = bin
+include $(TOPDIR)/src/vendors/MIRACL/Make.def
+APP_CFLAGS = $(MIRACL_CFLAGS)
+
 # Include build configuration
 MCL_CONFIG_DIR = $(MCL_DIR)
 include $(MCL_CONFIG_DIR)/defconfig
@@ -85,31 +95,43 @@ CFLAGS += -DC99 -DMCL_CHUNK=64 -DMCL_FFLEN=8
 all: $(EXE) $(EXETEST) $(EXETEST1) $(EXETEST2)
 
 # IMS Generator
-$(EXE): $(OBJ) $(LIBDEPS)
+$(EXE): $(OBJ) $(LIBDEPS) $(MIRACL_LIBS)
 	mkdir -p $(ODIR) $(BINDIR)
-	@ echo Compiling exe $<
-	$(CC) $(CFLAGS) $^ $(MCL_OBJ) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -L$(MCL_LIBDIR) $(_MCL_LIBS) -o $@
+	@ echo Compiling $(EXE_NAME): $<
+	$(CC) $(CFLAGS) $^ \
+        $(EXTRA_LIBS) \
+        -L$(LIBDIR) $(_LIBS) \
+        $(LIBMCLCORE) \
+        $(LIBMCLCURVE1) \
+        $(LIBMCLCURVE2) \
+        -o $@
 
 # Bringup IMS test
-$(EXETEST): $(OBJTEST) $(LIBDEPS)
+$(EXETEST): $(OBJTEST) $(LIBDEPS) $(MIRACL_LIBS)
 	mkdir -p $(ODIR) $(BINDIR)
-	@ echo Compiling $(EXETEST_NAME) $<
-	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -L$(MCL_LIBDIR) $(_MCL_LIBS) -o $@
+	@ echo Compiling  $(EXETEST_NAME): $<
+	$(CC) $(CFLAGS) $^ $(EXTRA_LIBS) L$(LIBDIR) $(_LIBS) \
+        $(LIBMCLCORE) $(LIBMCLCURVE1) $(LIBMCLCURVE2) \
+        -o $@
 
 # Official IMS test, part 1 (signs a file with keys from an IMS and saves the signatures)
 $(EXETEST1): $(OBJTEST1) $(LIBDEPS)
 	mkdir -p $(ODIR) $(BINDIR)
 	@ echo Compiling $(EXETEST1_NAME) $<
-	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -L$(MCL_LIBDIR) $(_MCL_LIBS) -o $@
+	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) \
+        $(LIBMCLCORE) $(LIBMCLCURVE1) $(LIBMCLCURVE2) \
+        -o $@
 
 # Official IMS test, part 2 (verifies a file with the keys saved in part 1)
 $(EXETEST2): $(OBJTEST2) $(LIBDEPS)
 	mkdir -p $(ODIR) $(BINDIR)
 	@ echo Compiling $(EXETEST2_NAME) $<
-	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) -L$(MCL_LIBDIR) $(_MCL_LIBS) -o $@
+	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) \
+        $(LIBMCLCORE) $(LIBMCLCURVE1) $(LIBMCLCURVE2) \
+        -o $@
 
 -include $(OBJ:.o=.d)
 
 clean:
-	rm -f $(OBJ) $(EXE)
+	- rm -f *~ obj/* $(EXE) $(EXETEST) $(EXETEST1) $(EXETEST2)
 

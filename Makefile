@@ -26,7 +26,7 @@
 #------------------------------------------------------------------------------
 # ...<root>/Makefile
 
-TOPDIR := ${shell pwd}
+TOPDIR = ${shell pwd}
 include $(TOPDIR)/Makefile.inc
 
 #  VERBOSE==1:  Echo commands
@@ -88,6 +88,7 @@ uninstall:
 
 # clean the tree by dependencies on all of the xxx_clean dependencies declared above
 clean: $(foreach SDIR, $(SUBDIRS), $(SDIR)_clean)
+	rm -rf bin/*
 
 force_look :
 	true

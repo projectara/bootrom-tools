@@ -1,8 +1,5 @@
 _TOPDIR := ${shell pwd}
 
-# Tweak to get this to build with just "make" or build.bsh
-MCL_CONFIG_DIR = $(_TOPDIR)
-
 # Include build configuration
 include $(MCL_CONFIG_DIR)/defconfig
 include $(MCL_CONFIG_DIR)/config.mk
@@ -67,7 +64,6 @@ else
   CC=gcc
   LD=$(CC)
   CFLAGS=-std=c99 -g -Wall 
-#  CFLAGS=-std=c11 -g -Wall 
   LDFLAGS=-Wl,--start-group $(LIBMCLCURVE) $(LIBMCLCORE) -Wl,--end-group 
   STRIP=strip --strip-all
   SIZE=size
@@ -133,7 +129,7 @@ endif
 
 all: $(TARGET)
 
-$(LIBMCLCURVE): $(LIBCURVE_OBJS)
+$(LIBMCLCURVE): $(LIBCURVE_OBJS) $(MCL_ECDH_OBJS) $(MCL_RSA_OBJS)
 	$(Q)$(AR) $(ARFLAGS) $@ $^
 
 $(LIBCURVE_OBJS): $(OUTBUILD)/%.o : $(LIB_DIR)/%.c

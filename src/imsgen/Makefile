@@ -36,12 +36,12 @@ MCL_LIBDIR   = $(MCL_DIR)/bin
 MCL_ODIR     = $(MCL_DIR)/bin
 #_MCL_LIBS    = -lmclcore -lmclcurveEC
 #_MCL_LIBDEPS = libmclcore.a libmclcurveC25519.a
-_MCL_LIBS    = -lmclcore -lmclcurveC25519 -lmclcurveC488
-_MCL_LIBDEPS = libmclcore.a libmclcurveC25519.a libmclcurveC488.a
+_MCL_LIBS    = -lmclcore -lmclcurveC25519 -lmclcurveC448
+_MCL_LIBDEPS = libmclcore.a libmclcurveC25519.a libmclcurveC448.a
 MCLLIBDEPS   = $(patsubst %,$(MCL_LIBDIR)/%,$(_MCL_LIBDEPS))
 MCL_CFLAGS   = -DC99
-MCL_OBJ      = $(MCL_LIBDIR)/mcl_ecdhC25519.o $(MCL_LIBDIR)/mcl_ecdhC488.o
-MCL_OBJTEST  = $(MCL_LIBDIR)/mcl_ecdhC25519.o $(MCL_LIBDIR)/mcl_ecdhC488.o $(MCL_LIBDIR)/mcl_rsaRSA2048.o
+MCL_OBJ      = $(MCL_LIBDIR)/mcl_ecdhC25519.o $(MCL_LIBDIR)/mcl_ecdhC448.o
+MCL_OBJTEST  = $(MCL_LIBDIR)/mcl_ecdhC25519.o $(MCL_LIBDIR)/mcl_ecdhC448.o $(MCL_LIBDIR)/mcl_rsaRSA2048.o
 
 # Include build configuration
 MCL_CONFIG_DIR = $(MCL_DIR)

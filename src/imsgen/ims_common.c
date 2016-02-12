@@ -405,9 +405,9 @@ void calc_epsk(uint8_t * y2, mcl_octet * epsk) {
 int calc_epvk(mcl_octet * epsk, mcl_octet * epvk) {
     int status = 0;
 
-    /* Generate the corresponding EPVK public key, an Ed488-Goldilocks ECC */
-    MCL_ECP_KEY_PAIR_GENERATE_C488(NULL, epsk, epvk);
-    status = MCL_ECP_PUBLIC_KEY_VALIDATE_C488(1, epvk);
+    /* Generate the corresponding EPVK public key, an Ed448-Goldilocks ECC */
+    MCL_ECP_KEY_PAIR_GENERATE_C448(NULL, epsk, epvk);
+    status = MCL_ECP_PUBLIC_KEY_VALIDATE_C448(1, epvk);
     if (status != 0) {
         printf("EPVK is invalid!\r\n");
     }

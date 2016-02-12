@@ -295,7 +295,7 @@ int ecc_sign_message(mcl_octet * message,
      * signature components: CS & DS
      */
     if (primary) {
-        mcl_status = MCL_ECPSP_DSA_C488(MCL_HASH_TYPE_ECC,
+        mcl_status = MCL_ECPSP_DSA_C448(MCL_HASH_TYPE_ECC,
                                         &rng,
                                         &epsk,
                                         message,
@@ -360,7 +360,7 @@ int ecc_verify_message(mcl_octet * message,
      * epvk and the two components, CS & DS generated from signing M above.
      */
     if (primary) {
-        mcl_status = MCL_ECPVP_DSA_C488(MCL_HASH_TYPE_ECC,
+        mcl_status = MCL_ECPVP_DSA_C448(MCL_HASH_TYPE_ECC,
                                         &epvk,
                                         message,
                                         signature_c,

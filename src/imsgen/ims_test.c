@@ -265,55 +265,9 @@ static int test_ecc_sign_roundtrip(bool primary) {
         M.val[i] = i;
     }
 
-<<<<<<< HEAD
     status = ecc_sign_message(&M, &CS, &DS, primary);
     if (status == 0) {
         status = ecc_verify_message(&M, &CS, &DS, primary);
-=======
-    /**
-     * Sign the message M with private signing key epsk, outputting two
-     * signature components: CS & DS
-     */
-    if (primary) {
-        mcl_status = MCL_ECPSP_DSA_C448(MCL_HASH_TYPE_ECC, &rng, &epsk, &M,
-                                        &CS, &DS);
-    } else {
-        mcl_status = MCL_ECPSP_DSA_C25519(MCL_HASH_TYPE_ECC, &rng, &essk, &M,
-                                          &CS, &DS);
-
-    }
-    if (mcl_status !=0 ) {
-        printf("ERROR: %s ECDSA Signature Failed\r\n", key_name);
-    }
-
-    /**
-     * Verify the signature: verify message M with public verification key
-     * epvk and the two components, CS & DS generated from signing M above.
-     */
-    if (primary) {
-        mcl_status = MCL_ECPVP_DSA_C448(MCL_HASH_TYPE_ECC, &epvk, &M,
-                                        &CS, &DS);
-    } else {
-        mcl_status = MCL_ECPVP_DSA_C25519(MCL_HASH_TYPE_ECC, &esvk, &M,
-                                          &CS, &DS);
-    }
-    if (mcl_status != 0) {
-      fprintf(stderr, "ERROR: %s ECC failed:\r\n",
-              key_name);
-
-      printf("Message M = 0x");
-      MCL_OCT_output(&M);
-      printf("\r\n");
-      printf("Signature C = 0x");
-      MCL_OCT_output(&CS);
-      printf("\r\n");
-      printf("Signature D = 0x");
-      MCL_OCT_output(&DS);
-      printf("\r\n");
-      status = -1;
-    } else {
-      status = 0;
->>>>>>> Bootrom Tools: Fix "make install" error
     }
 #else
     status = -1;

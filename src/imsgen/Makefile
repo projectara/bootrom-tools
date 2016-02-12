@@ -110,24 +110,36 @@ $(EXE): $(OBJ) $(LIBDEPS) $(MIRACL_LIBS)
 $(EXETEST): $(OBJTEST) $(LIBDEPS) $(MIRACL_LIBS)
 	mkdir -p $(ODIR) $(BINDIR)
 	@ echo Compiling  $(EXETEST_NAME): $<
-	$(CC) $(CFLAGS) $^ $(EXTRA_LIBS) L$(LIBDIR) $(_LIBS) \
-        $(LIBMCLCORE) $(LIBMCLCURVE1) $(LIBMCLCURVE2) \
+	$(CC) $(CFLAGS) $^ \
+        $(EXTRA_LIBS) \
+        -L$(LIBDIR) $(_LIBS) \
+        $(LIBMCLCORE) \
+        $(LIBMCLCURVE1) \
+        $(LIBMCLCURVE2) \
         -o $@
 
 # Official IMS test, part 1 (signs a file with keys from an IMS and saves the signatures)
-$(EXETEST1): $(OBJTEST1) $(LIBDEPS)
+$(EXETEST1): $(OBJTEST1) $(LIBDEPS) $(MIRACL_LIBS)
 	mkdir -p $(ODIR) $(BINDIR)
-	@ echo Compiling $(EXETEST1_NAME) $<
-	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) \
-        $(LIBMCLCORE) $(LIBMCLCURVE1) $(LIBMCLCURVE2) \
+	@ echo Compiling $(EXETEST1_NAME): $<
+	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST1) \
+        $(EXTRA_LIBS) \
+        -L$(LIBDIR) $(_LIBS) \
+        $(LIBMCLCORE) \
+        $(LIBMCLCURVE1) \
+        $(LIBMCLCURVE2) \
         -o $@
 
 # Official IMS test, part 2 (verifies a file with the keys saved in part 1)
-$(EXETEST2): $(OBJTEST2) $(LIBDEPS)
+$(EXETEST2): $(OBJTEST2) $(LIBDEPS) $(MIRACL_LIBS)
 	mkdir -p $(ODIR) $(BINDIR)
-	@ echo Compiling $(EXETEST2_NAME) $<
-	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST) $(EXTRA_LIBS) -L$(LIBDIR) $(_LIBS) \
-        $(LIBMCLCORE) $(LIBMCLCURVE1) $(LIBMCLCURVE2) \
+	@ echo Compiling $(EXETEST2_NAME): $<
+	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST2) \
+        $(EXTRA_LIBS) \
+        -L$(LIBDIR) $(_LIBS) \
+        $(LIBMCLCORE) \
+        $(LIBMCLCURVE1) \
+        $(LIBMCLCURVE2) \
         -o $@
 
 -include $(OBJ:.o=.d)

@@ -34,19 +34,8 @@ MCL_DIR      = $(TOPDIR)/src/vendors/MIRACL/ara
 MCL_INCDIR   = $(MCL_DIR)/include
 MCL_LIBDIR   = $(MCL_DIR)/bin
 MCL_ODIR     = $(MCL_DIR)/bin
-#_MCL_LIBS    = -lmclcore -lmclcurveEC
-#_MCL_LIBDEPS = libmclcore.a libmclcurveC25519.a
-_MCL_LIBS    = -lmclcore -lmclcurveC25519 -lmclcurveC448
-_MCL_LIBDEPS = libmclcore.a libmclcurveC25519.a libmclcurveC448.a
-MCLLIBDEPS   = $(patsubst %,$(MCL_LIBDIR)/%,$(_MCL_LIBDEPS))
 MCL_CFLAGS   = -DC99
-MCL_OBJ      = $(MCL_LIBDIR)/mcl_ecdhC25519.o $(MCL_LIBDIR)/mcl_ecdhC448.o
-MCL_OBJTEST  = $(MCL_LIBDIR)/mcl_ecdhC25519.o $(MCL_LIBDIR)/mcl_ecdhC448.o $(MCL_LIBDIR)/mcl_rsaRSA2048.o
 
-###MCL_LIBDIR   = $(MCL_DIR)/bin
-###MCL_ODIR     = $(MCL_DIR)/bin
-##MCL_CFLAGS   = -DC99
-##
 # This cluster of lines set up the MIRACL library build
 APP_MCL_CONFIG_DIR = $(TOPDIR)/src/imsgen/MIRACL_cfg
 OUTROOT = bin
@@ -122,7 +111,7 @@ $(EXETEST): $(OBJTEST) $(LIBDEPS) $(MIRACL_LIBS)
 $(EXETEST1): $(OBJTEST1) $(LIBDEPS) $(MIRACL_LIBS)
 	mkdir -p $(ODIR) $(BINDIR)
 	@ echo Compiling $(EXETEST1_NAME): $<
-	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST1) \
+	$(CC) $(CFLAGS) $^ \
         $(EXTRA_LIBS) \
         -L$(LIBDIR) $(_LIBS) \
         $(LIBMCLCORE) \
@@ -134,7 +123,7 @@ $(EXETEST1): $(OBJTEST1) $(LIBDEPS) $(MIRACL_LIBS)
 $(EXETEST2): $(OBJTEST2) $(LIBDEPS) $(MIRACL_LIBS)
 	mkdir -p $(ODIR) $(BINDIR)
 	@ echo Compiling $(EXETEST2_NAME): $<
-	$(CC) $(CFLAGS) $^ $(MCL_OBJTEST2) \
+	$(CC) $(CFLAGS) $^ \
         $(EXTRA_LIBS) \
         -L$(LIBDIR) $(_LIBS) \
         $(LIBMCLCORE) \

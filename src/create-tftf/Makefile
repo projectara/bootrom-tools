@@ -53,5 +53,5 @@ $(EXE): $(OBJ) $(LIBDEPS)
 -include $(OBJ:.o=.d)
 
 clean:
-	rm -f $(OBJ) $(EXE)
+	- rm -rf $(ODIR) $(OBJ) $(EXE)
 

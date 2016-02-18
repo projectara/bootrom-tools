@@ -134,5 +134,5 @@ $(EXETEST2): $(OBJTEST2) $(LIBDEPS) $(MIRACL_LIBS)
 -include $(OBJ:.o=.d)
 
 clean:
-	- rm -f *~ obj/* $(EXE) $(EXETEST) $(EXETEST1) $(EXETEST2)
+	- rm -rf *~ $(ODIR) $(EXE) $(EXETEST) $(EXETEST1) $(EXETEST2)
 

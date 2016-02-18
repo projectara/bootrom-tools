@@ -76,6 +76,7 @@ install:
 
 # clean the tree by dependencies on all of the xxx_clean dependencies declared above
 clean: $(foreach SDIR, $(SUBDIRS), $(SDIR)_clean)
+	- rm -rf  $(BINDIR) $(LIBDIR)
 
 
 force_look :

@@ -90,6 +90,6 @@ $(LIBDIR)/libs2cfg.a: $(S2CFGOBJ)
 .PHONY: all clean
 
 clean:
-	rm -f $(ODIR)/*.o $(LIBDIR)/*.a *~ core $(INCDIR)/*~
+	- rm -rf $(ODIR) $(LIBDIR)/*.a *~ core $(INCDIR)/*~
 
 
